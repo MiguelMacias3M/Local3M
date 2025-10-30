@@ -1,0 +1,87 @@
+/* Estilo base y el degradado de fondo */
+body, html {
+    height: 100%;
+    margin: 0;
+    font-family: Arial, sans-serif;
+    color: #fff;
+}
+
+body {
+    /* ¡Aquí está tu degradado! */
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364, #f12711, #f5af19);
+    background-size: 400% 400%;
+    animation: gradientAnimation 15s ease infinite;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Animación para que el degradado se mueva */
+@keyframes gradientAnimation {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* La tarjeta o caja de login */
+.login-card {
+    background: rgba(0, 0, 0, 0.4); /* Fondo oscuro semitransparente */
+    padding: 2.5rem;
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px); /* Efecto "vidrio" */
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    text-align: center;
+    width: 100%;
+    max-width: 400px;
+}
+
+/* Logo */
+.login-card img {
+    width: 80%;
+    max-width: 250px;
+    margin-bottom: 1.5rem;
+}
+
+/* Campos del formulario */
+.login-input {
+    width: 100%;
+    padding: 12px 15px;
+    margin-bottom: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1rem;
+    box-sizing: border-box; /* Importante para que el padding no afecte el ancho */
+}
+
+.login-input::placeholder {
+    color: #ccc;
+}
+
+.login-input:focus {
+    outline: none;
+    border-color: #f5af19;
+    box-shadow: 0 0 10px rgba(245, 175, 25, 0.5);
+}
+
+/* Botón de Iniciar Sesión */
+.login-button {
+    width: 100%;
+    padding: 12px 15px;
+    border: none;
+    border-radius: 8px;
+    background: #f5af19; /* Color principal de tu degradado */
+    color: #0f2027; /* Color oscuro para el texto */
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.login-button:hover {
+    background: #f12711; /* Segundo color del degradado */
+    color: #fff;
+    box-shadow: 0 0 15px rgba(241, 39, 17, 0.6);
+}

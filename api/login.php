@@ -33,7 +33,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     
                     $response['success'] = true;
                     $response['message'] = '¡Acceso correcto! Redirigiendo...';
-                    $response['redirect'] = 'reparacion.php'; // Página a la que debe ir
+                    $response['redirect'] = 'dashboard.php'; // Página a la que debe ir
                 } else {
                     // Contraseña incorrecta
                     $response['message'] = 'Usuario o contraseña incorrectos.';

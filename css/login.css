@@ -2,18 +2,19 @@
 body, html {
     height: 100%;
     margin: 0;
-    font-family: Arial, sans-serif;
-    color: #fff;
+    /* Fuente más moderna y profesional */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 }
 
 body {
-    /* ¡Aquí está tu degradado! */
-    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364, #f12711, #f5af19);
+    /* Degradado más corporativo */
+    background: linear-gradient(135deg, #003973, #004e92, #1c6aa8);
     background-size: 400% 400%;
     animation: gradientAnimation 15s ease infinite;
     display: flex;
     align-items: center;
     justify-content: center;
+    color: #fff; /* Texto blanco por defecto */
 }
 
 /* Animación para que el degradado se mueva */
@@ -23,25 +24,33 @@ body {
     100% { background-position: 0% 50%; }
 }
 
-/* La tarjeta o caja de login */
+/* Estilos de la tarjeta de login (Glassmorphism) */
 .login-card {
-    background: rgba(0, 0, 0, 0.4); /* Fondo oscuro semitransparente */
+    background: rgba(0, 0, 0, 0.35); /* Un poco más oscuro para mejor contraste */
     padding: 2.5rem;
     border-radius: 15px;
     border: 1px solid rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(10px); /* Efecto "vidrio" */
+    backdrop-filter: blur(10px);
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
     text-align: center;
     width: 100%;
     max-width: 400px;
+    box-sizing: border-box;
+    margin: 1rem;
 }
 
-/* Logo */
-.login-card img {
-    width: 80%;
-    max-width: 250px;
-    margin-bottom: 1.5rem;
+/* Texto del Logo */
+.logo-text {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #fff; /* Blanco para que combine */
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-top: 0;
+  margin-bottom: 25px;
 }
+
 
 /* Campos del formulario */
 .login-input {
@@ -53,7 +62,7 @@ body {
     border-radius: 8px;
     color: #fff;
     font-size: 1rem;
-    box-sizing: border-box; /* Importante para que el padding no afecte el ancho */
+    box-sizing: border-box; /* Importante */
 }
 
 .login-input::placeholder {
@@ -62,8 +71,8 @@ body {
 
 .login-input:focus {
     outline: none;
-    border-color: #f5af19;
-    box-shadow: 0 0 10px rgba(245, 175, 25, 0.5);
+    border-color: #fff;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
 }
 
 /* Botón de Iniciar Sesión */
@@ -72,16 +81,68 @@ body {
     padding: 12px 15px;
     border: none;
     border-radius: 8px;
-    background: #f5af19; /* Color principal de tu degradado */
-    color: #0f2027; /* Color oscuro para el texto */
+    /* Botón blanco de alto contraste */
+    background: #ffffff;
+    color: #004e92; /* Color de texto azul oscuro */
     font-size: 1.1rem;
     font-weight: bold;
     cursor: pointer;
     transition: all 0.3s ease;
+    /* Para centrar el spinner */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 48px; /* Altura fija para que no salte */
+    position: relative; /* Posición relativa para los spans */
 }
 
 .login-button:hover {
-    background: #f12711; /* Segundo color del degradado */
-    color: #fff;
-    box-shadow: 0 0 15px rgba(241, 39, 17, 0.6);
+    background: #f0f0f0; /* Un gris claro al pasar el mouse */
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
 }
+
+/* ------------------------------------------- */
+/* --- NUEVOS ESTILOS PARA EL SPINNER --- */
+/* ------------------------------------------- */
+
+/* Contenedores del texto y el loader */
+.button-text,
+.button-loader {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Estilos para el Spinner (rueda de progreso) */
+.button-loader {
+    display: none; /* Oculto por defecto */
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(0, 78, 146, 0.3); /* Color azul claro */
+    border-top-color: #004e92; /* Color azul oscuro */
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Estado de "cargando" para el botón */
+.login-button.loading {
+    background: #f0f0f0; /* Mismo color que el hover */
+    color: #004e92;
+    cursor: not-allowed;
+}
+
+.login-button.loading .button-text {
+    display: none; /* Ocultamos el texto "Iniciar sesión" */
+}
+
+.login-button.loading .button-loader {
+    display: block; /* Mostramos el spinner */
+}
+
+/* Animación del spinner */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+

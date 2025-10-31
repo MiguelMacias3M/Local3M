@@ -2,15 +2,15 @@
 // Revisamos si ya hay una sesión activa
 session_start();
 if (isset($_SESSION['nombre'])) {
-    // Si ya está logueado, lo mandamos directo a reparacion.php
-    header('Location: reparacion.php');
+    // Si ya está logueado, lo mandamos directo al dashboard
+    header('Location: dashboard.php');
     exit();
 }
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="utf-t">
+    <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Login - 3M-TECHNOLOGY</title>
@@ -23,9 +23,8 @@ if (isset($_SESSION['nombre'])) {
 <body>
 
     <div class="login-card">
-        
-        <img src="img/3M_TECHNOLOGY.png" alt="3M TECHNOLOGY" />
-
+      <h1 class="logo-text">3M TECHNOLOGY</h1>
+      
         <form id="loginForm">
             <input type="text" 
                    id="nombre" 
@@ -42,7 +41,15 @@ if (isset($_SESSION['nombre'])) {
                    placeholder="Contraseña" 
                    required="required" />
 
-            <button class="login-button" type="submit">Iniciar sesión</button>
+            <!--
+              AQUÍ ESTÁ EL CAMBIO:
+              - Añadido id="loginButton"
+              - Añadidos spans para el texto y el loader
+            -->
+            <button class="login-button" type="submit" id="loginButton">
+                <span class="button-text">Iniciar sesión</span>
+                <span class="button-loader"></span>
+            </button>
         </form>
 
     </div>
@@ -50,3 +57,4 @@ if (isset($_SESSION['nombre'])) {
     <script src="js/login.js"></script>
 </body>
 </html>
+

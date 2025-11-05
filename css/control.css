@@ -1,0 +1,172 @@
+/* =====================================
+ESTILOS PARA CONTROL.PHP (control.css)
+=====================================
+*/
+
+/* Contenedor de la barra de búsqueda */
+.search-box {
+    display: flex;
+    flex-wrap: wrap; /* Permite que los botones pasen abajo en móviles */
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+}
+
+.search-wrap {
+    flex: 1; /* Ocupa el espacio disponible */
+    position: relative;
+    min-width: 300px; /* Ancho mínimo */
+}
+
+.search-wrap .form-input {
+    width: 100%;
+    padding-left: 2.75rem; /* Espacio para el icono */
+    margin-bottom: 0; /* Quitamos el margen inferior */
+}
+
+.search-wrap i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9aa3af; /* Color de icono */
+}
+
+.search-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Ajustes a la tabla de control */
+.control-table th, .control-table td {
+    padding: 12px 15px;
+    vertical-align: middle;
+}
+
+.control-table .td-actions {
+    min-width: 310px; /* Ancho para todos los botones */
+    text-align: right;
+    white-space: nowrap; /* Evita que los botones se partan */
+}
+
+/* Botones de acción dentro de la tabla */
+.td-actions .form-button {
+    padding: 6px 12px; /* Más pequeños */
+    font-size: 0.85rem;
+    display: inline-flex; /* Se alinean uno al lado del otro */
+    width: auto; /* Ancho automático */
+    margin: 2px;
+}
+
+/* Feedback de tabla (Cargando, Sin resultados) */
+.table-feedback {
+    text-align: center;
+    padding: 2rem;
+    color: #6b7280;
+    font-style: italic;
+}
+
+.more-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-top: 1rem;
+    gap: 1rem;
+}
+
+/* Spinner (rueda de carga) */
+.spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid rgba(0, 78, 146, 0.1); /* --primary-color-light */
+    border-top-color: var(--primary-color); /* #004e92 */
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* =====================================
+MODALES (para Detalles y Código de Barras)
+=====================================
+*/
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+/* Mostramos el modal cuando tiene la clase (que JS quitará) */
+.modal-overlay:not([style*="display:none"]) {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    width: min(600px, 90vw);
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    padding: 1.5rem 2rem;
+}
+
+.modal-content h2 {
+    margin-top: 0;
+    color: var(--primary-color);
+}
+
+.modal-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: transparent;
+    border: none;
+    font-size: 2rem;
+    color: #9aa3af;
+    cursor: pointer;
+    line-height: 1;
+}
+.modal-close:hover {
+    color: #333;
+}
+
+.modal-body {
+    padding: 1rem 0;
+    line-height: 1.7;
+    color: #333;
+}
+.modal-body strong {
+    color: #111;
+}
+
+.modal-footer {
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* Específico del modal de código de barras */
+#barcode-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 150px;
+}
+#barcode-text {
+    font-weight: 600;
+    color: #333;
+    margin-top: 0.5rem;
+}

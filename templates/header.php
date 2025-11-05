@@ -22,42 +22,36 @@ if (!isset($_SESSION['nombre'])) {
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel - 3M TECHNOLOGY</title> 
     
-    <!-- Hoja de estilos principal del panel -->
-    <!-- CAMBIO: Usamos la ruta absoluta -->
     <link rel="stylesheet" href="/local3M/css/panel.css">
 
-    <!-- Incluimos Font Awesome para los iconos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
 </head>
 <body>
 
-    <!-- Barra de Navegación -->
     <nav class="navbar">
         <div class="navbar-left">
             <div class="navbar-brand">3M TECHNOLOGY</div>
-            <!-- El Menú Principal -->
             <ul class="navbar-menu">
-                <!-- CAMBIO: Todos los enlaces usan rutas absolutas -->
-                <li><a href="/local3M/dashboard.php"><i class="fas fa-home"></i> Panel Principal</a></li>
-                <li><a href="/local3M/reparacion.php"><i class="fas fa-tools"></i> Reparaciones</a></li>
-                <!-- Próximos módulos -->
-                <!-- <li><a href="/local3M/clientes.php"><i class="fas fa-users"></i> Clientes</a></li> -->
-                <!-- <li><a href="/local3M/inventario.php"><i class="fas fa-box"></i> Inventario</a></li> -->
-            </ul>
+                
+                <li><a href="/local3M/dashboard.php"><i class="fas fa-home"></i> Panel</a></li>
+                <li><a href="/local3M/reparacion.php"><i class="fas fa-plus-circle"></i> Nueva Reparación</a></li>
+                <li><a href="/local3M/control.php"><i class="fas fa-clipboard-list"></i> Control</a></li>
+                <li><a href="/local3M/venta.php"><i class="fas fa-cash-register"></i> Venta</a></li>
+                <li><a href="/local3M/caja.php"><i class="fas fa-piggy-bank"></i> Caja</a></li>
+                <li><a href="/local3M/inventario.php"><i class="fas fa-boxes"></i> Mercancía</a></li>
+                
+                </ul>
         </div>
         
         <div class="navbar-user">
-            <!-- Usamos la variable de sesión para saludar -->
             <span>Bienvenido, <?php echo htmlspecialchars($_SESSION['nombre']); ?></span>
-            
-            <!-- CAMBIO: Ruta absoluta para logout -->
-            <a href="/local3M/logout.php" class="logout-button">Cerrar Sesión</a>
+            <span> l </span>
+            <a href="/local3M/logout.php" class="logout-button">  Cerrar Sesión</a>
         </div>
     </nav>
 
-    <!-- Contenido del Panel (se cierra en footer.php) -->
     <div class="container">

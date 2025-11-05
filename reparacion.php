@@ -1,7 +1,7 @@
 <?php
 // 1. Incluimos el header (seguridad, menú, etc.)
 include 'templates/header.php';
-include 'conexion.php'; // Incluimos la conexión a la BD
+include 'config/conexion.php'; // Incluimos la conexión a la BD
 
 // 2. Generar un id_transaccion único para agrupar las reparaciones
 // Lo pasaremos a JavaScript
@@ -51,11 +51,11 @@ $usuario_sesion = $_SESSION['nombre'] ?? 'Sistema';
             <div class="form-row">
                 <div class="form-col">
                     <label for="monto">Monto Total ($):</label>
-                    <input class="form-input" id="monto" type="number" step="0.01" name="monto" value="0" oninput="calcularDeuda()" required>
+                    <input class="form-input" id="monto" type="number" name="monto" value="0" oninput="calcularDeuda()" required>
                 </div>
                 <div class="form-col">
                     <label for="adelanto">Adelanto ($):</label>
-                    <input class="form-input" id="adelanto" type="number" step="0.01" name="adelanto" value="0" oninput="calcularDeuda()" required>
+                    <input class="form-input" id="adelanto" type="number" name="adelanto" value="0" oninput="calcularDeuda()" required>
                 </div>
             </div>
 
@@ -78,7 +78,7 @@ $usuario_sesion = $_SESSION['nombre'] ?? 'Sistema';
 
         <div id="contenedor-total">
             <strong id="total-label">Deuda Total:</strong>
-            <span id="total-deuda">$0.00</span>
+            <span id="total-deuda">$0</span>
         </div>
         
         <button id="btn-registrar" type="button" class="form-button btn-register" onclick="enviarCarrito()" disabled>

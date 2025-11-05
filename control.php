@@ -12,7 +12,7 @@ if (isset($_GET['msg'])) {
 }
 ?>
 
-<link rel="stylesheet" href="/local3M/css/control.css">
+<link rel="stylesheet" href="css/control.css">
 
 <div class="page-title">
     <h1>Control de Reparaciones</h1>

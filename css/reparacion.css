@@ -1,0 +1,227 @@
+/* =====================================
+ESTILOS PARA REPARACION.PHP (reparacion.css)
+=====================================
+*/
+
+/* Grid principal de dos columnas */
+.reparacion-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Dos columnas de igual tamaño */
+    gap: 2rem;
+    align-items: flex-start; /* Alinea las cajas al inicio */
+}
+
+/* El .content-box ya viene de panel.css, pero podemos ajustarlo */
+.form-container,
+.carrito-container {
+    padding: 2rem;
+}
+
+/* Estilos del formulario */
+.main-form h2 {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--primary-color);
+    display: inline-block;
+}
+
+.main-form h2 i {
+    margin-right: 0.75rem;
+}
+
+.form-divider {
+    border: 0;
+    border-top: 1px solid var(--border-color);
+    margin: 2rem 0;
+}
+
+/* Etiquetas y campos */
+.main-form label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #555;
+}
+
+.form-input,
+.form-textarea {
+    width: 100%;
+    padding: 12px 15px;
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1rem;
+    box-sizing: border-box; /* Importante */
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 5px rgba(0, 78, 146, 0.3);
+}
+
+.form-input[readonly] {
+    background-color: #f4f7fa; /* Color de fondo para campos solo lectura */
+    color: #777;
+    cursor: not-allowed;
+}
+
+/* Fila para monto y adelanto */
+.form-row {
+    display: flex;
+    gap: 1rem;
+}
+.form-col {
+    flex: 1; /* Ocupa mitad y mitad */
+}
+
+/* Botones del formulario */
+.form-button {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+.btn-add {
+    background-color: #28a745; /* Verde */
+    color: white;
+}
+.btn-add:hover {
+    background-color: #218838;
+}
+
+.btn-register {
+    background-color: var(--primary-color);
+    color: white;
+    margin-top: 1rem;
+}
+.btn-register:hover {
+    background-color: var(--secondary-color);
+}
+.btn-register:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+
+/* -------------------------------
+Estilos del Carrito
+-------------------------------
+*/
+.carrito-container h2 {
+    margin-top: 0;
+}
+
+#lista-carrito {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 400px; /* Altura máxima antes de hacer scroll */
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    background-color: #fdfdfd;
+}
+
+#lista-carrito li {
+    padding: 1rem 0;
+    border-bottom: 1px solid #eee;
+}
+#lista-carrito li:last-child {
+    border-bottom: none;
+}
+
+#lista-carrito strong {
+    font-size: 1.1rem;
+    color: var(--primary-color);
+}
+
+.carrito-item-detalle {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #555;
+}
+
+.delete-btn {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    font-size: 0.9rem;
+    border-radius: 5px;
+    cursor: pointer;
+    float: right;
+    transition: background-color 0.3s;
+}
+.delete-btn:hover {
+    background-color: #c0392b;
+}
+
+/* Totales del carrito */
+#contenedor-total {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--primary-color);
+    text-align: right;
+}
+
+#total-label {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #555;
+    margin-right: 1rem;
+}
+
+#total-deuda {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+/* Totales Múltiples */
+.totales-multiples {
+    text-align: right;
+    font-size: 1.1rem;
+    line-height: 1.7;
+}
+.totales-multiples .total-final {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #d93040; /* Rojo para deuda */
+}
+
+
+/* -------------------------------
+Responsividad
+-------------------------------
+*/
+@media (max-width: 900px) {
+    .reparacion-grid {
+        grid-template-columns: 1fr; /* Una columna en pantallas pequeñas */
+    }
+
+    /* El carrito pasa abajo del formulario */
+    .carrito-container {
+        margin-top: 2rem;
+    }
+
+    .form-row {
+        flex-direction: column; /* Apila monto y adelanto */
+        gap: 0;
+    }
+}

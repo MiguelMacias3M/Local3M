@@ -2,8 +2,10 @@
 // Revisamos si ya hay una sesión activa
 session_start();
 if (isset($_SESSION['nombre'])) {
-    // Si ya está logueado, lo mandamos directo al dashboard
-    header('Location: dashboard.php');
+    //
+    // CORRECCIÓN: Usar la misma ruta absoluta que en header.php
+    //
+    header('Location: /local3M/dashboard.php');
     exit();
 }
 ?>
@@ -15,7 +17,8 @@ if (isset($_SESSION['nombre'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Login - 3M-TECNOLOGY</title>
 
-    <link rel="stylesheet" href="css/login.css">
+    <!-- CAMBIO: Ruta absoluta al CSS -->
+    <link rel="stylesheet" href="/local3M/css/login.css">
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
@@ -54,7 +57,7 @@ if (isset($_SESSION['nombre'])) {
 
     </div>
 
-    <script src="js/login.js"></script>
+    <!-- CAMBIO: Ruta absoluta al JS -->
+    <script src="/local3M/js/login.js"></script>
 </body>
 </html>
-

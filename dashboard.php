@@ -1,81 +1,135 @@
 <?php
-// Incluimos la cabecera (sesión, menú, HTML head)
+// 1. Incluimos al "guardia de seguridad" (header.php)
+// Él se encarga de session_start(), anti-caché y comprobar el login.
 include 'templates/header.php';
 
-// (Aquí irá la lógica para consultar la base de datos en el futuro)
-// --- DATOS DE EJEMPLO ---
-$reparaciones_abiertas = 12;
-$ganancias_hoy = 1850.50;
-$equipos_entregados_hoy = 8;
-$alertas_pendientes = 3; // ¡Nueva variable para las alertas!
-// --- FIN DATOS DE EJEMPLO ---
-
+// ---- DATOS DE EJEMPLO (eventualmente vendrán de la BD) ----
+$reparaciones_abiertas = 7;
+$ingresos_dia = 320.50;
+$alertas_pendientes = 1;
+$entregas_hoy = 3; 
+$monto_por_cobrar = 1480.00; 
+// -----------------------------------------------------------
 ?>
 
-<h1>Panel de Control</h1>
+<!--
+=====================================
+CONTENIDO PRINCIPAL DEL DASHBOARD
+=====================================
+-->
 
-<!-- Tarjetas de Estadísticas -->
+<!-- Título de la Página -->
+<div class="page-title">
+    <h1>Panel Principal</h1>
+    <p>Resumen general de tu taller.</p>
+</div>
+
+<!-- 
+  SECCIÓN DE ESTADÍSTICAS
+-->
 <div class="stats-grid">
+
+    <!-- Reparaciones Abiertas -->
     <div class="stat-card">
-        <div class="icon icon-open">
+        <div class="stat-icon icon-repair">
             <i class="fas fa-tools"></i>
         </div>
-        <div class="info">
-            <h3>Reparaciones Abiertas</h3>
-            <p class="number"><?php echo $reparaciones_abiertas; ?></p>
+        <div class="stat-info">
+            <h2><?php echo $reparaciones_abiertas; ?></h2>
+            <p>Reparaciones Abiertas</p>
         </div>
     </div>
 
+    <!-- Ingresos del Día -->
     <div class="stat-card">
-        <div class="icon icon-money">
+        <div class="stat-icon icon-money">
             <i class="fas fa-dollar-sign"></i>
         </div>
-        <div class="info">
-            <h3>Ganancias de Hoy (Caja)</h3>
-            <p class="number">$<?php echo number_format($ganancias_hoy, 2); ?></p>
+        <div class="stat-info">
+            <h2>$<?php echo number_format($ingresos_dia, 2); ?></h2>
+            <p>Ingresos del Día</p>
         </div>
     </div>
 
+    <!-- Entregas para Hoy -->
     <div class="stat-card">
-        <div class="icon icon-done">
-            <i class="fas fa-check-circle"></i>
+        <div class="stat-icon icon-entrega">
+            <i class="fas fa-calendar-check"></i>
         </div>
-        <div class="info">
-            <h3>Equipos Entregados Hoy</h3>
-            <p class="number"><?php echo $equipos_entregados_hoy; ?></p>
+        <div class="stat-info">
+            <h2><?php echo $entregas_hoy; ?></h2>
+            <p>Entregas para Hoy</p>
         </div>
     </div>
-    
-    <!-- Tarjeta de Clientes eliminada y reemplazada por Alertas -->
+
+    <!-- Pendiente por Cobrar -->
     <div class="stat-card">
-        <div class="icon icon-alert"> <!-- Nueva clase de icono -->
-            <i class="fas fa-bell"></i> <!-- Icono de campana -->
+        <div class="stat-icon icon-cobrar">
+            <i class="fas fa-hand-holding-usd"></i>
         </div>
-        <div class="info">
-            <h3>Alertas Pendientes</h3>
-            <p class="number"><?php echo $alertas_pendientes; ?></p>
+        <div class="stat-info">
+            <h2>$<?php echo number_format($monto_por_cobrar, 2); ?></h2>
+            <p>Pendiente por Cobrar</p>
+        </div>
+    </div>
+
+    <!-- Alertas Pendientes -->
+    <div class="stat-card">
+        <div class="stat-icon icon-alert">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="stat-info">
+            <h2><?php echo $alertas_pendientes; ?></h2>
+            <p>Alertas Pendientes</p>
         </div>
     </div>
 
 </div>
 
-<!-- Nuevas secciones del Dashboard -->
-<div class="dashboard-grid">
-    <div class="content-box">
-        <h2>Entradas del Día</h2>
-        <p>Aquí irá una lista de equipos recibidos hoy...</p>
-        <!-- (Próximamente: Lista de equipos) -->
-    </div>
-    <div class="content-box">
-        <h2>Tareas Pendientes</h2>
-        <p>Aquí irá una lista de tareas (ej. llamar cliente, pedir pieza)...</p>
-        <!-- (Próximamente: Lista de tareas) -->
-    </div>
+<!-- 
+  SECCIÓN DE REPARACIONES RECIENTES
+-->
+<div class="content-box">
+    <h2>Reparaciones Abiertas (Vista Rápida)</h2>
+    <table class="repair-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Cliente</th>
+                <th>Equipo</th>
+                <th>Problema</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Los datos vendrían de un loop de PHP -->
+            <tr>
+                <td>1024</td>
+                <td>Ana García</td>
+                <td>iPhone 12</td>
+                <td>Pantalla rota</td>
+                <td><span class="status status-progress">En Progreso</span></td>
+            </tr>
+            <tr>
+                <td>1023</td>
+                <td>Carlos López</td>
+                <td>Dell XPS 15</td>
+                <td>No enciende</td>
+                <td><span class="status status-pending">En Diagnóstico</span></td>
+            </tr>
+            <tr>
+                <td>1022</td>
+                <td>María Fernández</td>
+                <td>Samsung S21</td>
+                <td>Batería no carga</td>
+                <td><span class="status status-wait">Esperando Pieza</span></td>
+            </tr>
+        </tbody>
+    </table>
 </div>
-
 
 <?php
-// Incluimos el pie de página
+// Incluimos el footer
 include 'templates/footer.php';
 ?>
 

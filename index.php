@@ -13,7 +13,7 @@ if (isset($_SESSION['nombre'])) {
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Login - 3M-TECHNOLOGY</title>
+    <title>Login - 3M-TECNOLOGY</title>
 
     <link rel="stylesheet" href="css/login.css">
 
@@ -23,7 +23,7 @@ if (isset($_SESSION['nombre'])) {
 <body>
 
     <div class="login-card">
-      <h1 class="logo-text">3M TECHNOLOGY</h1>
+      <h1 class="logo-text">3M-TECHNOLOGY</h1>
       
         <form id="loginForm">
             <input type="text" 

@@ -8,7 +8,7 @@ body, html {
 
 body {
     /* Degradado más corporativo */
-    background: linear-gradient(135deg, #003973, #004e92, #1c6aa8);
+    background: linear-gradient(135deg, #00eeff, #a200ff, #bf00ff);
     background-size: 400% 400%;
     animation: gradientAnimation 15s ease infinite;
     display: flex;

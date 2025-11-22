@@ -3,170 +3,251 @@ ESTILOS PARA CONTROL.PHP (control.css)
 =====================================
 */
 
-/* Contenedor de la barra de búsqueda */
+/* --- 1. BUSCADOR Y FILTROS --- */
+
 .search-box {
     display: flex;
-    flex-wrap: wrap; /* Permite que los botones pasen abajo en móviles */
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 15px; /* Espacio entre la barra y los botones */
     align-items: center;
+    margin-bottom: 1.5rem;
+    background: #fff;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
 .search-wrap {
     flex: 1; /* Ocupa el espacio disponible */
-    position: relative;
-    min-width: 300px; /* Ancho mínimo */
-}
-
-.search-wrap .form-input {
-    width: 100%;
-    padding-left: 2.75rem; /* Espacio para el icono */
-    margin-bottom: 0; /* Quitamos el margen inferior */
+    min-width: 300px;
+    position: relative; /* Para posicionar el icono */
 }
 
 .search-wrap i {
     position: absolute;
-    left: 1rem;
+    left: 15px;
     top: 50%;
     transform: translateY(-50%);
-    color: #9aa3af; /* Color de icono */
+    color: #888;
+    font-size: 1.1rem;
+}
+
+/* Estilo del Input de búsqueda */
+.search-wrap .form-input {
+    width: 100%;
+    height: 45px; /* Altura FIJA para igualar botones */
+    padding-left: 45px; /* Espacio para el icono */
+    padding-right: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.3s;
+}
+
+.search-wrap .form-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 78, 146, 0.1);
 }
 
 .search-buttons {
     display: flex;
-    gap: 0.5rem;
+    gap: 10px;
 }
 
-/* Ajustes a la tabla de control */
-.control-table th, .control-table td {
+/* --- 2. ESTILOS DE BOTONES (GENERALES) --- */
+/* Estos estilos aplican a TODOS los botones .form-button */
+
+.form-button {
+    height: 45px; /* Misma altura que el input */
+    padding: 0 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px; /* Espacio entre icono y texto */
+    transition: all 0.3s ease;
+    text-decoration: none;
+    line-height: 1;
+}
+
+/* Colores de botones */
+.btn-primary {
+    background-color: #02a2e1; /* Azul */
+    color: white;
+}
+.btn-primary:hover { background-color: #003973; }
+
+.btn-secondary {
+    background-color: #e9ecef; /* Gris claro */
+    color: #333;
+    border: 1px solid #ced4da;
+}
+.btn-secondary:hover { background-color: #dde0e3; }
+
+.btn-danger {
+    background-color: #dc3545; /* Rojo */
+    color: white;
+}
+.btn-danger:hover { background-color: #c82333; }
+
+.btn-warning {
+    background-color: #ffc107; /* Amarillo */
+    color: #333;
+}
+.btn-warning:hover { background-color: #e0a800; }
+
+.btn-info {
+    background-color: #17a2b8; /* Cyan */
+    color: white;
+}
+.btn-info:hover { background-color: #138496; }
+
+
+/* --- 3. TABLA DE RESULTADOS --- */
+
+.table-wrap {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+.control-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 900px; /* Fuerza scroll horizontal en móviles */
+}
+
+.control-table th {
+    background-color: #f8f9fa;
+    color: #555;
+    font-weight: 700;
+    text-align: left;
+    padding: 15px;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.control-table td {
     padding: 12px 15px;
+    border-bottom: 1px solid #eee;
     vertical-align: middle;
+    color: #333;
 }
 
+.control-table tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Columna de Acciones */
 .control-table .td-actions {
-    min-width: 310px; /* Ancho para todos los botones */
     text-align: right;
-    white-space: nowrap; /* Evita que los botones se partan */
+    white-space: nowrap;
+    width: 1%;
 }
 
-/* Botones de acción dentro de la tabla */
+/* Botones dentro de la tabla (más pequeños) */
 .td-actions .form-button {
-    padding: 6px 12px; /* Más pequeños */
+    height: 32px; /* Altura reducida */
+    padding: 0 12px;
     font-size: 0.85rem;
-    display: inline-flex; /* Se alinean uno al lado del otro */
-    width: auto; /* Ancho automático */
-    margin: 2px;
+    border-radius: 6px;
+    margin-left: 4px;
 }
 
-/* Feedback de tabla (Cargando, Sin resultados) */
+
+/* --- 4. ESTADOS (Etiquetas de color) --- */
+.status {
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: inline-block;
+    text-transform: capitalize;
+}
+.status-wait { background-color: #ffea00ec; color: #5d5d5d; }      /* En espera */
+.status-pending { background-color: #cce5ff; color: #004085; }   /* Diagnóstico */
+.status-progress { background-color: #d1ecf1; color: #0c5460; }  /* En progreso */
+.status-ready { background-color: #d4edda; color: #155724; }     /* Reparado */
+.status-completed { background-color: #d4edda; color: #155724; } /* Entregado */
+.status-cancelled { background-color: #f8d7da; color: #721c24; } /* Cancelado */
+.status-unknown { background-color: #e2e3e5; color: #383d41; }   /* Otro */
+
+
+/* --- 5. EXTRAS (Spinner, Feedback) --- */
 .table-feedback {
     text-align: center;
-    padding: 2rem;
-    color: #6b7280;
-    font-style: italic;
+    padding: 3rem;
+    color: #777;
+    background: #fff;
+    border-radius: 8px;
+    margin-top: 10px;
 }
 
 .more-wrap {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding-top: 1rem;
-    gap: 1rem;
+    text-align: center;
+    padding: 20px;
 }
 
-/* Spinner (rueda de carga) */
 .spinner {
-    width: 28px;
-    height: 28px;
-    border: 3px solid rgba(0, 78, 146, 0.1); /* --primary-color-light */
-    border-top-color: var(--primary-color); /* #004e92 */
+    width: 30px;
+    height: 30px;
+    border: 3px solid rgba(0,0,0,0.1);
+    border-left-color: #004e92;
     border-radius: 50%;
-    animation: spin .8s linear infinite;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 10px;
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-/* =====================================
-MODALES (para Detalles y Código de Barras)
-=====================================
-*/
+
+/* --- 6. MODALES --- */
 .modal-overlay {
     position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(5px);
-    z-index: 1000;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
     display: flex;
-    align-items: center;
     justify-content: center;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
-}
-/* Mostramos el modal cuando tiene la clase (que JS quitará) */
-.modal-overlay:not([style*="display:none"]) {
-    opacity: 1;
-    visibility: visible;
+    align-items: center;
+    backdrop-filter: blur(3px);
 }
 
 .modal-content {
-    background: #fff;
+    background: white;
+    padding: 2rem;
     border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-    width: min(600px, 90vw);
-    max-height: 80vh;
-    overflow-y: auto;
+    width: 90%;
+    max-width: 600px;
     position: relative;
-    padding: 1.5rem 2rem;
-}
-
-.modal-content h2 {
-    margin-top: 0;
-    color: var(--primary-color);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 .modal-close {
     position: absolute;
-    top: 10px;
-    right: 15px;
-    background: transparent;
-    border: none;
-    font-size: 2rem;
-    color: #9aa3af;
+    top: 15px;
+    right: 20px;
+    font-size: 1.8rem;
     cursor: pointer;
+    background: none;
+    border: none;
+    color: #aaa;
     line-height: 1;
 }
-.modal-close:hover {
-    color: #333;
-}
+.modal-close:hover { color: #333; }
 
-.modal-body {
-    padding: 1rem 0;
-    line-height: 1.7;
-    color: #333;
-}
-.modal-body strong {
-    color: #111;
-}
+.modal-body { margin-top: 1rem; line-height: 1.6; }
+.modal-footer { margin-top: 1.5rem; text-align: right; border-top: 1px solid #eee; padding-top: 1rem; }
 
-.modal-footer {
-    padding-top: 1rem;
-    border-top: 1px solid var(--border-color);
-    display: flex;
-    justify-content: flex-end;
-}
-
-/* Específico del modal de código de barras */
-#barcode-body {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 150px;
-}
-#barcode-text {
-    font-weight: 600;
-    color: #333;
-    margin-top: 0.5rem;
-}
+/* Modal Código de barras */
+#barcode-wrap { margin: 20px 0; }
+#barcode-text { font-family: monospace; font-size: 1.2rem; margin-top: 10px; letter-spacing: 3px; }

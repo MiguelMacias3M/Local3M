@@ -8,17 +8,21 @@ if (isset($_GET['msg'])) {
     if ($_GET['msg'] === 'eliminado') {
         $toastMessage = "Swal.fire({ icon:'success', title:'Eliminado', text:'La reparación fue eliminada correctamente', timer:2000, showConfirmButton:false });";
     }
-    // (Podemos añadir más mensajes aquí en el futuro)
 }
 ?>
 
-<link rel="stylesheet" href="css/control.css">
+<!-- 
+    Estilos con versión forzada 
+-->
+<link rel="stylesheet" href="/local3M/css/control.css?v=9999">
 
+<!-- Título de la Página -->
 <div class="page-title">
     <h1>Control de Reparaciones</h1>
     <p>Consulta, filtra y administra todas tus órdenes de trabajo.</p>
 </div>
 
+<!-- Controles de Búsqueda -->
 <div class="content-box search-box">
     <div class="search-wrap">
         <i class="fas fa-search"></i>
@@ -30,6 +34,7 @@ if (isset($_GET['msg'])) {
     </div>
 </div>
 
+<!-- Contenedor de la Tabla -->
 <div class="content-box">
     <div class="table-wrap">
         <table class="repair-table control-table" id="tablaReparaciones">
@@ -44,10 +49,12 @@ if (isset($_GET['msg'])) {
                 </tr>
             </thead>
             <tbody id="tablaReparacionesBody">
-                </tbody>
+                <!-- El contenido se cargará con JavaScript -->
+            </tbody>
         </table>
     </div>
 
+    <!-- Feedback para el usuario -->
     <div id="noResults" class="table-feedback" style="display:none;">
         <i class="fas fa-info-circle"></i> No se encontraron reparaciones que coincidan.
     </div>
@@ -59,12 +66,12 @@ if (isset($_GET['msg'])) {
 </div>
 
 
+<!-- MODALES -->
 <div id="modalDetalles" class="modal-overlay" style="display:none;">
     <div class="modal-content">
         <button class="modal-close" onclick="cerrarModal()">&times;</button>
         <h2>Detalles de la Reparación</h2>
-        <div id="detallesContenido" class="modal-body">
-            </div>
+        <div id="detallesContenido" class="modal-body"></div>
     </div>
 </div>
 
@@ -86,15 +93,22 @@ if (isset($_GET['msg'])) {
     </div>
 </div>
 
+<!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="/local3M/js/control.js"></script>
 
+<!-- 
+    LA SOLUCIÓN ESTÁ AQUÍ:
+    Cambiamos la versión a ?v=9999 para obligar al navegador a olvidar el archivo viejo.
+-->
+<script src="/local3M/js/control.js?v=9999"></script>
+
+<!-- Script para mostrar mensajes (alertas PHP) -->
 <script>
     <?php echo $toastMessage; ?>
 </script>
 
 <?php
-// 3. Incluimos el footer (cierre de HTML, script anti-caché, etc.)
+// 3. Incluimos el footer
 include 'templates/footer.php';
 ?>

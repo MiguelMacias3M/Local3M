@@ -16,7 +16,7 @@ if (!isset($_SESSION['nombre'])) {
     exit();
 }
 
-// Ruta de conexión corregida
+// Ruta de conexión corregida (subir un nivel desde /api/)
 include '../config/conexion.php'; 
 
 try {
@@ -52,7 +52,7 @@ try {
     $stmt->execute();
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // 5. Consulta para contar el total de resultados (para la paginación)
+    // 5. Consulta para contar el total de resultados (para saber si hay más páginas)
     $sqlCount = "SELECT COUNT(*) FROM reparaciones $where";
     $cstmt = $conn->prepare($sqlCount);
     
@@ -62,7 +62,7 @@ try {
     $cstmt->execute();
     $total = (int)$cstmt->fetchColumn();
 
-    // 6. Comprobar si hay más páginas
+    // 6. Comprobar si hay más páginas disponibles
     $hasMore = ($offset + $limit) < $total;
 
     // 7. Enviar la respuesta JSON

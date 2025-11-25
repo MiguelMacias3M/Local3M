@@ -17,11 +17,9 @@ if (!$id_transaccion && !$id_individual) {
 try {
     // 1. Obtener los datos
     if ($id_transaccion) {
-        // Buscar por grupo (transacción)
         $stmt = $conn->prepare("SELECT * FROM reparaciones WHERE id_transaccion = :id");
         $stmt->execute([':id' => $id_transaccion]);
     } else {
-        // Buscar individual
         $stmt = $conn->prepare("SELECT * FROM reparaciones WHERE id = :id");
         $stmt->execute([':id' => $id_individual]);
     }
@@ -29,28 +27,26 @@ try {
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     if (empty($items)) {
-        die("No se encontraron reparaciones con estos datos.");
+        die("No se encontraron reparaciones.");
     }
 
-    // 2. Datos de cabecera (tomados del primer item)
+    // 2. Datos de cabecera
     $cliente  = $items[0]['nombre_cliente'];
     $telefono = $items[0]['telefono'];
-    $fecha    = $items[0]['fecha_hora']; // Formato string según tu BD
+    $fecha    = $items[0]['fecha_hora']; 
     $usuario  = $items[0]['usuario'];
-    $folio    = $items[0]['id_transaccion']; // Usamos la transacción como folio visible
+    
+    // Usamos el campo 'codigo_barras' real de la BD
+    $codigo_barras = !empty($items[0]['codigo_barras']) ? $items[0]['codigo_barras'] : $items[0]['id_transaccion'];
 
-    // Formatear fecha si es posible
     $fecha_format = $fecha; 
     try {
-        // Intentar convertir si viene como string ISO
         $dateObj = new DateTime($fecha);
         $fecha_format = $dateObj->format('d/m/Y h:i A');
-    } catch (Exception $e) {
-        // Si falla, dejar como está
-    }
+    } catch (Exception $e) {}
 
 } catch (PDOException $e) {
-    die("Error de base de datos: " . $e->getMessage());
+    die("Error: " . $e->getMessage());
 }
 ?>
 <!DOCTYPE html>
@@ -58,201 +54,264 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ticket de Servicio - 3M</title>
+    <title>Ticket #<?php echo $codigo_barras; ?></title>
     <style>
-        /* Estilos generales para el ticket (58mm - 80mm aprox) */
+        @page {
+            margin: 0; 
+            /* AJUSTE: Reducido 1.5mm (de 56mm a 54.5mm) */
+            size: 54.5mm auto; 
+        }
+
         body {
-            font-family: 'Courier New', Courier, monospace; /* Fuente tipo ticket */
-            font-size: 12px;
+            font-family: Arial, sans-serif; 
+            font-size: 13px;
             margin: 0;
             padding: 0;
-            background-color: #f0f0f0; /* Fondo gris para pantalla */
+            background-color: #fff;
+            color: #000;
         }
 
         .ticket {
-            width: 80mm; /* Ancho estándar de impresora térmica */
-            margin: 20px auto;
-            background: #fff;
-            padding: 15px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            /* AJUSTE: Reducido a 54.5mm */
+            width: 54.5mm; 
+            max-width: 54.5mm;
+            margin: 0 auto; 
+            padding: 2px 0; 
+            box-sizing: border-box;
+            overflow: hidden; 
         }
 
+        /* Textos */
+        h1, h2, p { margin: 0; padding: 0; }
+        .center { text-align: center; }
+        .right { text-align: right; }
+        .bold { font-weight: bold; }
+
         /* Encabezado */
-        .header { text-align: center; margin-bottom: 10px; }
-        .logo { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
-        .info { font-size: 10px; color: #333; }
+        .logo { 
+            font-size: 24px; 
+            font-weight: 900; 
+            margin-bottom: 2px;
+            letter-spacing: -1px;
+            text-transform: uppercase;
+        }
+        .subtitle { font-size: 10px; letter-spacing: 3px; margin-bottom: 8px; display: block;}
+        .ticket-title { font-size: 14px; font-weight: bold; border-bottom: 2px solid #000; display: inline-block; margin-bottom: 5px; }
+
+        .divider { 
+            border-top: 1px dashed #000; 
+            margin: 6px 0; 
+            width: 100%;
+        }
+
+        /* Tablas */
+        .info-table, .items-table, .totals-table { 
+            width: 100%; 
+            font-size: 12px; 
+            border-collapse: collapse; 
+        }
         
-        /* Separadores */
-        .line { border-top: 1px dashed #000; margin: 8px 0; }
+        .info-table td { padding: 1px 0; }
+        .items-table td { padding: 2px 0; }
+        .totals-table td { padding: 2px 0; font-size: 13px; }
 
-        /* Detalles del Cliente */
-        .client-info { margin-bottom: 10px; font-size: 11px; }
-        .client-info div { margin-bottom: 3px; }
+        /* Footer */
+        .footer-text { 
+            font-size: 11px; 
+            text-align: center; 
+            margin-top: 10px; 
+            line-height: 1.2;
+        }
 
-        /* Tabla de items */
-        table { width: 100%; border-collapse: collapse; font-size: 11px; }
-        th { text-align: left; border-bottom: 1px solid #000; }
-        td { padding: 4px 0; vertical-align: top; }
-        .col-monto { text-align: right; }
-        
-        /* Totales */
-        .totals { margin-top: 10px; text-align: right; font-size: 12px; }
-        .totals div { margin-bottom: 3px; }
-        .total-big { font-weight: bold; font-size: 14px; margin-top: 5px; }
-
-        /* Pie de página */
-        .footer { text-align: center; margin-top: 20px; font-size: 10px; }
-        .barcode { margin-top: 10px; text-align: center; }
-
-        /* Botones de acción (No se imprimen) */
+        /* Botones (No imprimir) */
         .no-print {
             text-align: center;
-            margin-top: 20px;
-            padding-bottom: 20px;
+            padding: 20px;
+            background: #f0f0f0;
+            border-bottom: 1px solid #ccc;
+            margin-bottom: 10px;
         }
         .btn {
             padding: 10px 20px;
-            background: #333;
             color: #fff;
-            text-decoration: none;
             border-radius: 5px;
-            font-family: sans-serif;
-            cursor: pointer;
             border: none;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
         }
-        .btn:hover { background: #555; }
+        .btn-print { background: #000; }
+        .btn-close { background: #dc3545; }
 
-        /* Reglas de impresión */
         @media print {
-            body { background: none; }
-            .ticket { width: 100%; margin: 0; box-shadow: none; padding: 0; }
+            body { margin: 0; padding: 0; }
+            /* AJUSTE: Ancho en impresión */
+            .ticket { width: 54.5mm; margin: 0 auto; } 
             .no-print { display: none; }
+            * { color: #000 !important; }
         }
     </style>
 </head>
 <body>
 
+    <!-- Botones de control (Solo pantalla) -->
+    <div class="no-print">
+        <button onclick="window.print()" class="btn btn-print">Imprimir 🖨️</button>
+        <button onclick="cerrarTicket()" class="btn btn-close">Cerrar ✕</button>
+    </div>
+
     <div class="ticket">
         <!-- Encabezado -->
-        <div class="header">
-            <div class="logo">3M TECHNOLOGY</div>
-            <div class="info">Servicio Técnico Especializado</div>
-            <div class="info">Fecha: <?php echo $fecha_format; ?></div>
-            <div class="info">Folio: #<?php echo substr($folio, -6); ?></div>
+        <div class="center">
+            <div class="logo">3M</div>
+            <span class="subtitle">TECHNOLOGY</span><br>
+            <span class="ticket-title">NOTA DE REPARACION</span>
         </div>
 
-        <div class="line"></div>
+        <div class="divider"></div>
 
-        <!-- Datos Cliente -->
-        <div class="client-info">
-            <div><strong>Cliente:</strong> <?php echo htmlspecialchars($cliente); ?></div>
-            <div><strong>Teléfono:</strong> <?php echo htmlspecialchars($telefono); ?></div>
-            <div><strong>Atendió:</strong> <?php echo htmlspecialchars($usuario); ?></div>
-        </div>
-
-        <div class="line"></div>
-
-        <!-- Lista de Equipos -->
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 55%;">Descripción</th>
-                    <th class="col-monto">Importe</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php 
-                $total_monto = 0;
-                $total_adelanto = 0;
-                $total_deuda = 0;
-
-                foreach ($items as $item): 
-                    $total_monto += $item['monto'];
-                    $total_adelanto += $item['adelanto'];
-                    $total_deuda += $item['deuda'];
-                ?>
-                <tr>
-                    <td>
-                        <strong><?php echo htmlspecialchars($item['tipo_reparacion']); ?></strong><br>
-                        <?php echo htmlspecialchars($item['marca_celular'] . " " . $item['modelo']); ?><br>
-                        <small>Nota: <?php echo htmlspecialchars($item['info_extra']); ?></small>
-                    </td>
-                    <td class="col-monto">
-                        $<?php echo number_format($item['monto'], 2); ?>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
-            </tbody>
+        <!-- Info General -->
+        <table class="info-table">
+            <tr>
+                <td class="bold">Folio:</td>
+                <td class="right bold" style="font-size:14px;"><?php echo strtoupper($codigo_barras); ?></td>
+            </tr>
+            <tr>
+                <td>Fecha:</td>
+                <td class="right"><?php echo $fecha_format; ?></td>
+            </tr>
+            <tr>
+                <td>Atendió:</td>
+                <td class="right"><?php echo htmlspecialchars(substr($usuario, 0, 15)); ?></td>
+            </tr>
         </table>
 
-        <div class="line"></div>
+        <div class="divider"></div>
 
-        <!-- Totales -->
-        <div class="totals">
-            <div>Total: $<?php echo number_format($total_monto, 2); ?></div>
-            <div>Abonado: $<?php echo number_format($total_adelanto, 2); ?></div>
-            <div class="total-big">Resta: $<?php echo number_format($total_deuda, 2); ?></div>
-        </div>
+        <!-- Cliente -->
+        <div class="bold" style="font-size:13px;">CLIENTE:</div>
+        <div style="font-size:13px; margin-bottom:2px;"><?php echo htmlspecialchars($cliente); ?></div>
+        <div>Tel: <?php echo htmlspecialchars($telefono); ?></div>
 
-        <!-- Pie de página -->
-        <div class="footer">
-            <p>IMPORTANTE</p>
-            <p>
-                Al recibir este ticket, el cliente acepta que después de 30 días 
-                no nos hacemos responsables por equipos olvidados.
-                <br><br>
-                Garantía válida solo con este ticket.
-                <br>
-                No cubre equipos mojados o golpeados.
-            </p>
-            <p>¡Gracias por su confianza!</p>
-            
-            <div class="barcode">
-                <svg id="barcode"></svg>
+        <div class="divider"></div>
+
+        <!-- Productos -->
+        <div class="bold" style="font-size:13px;">REPARACIONES:</div><br>
+        <?php 
+        $total_monto = 0;
+        $total_adelanto = 0;
+        $i = 1;
+        foreach ($items as $item): 
+            $total_monto += $item['monto'];
+            $total_adelanto += $item['adelanto'];
+            $deuda_item = $item['monto'] - $item['adelanto'];
+        ?>
+            <div style="margin-bottom: 6px;">
+                <div class="bold" style="font-size:13px;">
+                    <?php echo $i++; ?>. <?php echo htmlspecialchars($item['tipo_reparacion']); ?>
+                </div>
+                <div>
+                    <?php echo htmlspecialchars($item['marca_celular'] . " " . $item['modelo']); ?>
+                </div>
+                
+                
+
+                <table class="items-table" style="margin-top:2px;">
+                    <tr>
+                        <td>Costo:</td>
+                        <td class="right">$<?php echo number_format($item['monto'], 2); ?></td>
+                    </tr>
+                    <tr>
+                        <td>Abono:</td>
+                        <td class="right">-$<?php echo number_format($item['adelanto'], 2); ?></td>
+                    </tr>
+                    <tr style="font-weight:bold;">
+                        <td>Total:</td>
+                        <td class="right">$<?php echo number_format($deuda_item, 2); ?></td>
+                    </tr>
+                </table>
             </div>
+            <?php if ($i <= count($items)): ?><div style="border-top:1px dotted #ccc; margin:4px 0;"></div><?php endif; ?>
+        <?php endforeach; ?>
+
+        <div class="divider"></div>
+
+        <!-- Totales Finales -->
+        <?php if (count($items) > 1): 
+            $total_final = $total_monto - $total_adelanto;
+        ?>
+            <table class="totals-table bold">
+                <tr>
+                    <td>TOTAL:</td>
+                    <td class="right">$<?php echo number_format($total_monto, 2); ?></td>
+                </tr>
+                
+                <tr>
+                    
+                    <td>ABONADO:</td>
+                    <td class="right">-$<?php echo number_format($total_adelanto, 2); ?></td>
+                </tr>
+                <tr style="font-size:16px;">
+                    <td>RESTANTE:</td>
+                    <td class="right">$<?php echo number_format($total_final, 2); ?></td>
+                </tr>
+            </table>
+            <div class="divider"></div>
+        <?php endif; ?>
+
+        <!-- Políticas -->
+        <div class="footer-text">
+            <strong>CONDICIONES DE SERVICIO</strong><br>
+            1. Garantía válida solo con este ticket.<br>
+            2. Después de 30 días no nos hacemos responsables por equipos olvidados.<br>
+            3. No hay garantía en equipos mojados.<br>
+            4. La garantía no cubre daños físicos o por mal uso.<br>
+            5. Revisar el equipo al momento de la entrega.<br>
+            6. Conserva este ticket para cualquier aclaración.<br>  
+            7. Retirar chip y memoria antes de dejar el equipo.<br>
+            <br>
+            <strong>¡Gracias por su confianza!</strong>
         </div>
+
+        <!-- Código de Barras -->
+        <div class="center" style="margin-top:15px; overflow:hidden; width:100%;">
+            <svg id="barcode" style="max-width: 100%; height: auto;"></svg>
+        </div>
+        
+        <div class="center" style="font-size:12px; font-weight:bold; letter-spacing:1px; margin-top:2px;">
+            <?php echo strtoupper($codigo_barras); ?>
+        </div>
+        
+        <div class="center" style="margin-top:10px; font-size:11px;">
+            <strong>WhatsApp:</strong> 449 491 2164<br>
+            Lunes a Sábado 10am - 10pm
+        </div>
+        <div class="center" style="margin-top:5px;">--- 3M TECHNOLOGY ---</div>
     </div>
 
-    <!-- Botones para pantalla -->
-    <div class="no-print">
-        <button onclick="window.print()" class="btn">Imprimir Ticket</button>
-        <!-- CAMBIO: Llamamos a la nueva función cerrarTicket() -->
-        <button onclick="cerrarTicket()" class="btn" style="background:#dc3545;">Cerrar</button>
-    </div>
-
-    <!-- Generador de código de barras simple -->
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script>
-        // Generar código de barras con el ID de transacción
         try {
-            JsBarcode("#barcode", "<?php echo $folio; ?>", {
+            JsBarcode("#barcode", "<?php echo $codigo_barras; ?>", {
                 format: "CODE128",
-                width: 1.5,
-                height: 40,
-                displayValue: true,
-                fontSize: 10,
-                margin: 0
+                // AJUSTE DE BARRAS:
+                // width 1.2: Un poco más grueso que el 1 anterior (para que se vea 'grande' pero quepa)
+                // height 60: Más alto para que destaque
+                width: 1.2,      
+                height: 60,    
+                displayValue: false, 
+                margin: 0,
+                flat: true 
             });
-        } catch (e) {
-            console.error("Error generando código de barras", e);
-        }
+        } catch (e) {}
 
-        // Imprimir automáticamente (Opcional)
-        // window.onload = function() { window.print(); }
-
-        // --- FUNCIÓN INTELIGENTE PARA CERRAR ---
         function cerrarTicket() {
-            // 1. Intentamos cerrar la ventana (funciona si es popup)
             window.close();
-            
-            // 2. Si el navegador no la cerró en 200ms, redirigimos al panel de control
-            // Esto asegura que el botón SIEMPRE haga algo útil.
             setTimeout(function() {
-                // Usamos ruta absoluta por seguridad
                 window.location.href = '/local3M/control.php';
-            }, 200);
+            }, 300);
         }
     </script>
-
 </body>
 </html>

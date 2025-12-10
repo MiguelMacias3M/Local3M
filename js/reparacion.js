@@ -3,15 +3,9 @@ LÓGICA PARA REPARACION.PHP (reparacion.js)
 =====================================
 */
 
-// Array global para guardar los items del carrito
 let carrito = [];
 
-/**
- * Valida que los campos principales no estén vacíos y que el teléfono sea correcto.
- */
 function validarCampos(esParaCarrito) {
-
-    // Si SÍ es para el carrito (true), solo validamos el EQUIPO
     if (esParaCarrito) {
         const tipoReparacion = document.getElementById('tipo_reparacion').value.trim();
         const marcaCelular = document.getElementById('marca_celular').value.trim();
@@ -20,12 +14,10 @@ function validarCampos(esParaCarrito) {
         const adelanto = document.getElementById('adelanto').value.trim();
 
         if (!tipoReparacion || !marcaCelular || !modelo || !monto || !adelanto) {
-            Swal.fire('Campos de Equipo Vacíos', 'Por favor, complete todos los campos del equipo (reparación, marca, modelo, monto y adelanto).', 'warning');
+            Swal.fire('Campos de Equipo Vacíos', 'Por favor, complete todos los campos del equipo.', 'warning');
             return false;
         }
-    }
-    // Si NO es para el carrito (false, o sea, es para ENVIAR), solo validamos el CLIENTE
-    else {
+    } else {
         const nombreCliente = document.getElementById('nombre_cliente').value.trim();
         const telefono = document.getElementById('telefono').value.trim();
         
@@ -38,20 +30,12 @@ function validarCampos(esParaCarrito) {
             return false;
         }
     }
-    
-    // Si pasó la validación que le correspondía
     return true;
 }
 
-/**
- * Agrega la reparación actual al array del carrito.
- */
 function agregarAlCarrito() {
-    // Validamos solo los campos del equipo (true)
     if (!validarCampos(true)) return;
 
-    // Recogemos los datos del formulario
-    // CAMBIO: Usamos parseInt() en lugar de parseFloat()
     const tipoReparacion = document.getElementById('tipo_reparacion').value;
     const marcaCelular = document.getElementById('marca_celular').value;
     const modelo = document.getElementById('modelo').value;
@@ -59,23 +43,17 @@ function agregarAlCarrito() {
     const adelanto = parseInt(document.getElementById('adelanto').value) || 0;
     const deuda = Math.max(monto - adelanto, 0);
 
-    // Creamos el objeto de reparación y lo añadimos al carrito
     const reparacion = { tipoReparacion, marcaCelular, modelo, monto, adelanto, deuda };
     carrito.push(reparacion);
     
-    // Actualizamos la vista del carrito y limpiamos los campos del equipo
     mostrarCarrito();
     limpiarCamposEquipo();
 }
 
-/**
- * Actualiza la lista del carrito en el HTML.
- */
 function mostrarCarrito() {
     const listaCarrito = document.getElementById('lista-carrito');
     const btnRegistrar = document.getElementById('btn-registrar');
     const totalDeudaElement = document.getElementById('total-deuda');
-    const totalLabelElement = document.getElementById('total-label');
     const contenedorTotal = document.getElementById('contenedor-total');
 
     listaCarrito.innerHTML = '';
@@ -83,13 +61,10 @@ function mostrarCarrito() {
     let totalAdelanto = 0;
     let totalDeuda = 0;
 
-    // CAMBIO: Quitado .toFixed(2) de todos lados
     if (carrito.length === 0) {
         listaCarrito.innerHTML = '<li>El carrito está vacío.</li>';
         btnRegistrar.disabled = true;
-        totalLabelElement.textContent = 'Deuda Total:';
         totalDeudaElement.textContent = '$0';
-        contenedorTotal.innerHTML = '<strong id="total-label">Deuda Total:</strong> <span id="total-deuda">$0</span>';
     } else {
         carrito.forEach((reparacion, index) => {
             totalMonto += reparacion.monto;
@@ -111,44 +86,23 @@ function mostrarCarrito() {
 
         totalDeuda = totalMonto - totalAdelanto;
         btnRegistrar.disabled = false;
-
-        if (carrito.length === 1) {
-            // Si hay un solo item, mostramos su deuda
-            contenedorTotal.innerHTML = `<strong id="total-label">Deuda Total:</strong> <span id="total-deuda">$${totalDeuda}</span>`;
-        } else {
-            // Si hay múltiples items, mostramos el desglose
-            contenedorTotal.innerHTML = `
-                <div class="totales-multiples">
-                    <div>Total Monto: <span>$${totalMonto}</span></div>
-                    <div>Total Adelanto: <span>$${totalAdelanto}</span></div>
-                    <div class="total-final">Deuda Total: <span>$${totalDeuda}</span></div>
-                </div>
-            `;
-        }
+        
+        contenedorTotal.innerHTML = `<strong id="total-label">Deuda Total:</strong> <span id="total-deuda">$${totalDeuda}</span>`;
     }
 }
 
-/**
- * Elimina un item del carrito por su índice.
- */
 function eliminarDelCarrito(index) {
     carrito.splice(index, 1);
     mostrarCarrito();
 }
 
-/**
- * Envía el carrito completo al backend (api/registrar_reparaciones.php).
- */
 function enviarCarrito() {
-    // Validamos que el carrito no esté vacío
     if (carrito.length === 0) {
-        Swal.fire('Carrito Vacío', 'Debe agregar al menos una reparación al carrito.', 'warning');
+        Swal.fire('Carrito Vacío', 'Debe agregar al menos una reparación.', 'warning');
         return;
     }
-    // Validamos solo los campos del cliente (false)
     if (!validarCampos(false)) return;
 
-    // Recogemos datos del cliente
     const nombreCliente = document.getElementById('nombre_cliente').value;
     const telefono = document.getElementById('telefono').value;
     const infoExtra = document.getElementById('info_extra').value;
@@ -157,7 +111,7 @@ function enviarCarrito() {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando...';
 
-    // Usamos las variables globales definidas en reparacion.php
+    // Usamos la variable global ID_TRANSACCION definida en el PHP
     const payload = {
         usuario: USUARIO_SESION, 
         nombreCliente,
@@ -167,7 +121,6 @@ function enviarCarrito() {
         id_transaccion: ID_TRANSACCION 
     };
 
-    // Usamos la ruta absoluta
     fetch('/local3M/api/registrar_reparaciones.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -175,22 +128,25 @@ function enviarCarrito() {
     })
     .then(response => response.json())
     .then(data => {
-        console.log(data);
         if (data.success) {
+            // IMPORTANTE: Aquí recibimos el ID correcto del servidor
+            const nuevoIdTransaccion = data.id_transaccion;
+
             Swal.fire({
                 title: 'Registro Exitoso',
                 text: 'Las reparaciones han sido registradas correctamente.',
                 icon: 'success',
                 showCancelButton: true,
                 confirmButtonText: 'Aceptar (Nueva Orden)',
-                cancelButtonText: 'Imprimir Ticket'
+                cancelButtonText: 'Imprimir Ticket',
+                cancelButtonColor: '#ffc107'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // Aceptar: Limpia todo para una nueva orden
                     vaciarCarritoYUI();
+                    location.reload();
                 } else if (result.dismiss === Swal.DismissReason.cancel) {
-                    // Imprimir la ÚLTIMA reparación
-                    imprimirUltimaYLimpiar();
+                    // Enviamos el ID nuevo a la función de imprimir
+                    imprimirUltimaYLimpiar(nuevoIdTransaccion);
                 }
             });
         } else {
@@ -201,54 +157,51 @@ function enviarCarrito() {
     })
     .catch(error => {
         console.error('Error en fetch:', error);
-        Swal.fire('Error de Conexión', 'No se pudo conectar con el servidor. Revisa la consola.', 'error');
+        Swal.fire('Error de Conexión', 'No se pudo conectar con el servidor.', 'error');
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-check-circle"></i> Registrar Orden';
     });
 }
 
-/**
- * Abre el ticket y limpia la UI.
- */
-function imprimirUltimaYLimpiar() {
-    // 1) Abrir ticket
-    // Usamos ruta absoluta
-    window.open('/local3M/generar_ticket.php?ts=' + Date.now(), '_blank');
+// Función corregida para abrir el ticket
+function imprimirUltimaYLimpiar(idTransaccion) {
+    if (idTransaccion) {
+        // Abrimos el ticket con el ID específico de la transacción
+        // Fíjate que aquí NO usamos ?ts=, usamos ?id_transaccion=
+        window.open('/local3M/generar_ticket.php?id_transaccion=' + encodeURIComponent(idTransaccion), '_blank');
+    } else {
+        // Respaldo por si acaso
+        if (typeof ID_TRANSACCION !== 'undefined') {
+             window.open('/local3M/generar_ticket.php?id_transaccion=' + encodeURIComponent(ID_TRANSACCION), '_blank');
+        } else {
+            Swal.fire('Error', 'No se pudo obtener el folio del ticket.', 'error');
+        }
+    }
 
-    // 2) Limpiar UI
-    vaciarCarritoYUI();
+    // Limpiamos y recargamos la página después de un momento
+    setTimeout(() => {
+        vaciarCarritoYUI();
+        location.reload();
+    }, 1000);
 }
 
-/**
- * Resetea el carrito y el formulario completo.
- */
 function vaciarCarritoYUI() {
     carrito = [];
     mostrarCarrito();
     limpiarTodosCampos();
-    
-    // Resetea el botón
     const btn = document.getElementById('btn-registrar');
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-check-circle"></i> Registrar Orden';
 }
 
-/**
- * Calcula la deuda en tiempo real.
- */
 function calcularDeuda() {
-    // CAMBIO: Usamos parseInt()
     var monto = parseInt(document.getElementById('monto').value) || 0;
     var adelanto = parseInt(document.getElementById('adelanto').value) || 0;
     var deuda = monto - adelanto;
-    deuda = deuda < 0 ? 0 : deuda; // La deuda no puede ser negativa
-    // CAMBIO: Quitado .toFixed(2)
+    deuda = deuda < 0 ? 0 : deuda;
     document.getElementById('deuda').value = deuda;
 }
 
-/**
- * Limpia TODOS los campos del formulario (cliente y equipo).
- */
 function limpiarTodosCampos() {
     document.getElementById('nombre_cliente').value = '';
     document.getElementById('telefono').value = '';
@@ -256,9 +209,6 @@ function limpiarTodosCampos() {
     limpiarCamposEquipo();
 }
 
-/**
- * Limpia solo los campos del equipo (usado después de agregar al carrito).
- */
 function limpiarCamposEquipo() {
     document.getElementById('tipo_reparacion').value = '';
     document.getElementById('marca_celular').value = '';

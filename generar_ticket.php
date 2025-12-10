@@ -37,6 +37,7 @@ try {
     $usuario  = $items[0]['usuario'];
     
     // Usamos el campo 'codigo_barras' real de la BD
+    // Si por alguna razón está vacío, usamos id_transaccion como respaldo
     $codigo_barras = !empty($items[0]['codigo_barras']) ? $items[0]['codigo_barras'] : $items[0]['id_transaccion'];
 
     $fecha_format = $fecha; 
@@ -58,7 +59,7 @@ try {
     <style>
         @page {
             margin: 0; 
-            /* Ancho ajustado a 54.5mm para evitar cortes en impresoras de 58mm */
+            /* Ancho ajustado a 54.5mm para evitar cortes por márgenes de impresora */
             size: 54.5mm auto; 
         }
 
@@ -288,8 +289,8 @@ try {
         try {
             JsBarcode("#barcode", "<?php echo $codigo_barras; ?>", {
                 format: "CODE128",
-                width: 1.2,      // Ancho 1.2 para que sea visible y compacto
-                height: 60,      // Alto 60 para que sea fácil de leer
+                width: 1.2,      // Ancho ajustado para legibilidad y espacio
+                height: 60,      // Altura para destacar
                 displayValue: false, 
                 margin: 0,
                 flat: true 

@@ -1,0 +1,15 @@
+Ignorar archivo de conexión (con contraseñas reales)
+
+config/conexion.php
+
+Ignorar archivos del sistema y logs
+
+.DS_Store
+Thumbs.db
+error_log
+debug.log
+
+Ignorar carpetas de IDEs
+
+.vscode/
+.idea/

@@ -1,6 +1,6 @@
 
 config/conexion.php
-
+conexion.php
 Ignorar archivos del sistema y logs
 
 .DS_Store

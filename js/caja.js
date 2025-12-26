@@ -1,0 +1,175 @@
+document.addEventListener('DOMContentLoaded', () => {
+    cargarUsuarios();
+    cargarReporte();
+});
+
+const filtroFecha = document.getElementById('filtroFecha');
+const filtroUsuario = document.getElementById('filtroUsuario');
+const modal = document.getElementById('modalMovimiento');
+const form = document.getElementById('formMovimiento');
+
+// --- 1. CARGAR REPORTE PRINCIPAL ---
+async function cargarReporte() {
+    const fecha = filtroFecha.value;
+    const usuario = filtroUsuario.value;
+
+    try {
+        const res = await fetch(`/local3M/api/caja.php?action=reporte_dia&fecha=${fecha}&usuario=${usuario}`);
+        const json = await res.json();
+
+        if (json.success) {
+            // Actualizar KPIs
+            document.getElementById('valIngresos').textContent = formatoDinero(json.totales.ingreso);
+            document.getElementById('valEgresos').textContent = formatoDinero(json.totales.egreso);
+            document.getElementById('valNeto').textContent = formatoDinero(json.totales.neto);
+
+            // Actualizar Estado Caja (Tarjeta oscura)
+            actualizarEstadoCaja(json.estado_caja);
+
+            // Llenar Tabla
+            llenarTabla(json.movimientos);
+        }
+    } catch (e) { console.error(e); }
+}
+
+// Actualiza el widget de estado de caja
+function actualizarEstadoCaja(estado) {
+    const lblEstado = document.getElementById('lblEstadoCaja');
+    const lblMonto = document.getElementById('lblMontoActual');
+    const lblDetalle = document.getElementById('lblDetalleCaja');
+    const btn = document.getElementById('btnCorteCaja');
+
+    if (estado.estado === 'ABIERTA') {
+        lblEstado.textContent = 'CAJA ABIERTA';
+        lblEstado.style.color = '#28a745'; // Verde
+        lblMonto.textContent = formatoDinero(estado.monto_actual);
+        lblDetalle.textContent = `Por: ${estado.usuario} desde ${new Date(estado.inicio).toLocaleTimeString()}`;
+        
+        btn.innerHTML = '<i class="fas fa-lock"></i> Realizar Corte';
+        btn.onclick = () => window.location.href = 'cierre_caja.php'; // Redirige a la página de corte
+    } else {
+        lblEstado.textContent = 'CAJA CERRADA';
+        lblEstado.style.color = '#dc3545'; // Rojo
+        lblMonto.textContent = '$0.00';
+        lblDetalle.textContent = 'No hay turno activo';
+        
+        btn.innerHTML = '<i class="fas fa-key"></i> Abrir Turno';
+        btn.onclick = () => window.location.href = 'cierre_caja.php'; // Redirige a apertura
+    }
+}
+
+// Llenar la tabla
+function llenarTabla(movs) {
+    const tbody = document.getElementById('tablaBody');
+    tbody.innerHTML = '';
+
+    if (movs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="padding:20px;">No hay movimientos este día.</td></tr>';
+        return;
+    }
+
+    movs.forEach(m => {
+        const esIngreso = parseFloat(m.ingreso) > 0;
+        const monto = esIngreso ? m.ingreso : m.egreso;
+        const claseMonto = esIngreso ? 'monto-ingreso' : 'monto-egreso';
+        const signo = esIngreso ? '+' : '-';
+        const hora = new Date(m.fecha).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${hora}</td>
+            <td><span class="badge badge-secondary">${m.tipo}</span></td>
+            <td>${m.descripcion}</td>
+            <td>${m.categoria || '-'}</td>
+            <td>${m.usuario}</td>
+            <td class="text-right ${claseMonto}">${signo}${formatoDinero(monto)}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// --- 2. GESTIÓN DE MODALES ---
+function abrirModalGasto() {
+    form.reset();
+    document.getElementById('modalTitle').textContent = 'Registrar Gasto (Salida)';
+    document.getElementById('tipoMovimiento').value = 'GASTO';
+    // Cambiar color de botón
+    document.querySelector('#formMovimiento button[type="submit"]').className = 'form-button btn-danger';
+    modal.style.display = 'flex';
+}
+
+function abrirModalIngreso() {
+    form.reset();
+    document.getElementById('modalTitle').textContent = 'Registrar Ingreso Extra';
+    document.getElementById('tipoMovimiento').value = 'INGRESO';
+    // Cambiar color de botón
+    document.querySelector('#formMovimiento button[type="submit"]').className = 'form-button btn-success';
+    modal.style.display = 'flex';
+}
+
+function cerrarModal() { modal.style.display = 'none'; }
+
+async function guardarMovimiento() {
+    const formData = new FormData(form);
+    formData.append('action', 'registrar_movimiento');
+
+    try {
+        const res = await fetch('/local3M/api/caja.php', { method: 'POST', body: formData });
+        const json = await res.json();
+
+        if (json.success) {
+            Swal.fire({ icon: 'success', title: 'Registrado', timer: 1000, showConfirmButton: false });
+            cerrarModal();
+            cargarReporte(); // Actualizar datos
+        } else {
+            Swal.fire('Error', json.error, 'error');
+        }
+    } catch (e) { Swal.fire('Error', 'Error de conexión', 'error'); }
+}
+
+// --- 3. EXTRAS ---
+async function cargarUsuarios() {
+    try {
+        const res = await fetch('/local3M/api/caja.php?action=usuarios');
+        const json = await res.json();
+        if (json.success) {
+            const select = document.getElementById('filtroUsuario');
+            json.data.forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = u;
+                opt.textContent = u;
+                select.appendChild(opt);
+            });
+        }
+    } catch (e) {}
+}
+
+function formatoDinero(amount) {
+    return '$' + parseFloat(amount).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+}
+
+// Exportar CSV simple
+document.getElementById('btnExportar')?.addEventListener('click', () => {
+    let csv = [];
+    const rows = document.querySelectorAll("table tr");
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = [], cols = rows[i].querySelectorAll("td, th");
+        for (let j = 0; j < cols.length; j++) 
+            row.push(cols[j].innerText);
+        csv.push(row.join(","));        
+    }
+
+    const csvFile = new Blob([csv.join("\n")], {type: "text/csv"});
+    const downloadLink = document.createElement("a");
+    downloadLink.download = `Corte_${filtroFecha.value}.csv`;
+    downloadLink.href = window.URL.createObjectURL(csvFile);
+    downloadLink.style.display = "none";
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+});
+
+// Redirección para gestionar turno
+function gestionarCaja() {
+    window.location.href = 'cierre_caja.php'; // Esta página la haremos después si la necesitas
+}

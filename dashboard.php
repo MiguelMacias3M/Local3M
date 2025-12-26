@@ -1,14 +1,53 @@
 <?php
 // 1. Incluimos al "guardia de seguridad" (header.php)
-// Él se encarga de session_start(), anti-caché y comprobar el login.
 include 'templates/header.php';
+// 2. Incluimos la conexión a la base de datos
+include 'config/conexion.php';
 
-// ---- DATOS DE EJEMPLO (eventualmente vendrán de la BD) ----
-$reparaciones_abiertas = 7;
-$ingresos_dia = 320.50;
-$alertas_pendientes = 1;
-$entregas_hoy = 3; 
-$monto_por_cobrar = 1480.00; 
+// ---- OBTENER DATOS REALES DE LA BASE DE DATOS ----
+
+try {
+    // A) Reparaciones Abiertas (Cualquiera que NO esté Entregada o Cancelada)
+    $sqlAbiertas = "SELECT COUNT(*) FROM reparaciones WHERE estado NOT IN ('Entregado', 'Cancelado', 'No se pudo reparar')";
+    $stmtAbiertas = $conn->query($sqlAbiertas);
+    $reparaciones_abiertas = $stmtAbiertas->fetchColumn();
+
+    // B) Ingresos del Día (Suma de ingresos en caja_movimientos HOY)
+    $sqlIngresos = "SELECT COALESCE(SUM(ingreso), 0) FROM caja_movimientos WHERE DATE(fecha) = CURDATE()";
+    $stmtIngresos = $conn->query($sqlIngresos);
+    $ingresos_dia = $stmtIngresos->fetchColumn();
+
+    // C) Entregas para Hoy (Reparaciones marcadas como 'Entregado' HOY)
+    // OJO: Si usas un campo 'fecha_prometida', cambia 'fecha_entrega' por 'fecha_prometida'
+    // Aquí asumo que quieres ver cuántas se entregaron hoy.
+    $sqlEntregas = "SELECT COUNT(*) FROM reparaciones WHERE estado = 'Entregado' AND DATE(fecha_entrega) = CURDATE()";
+    $stmtEntregas = $conn->query($sqlEntregas);
+    $entregas_hoy = $stmtEntregas->fetchColumn();
+
+    // D) Alertas Pendientes (Ejemplo: Stock bajo en mercancía)
+    // Contamos productos con menos de 3 piezas
+    $sqlAlertas = "SELECT COUNT(*) FROM mercancia WHERE cantidad < 3";
+    $stmtAlertas = $conn->query($sqlAlertas);
+    $alertas_pendientes = $stmtAlertas->fetchColumn();
+
+
+    // E) Lista de Reparaciones Recientes (Últimas 5 no entregadas)
+    $sqlRecientes = "SELECT id, nombre_cliente, modelo, tipo_reparacion, estado 
+                     FROM reparaciones 
+                     WHERE estado NOT IN ('Entregado', 'Cancelado')
+                     ORDER BY id DESC LIMIT 5";
+    $stmtRecientes = $conn->query($sqlRecientes);
+    $lista_recientes = $stmtRecientes->fetchAll(PDO::FETCH_ASSOC);
+
+} catch (PDOException $e) {
+    // Si falla la BD, mostramos ceros para no romper la página
+    $reparaciones_abiertas = 0;
+    $ingresos_dia = 0;
+    $entregas_hoy = 0;
+    $alertas_pendientes = 0;
+    $lista_recientes = [];
+    // Opcional: mostrar error en log
+}
 // -----------------------------------------------------------
 ?>
 
@@ -54,33 +93,22 @@ CONTENIDO PRINCIPAL DEL DASHBOARD
     <!-- Entregas para Hoy -->
     <div class="stat-card">
         <div class="stat-icon icon-entrega">
-            <i class="fas fa-calendar-check"></i>
+            <i class="fas fa-check-circle"></i>
         </div>
         <div class="stat-info">
             <h2><?php echo $entregas_hoy; ?></h2>
-            <p>Entregas para Hoy</p>
+            <p>Entregadas Hoy</p>
         </div>
     </div>
 
-    <!-- Pendiente por Cobrar -->
-    <div class="stat-card">
-        <div class="stat-icon icon-cobrar">
-            <i class="fas fa-hand-holding-usd"></i>
-        </div>
-        <div class="stat-info">
-            <h2>$<?php echo number_format($monto_por_cobrar, 2); ?></h2>
-            <p>Pendiente por Cobrar</p>
-        </div>
-    </div>
-
-    <!-- Alertas Pendientes -->
+    <!-- Alertas Pendientes (Stock Bajo) -->
     <div class="stat-card">
         <div class="stat-icon icon-alert">
             <i class="fas fa-exclamation-triangle"></i>
         </div>
         <div class="stat-info">
             <h2><?php echo $alertas_pendientes; ?></h2>
-            <p>Alertas Pendientes</p>
+            <p>Alertas de Stock</p>
         </div>
     </div>
 
@@ -90,7 +118,8 @@ CONTENIDO PRINCIPAL DEL DASHBOARD
   SECCIÓN DE REPARACIONES RECIENTES
 -->
 <div class="content-box">
-    <h2>Reparaciones Abiertas (Vista Rápida)</h2>
+    <h2>Reparaciones Pendientes Recientes</h2>
+    <?php if (count($lista_recientes) > 0): ?>
     <table class="repair-table">
         <thead>
             <tr>
@@ -102,34 +131,34 @@ CONTENIDO PRINCIPAL DEL DASHBOARD
             </tr>
         </thead>
         <tbody>
-            <!-- Los datos vendrían de un loop de PHP -->
+            <?php foreach ($lista_recientes as $fila): ?>
             <tr>
-                <td>1024</td>
-                <td>Ana García</td>
-                <td>iPhone 12</td>
-                <td>Pantalla rota</td>
-                <td><span class="status status-progress">En Progreso</span></td>
+                <td><?php echo $fila['id']; ?></td>
+                <td><?php echo htmlspecialchars($fila['nombre_cliente']); ?></td>
+                <td><?php echo htmlspecialchars($fila['modelo']); ?></td>
+                <td><?php echo htmlspecialchars($fila['tipo_reparacion']); ?></td>
+                <td>
+                    <?php 
+                        // Asignar clase de color según el estado
+                        $estadoClass = 'status-unknown';
+                        $est = strtolower($fila['estado']);
+                        if (strpos($est, 'espera') !== false) $estadoClass = 'status-wait';
+                        elseif (strpos($est, 'revision') !== false || strpos($est, 'diagnosticado') !== false) $estadoClass = 'status-pending';
+                        elseif (strpos($est, 'progreso') !== false) $estadoClass = 'status-progress';
+                        elseif (strpos($est, 'reparado') !== false) $estadoClass = 'status-ready';
+                    ?>
+                    <span class="status <?php echo $estadoClass; ?>"><?php echo htmlspecialchars($fila['estado']); ?></span>
+                </td>
             </tr>
-            <tr>
-                <td>1023</td>
-                <td>Carlos López</td>
-                <td>Dell XPS 15</td>
-                <td>No enciende</td>
-                <td><span class="status status-pending">En Diagnóstico</span></td>
-            </tr>
-            <tr>
-                <td>1022</td>
-                <td>María Fernández</td>
-                <td>Samsung S21</td>
-                <td>Batería no carga</td>
-                <td><span class="status status-wait">Esperando Pieza</span></td>
-            </tr>
+            <?php endforeach; ?>
         </tbody>
     </table>
+    <?php else: ?>
+        <p style="text-align: center; color: #666; padding: 20px;">No hay reparaciones pendientes por ahora.</p>
+    <?php endif; ?>
 </div>
 
 <?php
 // Incluimos el footer
 include 'templates/footer.php';
 ?>
-

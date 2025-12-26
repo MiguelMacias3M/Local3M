@@ -1,0 +1,110 @@
+.cierre-container {
+    max-width: 900px;
+    margin: 0 auto;
+    min-height: 400px;
+    position: relative;
+}
+
+/* Spinner Loader */
+.loader-container {
+    text-align: center;
+    padding: 50px;
+}
+.spinner {
+    width: 40px; height: 40px; border: 4px solid #eee; 
+    border-top-color: #0056b3; border-radius: 50%; 
+    animation: spin 1s linear infinite; margin: 0 auto 10px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Tarjeta Caja Cerrada */
+.caja-card {
+    background: #fff;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    text-align: center;
+    border: 1px solid #e0e0e0;
+}
+.closed-card .card-icon {
+    font-size: 4rem; color: #6c757d; margin-bottom: 20px;
+}
+.closed-card h2 { color: #333; margin-bottom: 10px; }
+
+/* Inputs grandes para dinero */
+.input-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 15px 0;
+}
+.currency-symbol {
+    font-size: 1.5rem; color: #555; padding: 10px; font-weight: bold;
+}
+.big-input {
+    font-size: 1.5rem; text-align: center; width: 200px;
+    padding: 10px; border: 2px solid #ddd; border-radius: 8px;
+}
+.big-input:focus { border-color: #0056b3; outline: none; }
+
+.hint { display: block; color: #666; margin-top: 5px; }
+.btn-lg { width: 100%; padding: 15px; font-size: 1.1rem; margin-top: 20px; }
+
+/* Grid Caja Abierta */
+.caja-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+/* Columna Info */
+.info-card {
+    background: #212529; color: white;
+    padding: 25px; border-radius: 12px;
+    height: 100%; box-sizing: border-box;
+}
+.info-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px; border-bottom: 1px solid #444; padding-bottom: 15px;
+}
+.badge-open {
+    background: #28a745; color: white; padding: 5px 10px; 
+    border-radius: 4px; font-weight: bold; font-size: 0.8rem;
+}
+.system-calc .calc-row {
+    display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 1.1rem;
+}
+.total-row {
+    font-size: 1.5rem; font-weight: bold; margin-top: 10px; color: #ffd700;
+}
+.hint-text { display: block; margin-top: 15px; opacity: 0.6; font-size: 0.8rem; }
+
+/* Formulario Cierre */
+.cierre-form-card {
+    background: #fff; padding: 25px; border-radius: 12px;
+    border: 1px solid #e0e0e0; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+.cierre-form-card h3 { margin-top: 0; color: #0056b3; margin-bottom: 20px; }
+.form-group { margin-bottom: 15px; }
+.form-group label { display: block; font-weight: 600; margin-bottom: 5px; color: #555; }
+.form-input, .form-textarea {
+    width: 100%; padding: 10px; border: 1px solid #ccc; 
+    border-radius: 6px; box-sizing: border-box; font-size: 1rem;
+}
+
+/* Previsualización de Resultados */
+.results-preview {
+    background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;
+    border: 1px solid #eee;
+}
+.res-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+.fw-bold { font-weight: bold; }
+.text-danger { color: #dc3545; }
+.text-success { color: #28a745; }
+.text-primary { color: #0056b3; }
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .caja-grid { grid-template-columns: 1fr; }
+    .info-card { margin-bottom: 20px; }
+}

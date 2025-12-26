@@ -40,16 +40,17 @@ if (!isset($_SESSION['nombre'])) {
                 <li><a href="/local3M/dashboard.php"><i class="fas fa-home"></i> Panel</a></li>
                 <li><a href="/local3M/reparacion.php"><i class="fas fa-plus-circle"></i> Nueva Reparación</a></li>
                 <li><a href="/local3M/control.php"><i class="fas fa-clipboard-list"></i> Control</a></li>
-                <li><a href="/local3M/venta.php"><i class="fas fa-cash-register"></i> Venta</a></li>
-                <li><a href="/local3M/caja.php"><i class="fas fa-piggy-bank"></i> Caja</a></li>
-                <li><a href="/local3M/inventario.php"><i class="fas fa-boxes"></i> Mercancía</a></li>
+                <li><a href="/local3M/venta.php"><i class="fas fas fa-donate"></i> Venta</a></li>
+                <li><a href="/local3M/productos.php"><i class="fas 	fas fa-boxes"></i> Productos</a></li>
+                <li><a href="/local3M/mercancia.php"><i class="fas fa-clipboard-list"></i> Mercancía</a></li>
+                <li><a href="/local3M/caja.php"><i class="fas fa-cash-register"></i> Caja</a></li>
                 
                 </ul>
         </div>
         
         <div class="navbar-user">
             <span>Bienvenido, <?php echo htmlspecialchars($_SESSION['nombre']); ?></span>
-            <span> l </span>
+            <span></span>
             <a href="/local3M/logout.php" class="logout-button">  Cerrar Sesión</a>
         </div>
     </nav>

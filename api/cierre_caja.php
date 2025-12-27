@@ -16,13 +16,16 @@ $action = $_GET['action'] ?? ($_POST['action'] ?? null);
 try {
     // --- 1. OBTENER ESTADO ACTUAL ---
     if ($action === 'estado') {
+        // Buscar caja abierta
         $stmt = $conn->prepare("SELECT * FROM caja_cierres WHERE estado = 'ABIERTA' ORDER BY id DESC LIMIT 1");
         $stmt->execute();
         $caja = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($caja) {
+            // CAJA ABIERTA: Calcular totales en tiempo real
             $fechaApertura = $caja['fecha_apertura'];
             
+            // Usamos caja_movimientos directamente
             $sqlMovs = "SELECT 
                             COALESCE(SUM(ingreso), 0) as ingresos, 
                             COALESCE(SUM(egreso), 0) as egresos 
@@ -32,6 +35,7 @@ try {
             $stmtMovs->execute([':fecha' => $fechaApertura]);
             $movs = $stmtMovs->fetch(PDO::FETCH_ASSOC);
 
+            // Cálculos
             $saldo_inicial = (float)$caja['saldo_inicial'];
             $ingresos = (float)$movs['ingresos'];
             $egresos = (float)$movs['egresos'];
@@ -51,6 +55,7 @@ try {
                 ]
             ]);
         } else {
+            // CAJA CERRADA: Buscar fondo sugerido
             $stmtLast = $conn->query("SELECT fondo_siguiente_dia FROM caja_cierres WHERE estado = 'CERRADA' ORDER BY id DESC LIMIT 1");
             $last = $stmtLast->fetch(PDO::FETCH_ASSOC);
             $fondo = $last ? (float)$last['fondo_siguiente_dia'] : 0;
@@ -69,6 +74,7 @@ try {
         $saldo_inicial = (float)$_POST['saldo_inicial'];
         $usuario = $_SESSION['nombre'];
 
+        // Doble verificación
         $check = $conn->query("SELECT id FROM caja_cierres WHERE estado = 'ABIERTA'");
         if ($check->fetch()) {
             echo json_encode(['success' => false, 'error' => 'Ya existe una caja abierta']);
@@ -93,6 +99,7 @@ try {
 
         $conn->beginTransaction();
 
+        // Recalcular teóricos por seguridad
         $stmtCaja = $conn->prepare("SELECT * FROM caja_cierres WHERE id = ? AND estado = 'ABIERTA'");
         $stmtCaja->execute([$id]);
         $caja = $stmtCaja->fetch(PDO::FETCH_ASSOC);
@@ -105,13 +112,15 @@ try {
 
         $teorico = (float)$caja['saldo_inicial'] + $movs['ing'] - $movs['egr'];
         $diferencia = $real - $teorico;
+        
+        // Retiro = Lo que había físicamente (real) - Lo que se deja para mañana (fondo)
         $retiro = $real - $fondo;
 
-        // RESTAURADO: Guardar con categoria 'Retiro'
+        // Registrar el Retiro en caja_movimientos si es mayor a 0
         if ($retiro > 0) {
-            $sqlRet = "INSERT INTO caja_movimientos 
-                       (id_transaccion, tipo, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, fecha, categoria) 
-                       VALUES (?, 'GASTO', ?, 1, ?, 0, ?, ?, NOW(), 'Retiro')";
+            // CORRECCIÓN: Eliminamos el campo 'categoria' de la consulta
+            $sqlRet = "INSERT INTO caja_movimientos (id_transaccion, tipo, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, fecha) 
+                       VALUES (?, 'GASTO', ?, 1, ?, 0, ?, ?, NOW())";
             $stmtRet = $conn->prepare($sqlRet);
             $stmtRet->execute([
                 'RET-' . date('ymd'),
@@ -122,6 +131,7 @@ try {
             ]);
         }
 
+        // Actualizar tabla de cierres
         $sqlUpdate = "UPDATE caja_cierres SET 
                         fecha_cierre = NOW(), 
                         usuario_cierre = ?, 
@@ -138,7 +148,16 @@ try {
         
         $stmtUpd = $conn->prepare($sqlUpdate);
         $stmtUpd->execute([
-            $usuario, $movs['ing'], $movs['egr'], $teorico, $real, $diferencia, $fondo, $retiro, $notas, $id
+            $usuario, 
+            $movs['ing'], 
+            $movs['egr'], 
+            $teorico, 
+            $real, 
+            $diferencia, 
+            $fondo, 
+            $retiro, 
+            $notas, 
+            $id
         ]);
 
         $conn->commit();

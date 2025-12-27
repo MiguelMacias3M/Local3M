@@ -1,6 +1,6 @@
 <?php include 'templates/header.php'; ?>
 
-<!-- Estilos -->
+<!-- Estilos específicos -->
 <link rel="stylesheet" href="/local3M/css/caja.css?v=1.0">
 
 <div class="page-title">
@@ -22,7 +22,7 @@
             <small id="lblDetalleCaja">...</small>
         </div>
         <div class="status-actions">
-            <!-- El botón cambiará dinámicamente -->
+            <!-- El botón cambiará dinámicamente con JS -->
             <button id="btnCorteCaja" class="form-button btn-primary" onclick="gestionarCaja()">
                 <i class="fas fa-sync-alt"></i> Gestionar Turno
             </button>
@@ -108,7 +108,7 @@
                 </tr>
             </thead>
             <tbody id="tablaBody">
-                <!-- JS -->
+                <!-- Se llena con JS -->
             </tbody>
         </table>
     </div>

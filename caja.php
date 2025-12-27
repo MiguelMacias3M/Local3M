@@ -1,38 +1,34 @@
 <?php include 'templates/header.php'; ?>
 
 <!-- 
-    IMPORTANTE: Cambiamos ?v=1.0 a ?v=FIX_MODAL 
-    Esto obliga al navegador a cargar los estilos nuevos del modal
+    IMPORTANTE: ?v=FINAL_MODAL para forzar la carga de los nuevos estilos 
 -->
-<link rel="stylesheet" href="/local3M/css/caja.css?v=FIX_MODAL">
+<link rel="stylesheet" href="/local3M/css/caja.css?v=FINAL_MODAL">
 
 <div class="page-title">
     <h1>Flujo de Caja</h1>
     <p>Consulta ingresos, gastos y el estado actual de la caja.</p>
 </div>
 
-<!-- PANEL SUPERIOR: Estado de Caja y Filtros -->
+<!-- PANEL SUPERIOR: Estado y Filtros -->
 <div class="caja-header-grid">
     
-    <!-- Estado de la Caja (Tarjeta Destacada) -->
+    <!-- Tarjeta Estado -->
     <div class="content-box status-card" id="statusCard">
-        <div class="status-icon">
-            <i class="fas fa-cash-register"></i>
-        </div>
+        <div class="status-icon"><i class="fas fa-cash-register"></i></div>
         <div class="status-info">
             <h3 id="lblEstadoCaja">Cargando...</h3>
             <div class="money-display" id="lblMontoActual">$0.00</div>
             <small id="lblDetalleCaja">...</small>
         </div>
         <div class="status-actions">
-            <!-- El botón cambiará dinámicamente con JS -->
             <button id="btnCorteCaja" class="form-button btn-primary" onclick="gestionarCaja()">
                 <i class="fas fa-sync-alt"></i> Gestionar Turno
             </button>
         </div>
     </div>
 
-    <!-- Filtros -->
+    <!-- Tarjeta Filtros -->
     <div class="content-box filters-card">
         <h3><i class="fas fa-filter"></i> Filtros de Reporte</h3>
         <div class="filters-row">
@@ -54,7 +50,7 @@
     </div>
 </div>
 
-<!-- TARJETAS DE TOTALES DEL DÍA -->
+<!-- KPI GRID (Indicadores) -->
 <div class="kpi-grid">
     <div class="kpi-card kpi-success">
         <div class="kpi-icon"><i class="fas fa-arrow-down"></i></div>
@@ -63,7 +59,6 @@
             <span class="kpi-value" id="valIngresos">$0.00</span>
         </div>
     </div>
-
     <div class="kpi-card kpi-danger">
         <div class="kpi-icon"><i class="fas fa-arrow-up"></i></div>
         <div class="kpi-data">
@@ -71,7 +66,6 @@
             <span class="kpi-value" id="valEgresos">$0.00</span>
         </div>
     </div>
-
     <div class="kpi-card kpi-info">
         <div class="kpi-icon"><i class="fas fa-wallet"></i></div>
         <div class="kpi-data">
@@ -117,10 +111,13 @@
     </div>
 </div>
 
-<!-- MODAL PARA REGISTRAR MOVIMIENTO -->
-<div id="modalMovimiento" class="modal-overlay" style="display:none;">
-    <div class="modal-content">
-        <button class="modal-close" onclick="cerrarModal()">&times;</button>
+<!-- 
+    MODAL (UBICADO AL FINAL DEL ARCHIVO PARA EVITAR ERRORES DE POSICIÓN)
+    Usamos clases 'custom-overlay' y 'custom-modal' para evitar conflictos con Bootstrap
+-->
+<div id="modalMovimiento" class="custom-overlay" style="display:none;">
+    <div class="custom-modal">
+        <button class="custom-close" onclick="cerrarModal()">&times;</button>
         <h2 id="modalTitle">Registrar Gasto</h2>
         
         <form id="formMovimiento" onsubmit="return false;">
@@ -128,7 +125,7 @@
             
             <div class="form-group">
                 <label>Descripción <span class="text-danger">*</span></label>
-                <input type="text" class="form-input" name="descripcion" id="descripcion" placeholder="Ej: Comida, Transporte, Pago Proveedor" required>
+                <input type="text" class="form-input" name="descripcion" id="descripcion" placeholder="Ej: Comida, Transporte" required>
             </div>
 
             <div class="row-2-col">
@@ -142,7 +139,7 @@
                         <option value="General">General</option>
                         <option value="Alimentos">Alimentos</option>
                         <option value="Transporte">Transporte</option>
-                        <option value="Servicios">Servicios (Luz/Net)</option>
+                        <option value="Servicios">Servicios (Luz/Internet)</option>
                         <option value="Proveedores">Proveedores</option>
                         <option value="Retiro">Retiro de Efectivo</option>
                     </select>

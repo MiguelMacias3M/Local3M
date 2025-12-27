@@ -1,7 +1,10 @@
 <?php include 'templates/header.php'; ?>
 
-<!-- Estilos específicos -->
-<link rel="stylesheet" href="/local3M/css/caja.css?v=1.0">
+<!-- 
+    IMPORTANTE: Cambiamos ?v=1.0 a ?v=FIX_MODAL 
+    Esto obliga al navegador a cargar los estilos nuevos del modal
+-->
+<link rel="stylesheet" href="/local3M/css/caja.css?v=FIX_MODAL">
 
 <div class="page-title">
     <h1>Flujo de Caja</h1>

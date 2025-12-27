@@ -1,8 +1,8 @@
 <?php
 session_start();
+ini_set('display_errors', 0); 
+error_reporting(E_ALL); 
 header('Content-Type: application/json; charset=utf-8');
-ini_set('display_errors', 0);
-error_reporting(0);
 
 if (!isset($_SESSION['nombre'])) {
     echo json_encode(['success' => false, 'error' => 'No autorizado']);
@@ -14,12 +14,13 @@ include '../config/conexion.php';
 $action = $_GET['action'] ?? ($_POST['action'] ?? null);
 
 try {
-    // --- 1. OBTENER REPORTE DEL DÍA (KPIs y Tabla) ---
+    // --- 1. REPORTES ---
     if ($action === 'reporte_dia') {
         $fecha = $_GET['fecha'] ?? date('Y-m-d');
         $usuario = $_GET['usuario'] ?? '';
 
-        // Filtros base
+        // Filtramos usando CATEGORIA != 'Retiro' para ver solo operación
+        // Esto oculta los retiros de caja del balance operativo diario
         $where = "DATE(fecha) = :fecha AND COALESCE(categoria, '') != 'Retiro'";
         $params = [':fecha' => $fecha];
 
@@ -28,27 +29,31 @@ try {
             $params[':usuario'] = $usuario;
         }
 
-        // 1.1 Totales Generales
-        $sqlTot = "SELECT 
-                    COALESCE(SUM(ingreso), 0) as ingreso, 
-                    COALESCE(SUM(egreso), 0) as egreso
-                   FROM vw_caja_unificada 
-                   WHERE $where";
-        $stmt = $conn->prepare($sqlTot);
-        $stmt->execute($params);
-        $totales = $stmt->fetch(PDO::FETCH_ASSOC);
+        // 1.1 Totales
+        try {
+            $sqlTot = "SELECT 
+                        COALESCE(SUM(ingreso), 0) as ingreso, 
+                        COALESCE(SUM(egreso), 0) as egreso
+                       FROM caja_movimientos 
+                       WHERE $where";
+            $stmt = $conn->prepare($sqlTot);
+            $stmt->execute($params);
+            $totales = $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $totales = ['ingreso'=>0, 'egreso'=>0];
+        }
         
         $totales['neto'] = $totales['ingreso'] - $totales['egreso'];
 
-        // 1.2 Lista de Movimientos
-        $sqlList = "SELECT * FROM vw_caja_unificada 
+        // 1.2 Movimientos
+        $sqlList = "SELECT id, id_transaccion, fecha, tipo, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, categoria 
+                    FROM caja_movimientos 
                     WHERE $where 
-                    ORDER BY fecha DESC"; // Más recientes primero
+                    ORDER BY fecha DESC";
         $stmtList = $conn->prepare($sqlList);
         $stmtList->execute($params);
         $movimientos = $stmtList->fetchAll(PDO::FETCH_ASSOC);
 
-        // 1.3 Estado de la Caja Actual (Independiente de la fecha del reporte)
         $estadoCaja = obtenerEstadoCaja($conn);
 
         echo json_encode([
@@ -60,23 +65,28 @@ try {
         exit();
     }
 
-    // --- 2. REGISTRAR GASTO / INGRESO EXTRA ---
+    // --- 2. REGISTRAR MOVIMIENTO (GASTO/INGRESO) ---
     if ($action === 'registrar_movimiento') {
-        $tipo = $_POST['tipo']; // 'GASTO' o 'INGRESO'
+        $tipo = $_POST['tipo'];
         $descripcion = trim($_POST['descripcion']);
         $monto = (float)$_POST['monto'];
-        $categoria = $_POST['categoria'] ?? 'General';
+        $categoria = $_POST['categoria'] ?? 'General'; 
 
         if ($monto <= 0 || empty($descripcion)) {
             echo json_encode(['success' => false, 'error' => 'Datos inválidos']);
             exit();
         }
 
-        // Generar ID transacción simple para gastos
-        $idTx = ($tipo === 'GASTO' ? 'GAS' : 'ING') . date('ymdHi') . rand(10,99);
+        // Si la categoría es 'Retiro', cambiamos el tipo para mantener coherencia interna
+        if ($tipo === 'GASTO' && ($categoria === 'Retiro' || $categoria === 'Retiro de Efectivo')) {
+            $tipo = 'RETIRO';
+        }
+
+        $idTx = ($tipo === 'GASTO' ? 'GAS' : ($tipo === 'RETIRO' ? 'RET' : 'ING')) . date('ymdHi') . rand(10,99);
         
         $ingreso = ($tipo === 'INGRESO') ? $monto : 0;
-        $egreso = ($tipo === 'GASTO') ? $monto : 0;
+        // Si es GASTO o RETIRO, es egreso
+        $egreso = ($tipo === 'INGRESO') ? 0 : $monto;
 
         $sql = "INSERT INTO caja_movimientos 
                 (id_transaccion, tipo, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, fecha, categoria) 
@@ -89,7 +99,7 @@ try {
         exit();
     }
 
-    // --- 3. OBTENER LISTA DE USUARIOS (Para filtro) ---
+    // --- 3. USUARIOS ---
     if ($action === 'usuarios') {
         $stmt = $conn->query("SELECT DISTINCT usuario FROM caja_movimientos ORDER BY usuario");
         $users = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -101,28 +111,19 @@ try {
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
 
-// Función auxiliar para calcular cuánto dinero hay FÍSICAMENTE en caja ahora
 function obtenerEstadoCaja($conn) {
-    // Buscar última apertura abierta
     $stmt = $conn->query("SELECT * FROM caja_cierres WHERE estado = 'ABIERTA' ORDER BY id DESC LIMIT 1");
     $caja = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($caja) {
-        // Caja ABIERTA: Saldo Inicial + Ingresos - Egresos (desde la hora de apertura)
         $fechaApertura = $caja['fecha_apertura'];
-        
-        $sql = "SELECT 
-                    COALESCE(SUM(ingreso), 0) as ing, 
-                    COALESCE(SUM(egreso), 0) as egr 
-                FROM vw_caja_unificada 
-                WHERE fecha >= ?";
+        // Sumar todos los movimientos desde la apertura para calcular saldo actual
+        $sql = "SELECT COALESCE(SUM(ingreso), 0) as ing, COALESCE(SUM(egreso), 0) as egr 
+                FROM caja_movimientos WHERE fecha >= ?";
         $stmtCalc = $conn->prepare($sql);
         $stmtCalc->execute([$fechaApertura]);
         $movs = $stmtCalc->fetch(PDO::FETCH_ASSOC);
 
-        $actual = (float)$caja['saldo_inicial'] + $movs['ing']; // Solo sumamos ingresos al arqueo teórico
-        // Nota: Los egresos se restan visualmente, pero el "Fondo" suele contarse diferente. 
-        // Para simplificar: Dinero en Caja = Inicial + Entradas - Salidas
         $enCaja = (float)$caja['saldo_inicial'] + $movs['ing'] - $movs['egr'];
 
         return [
@@ -132,7 +133,6 @@ function obtenerEstadoCaja($conn) {
             'inicio' => $caja['fecha_apertura']
         ];
     } else {
-        // Caja CERRADA
         return ['estado' => 'CERRADA', 'monto_actual' => 0];
     }
 }

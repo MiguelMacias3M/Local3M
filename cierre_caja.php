@@ -9,10 +9,17 @@
 </div>
 
 <div class="cierre-container">
-    <!-- Spinner de carga -->
-    <div id="loader" class="loader-container">
-        <div class="spinner"></div>
-        <p>Verificando estado de caja...</p>
+    <!-- Encabezado con Botón de Regreso -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div id="loader" class="loader-container" style="margin:0; padding:0;">
+            <div class="spinner" style="width:20px; height:20px; border-width:2px; display:inline-block; vertical-align:middle;"></div>
+            <span style="font-size:0.9rem; margin-left:10px;">Cargando estado...</span>
+        </div>
+        
+        <!-- AQUÍ ESTÁ EL BOTÓN QUE PEDISTE -->
+        <a href="caja.php" class="form-button btn-secondary" style="text-decoration:none;">
+            <i class="fas fa-arrow-left"></i> Volver a Caja
+        </a>
     </div>
 
     <!-- VISTA 1: CAJA CERRADA (Formulario de Apertura) -->

@@ -3,36 +3,42 @@ document.addEventListener('DOMContentLoaded', () => {
     cargarReporte();
 });
 
+// Referencias a elementos del DOM
 const filtroFecha = document.getElementById('filtroFecha');
 const filtroUsuario = document.getElementById('filtroUsuario');
 const modal = document.getElementById('modalMovimiento');
 const form = document.getElementById('formMovimiento');
 
-// --- 1. CARGAR REPORTE PRINCIPAL ---
+// ==========================================
+// 1. CARGA DE REPORTES Y DATOS
+// ==========================================
+
 async function cargarReporte() {
     const fecha = filtroFecha.value;
     const usuario = filtroUsuario.value;
 
     try {
+        // Petición a la API para obtener totales y movimientos
         const res = await fetch(`/local3M/api/caja.php?action=reporte_dia&fecha=${fecha}&usuario=${usuario}`);
         const json = await res.json();
 
         if (json.success) {
-            // Actualizar KPIs
+            // Actualizar KPIs (Indicadores)
             document.getElementById('valIngresos').textContent = formatoDinero(json.totales.ingreso);
             document.getElementById('valEgresos').textContent = formatoDinero(json.totales.egreso);
             document.getElementById('valNeto').textContent = formatoDinero(json.totales.neto);
 
-            // Actualizar Estado Caja (Tarjeta oscura)
+            // Actualizar Estado Caja (Tarjeta superior)
             actualizarEstadoCaja(json.estado_caja);
 
-            // Llenar Tabla
+            // Llenar Tabla de movimientos
             llenarTabla(json.movimientos);
         }
-    } catch (e) { console.error(e); }
+    } catch (e) {
+        console.error("Error cargando reporte:", e);
+    }
 }
 
-// Actualiza el widget de estado de caja
 function actualizarEstadoCaja(estado) {
     const lblEstado = document.getElementById('lblEstadoCaja');
     const lblMonto = document.getElementById('lblMontoActual');
@@ -43,28 +49,27 @@ function actualizarEstadoCaja(estado) {
         lblEstado.textContent = 'CAJA ABIERTA';
         lblEstado.style.color = '#28a745'; // Verde
         lblMonto.textContent = formatoDinero(estado.monto_actual);
-        lblDetalle.textContent = `Por: ${estado.usuario} desde ${new Date(estado.inicio).toLocaleTimeString()}`;
+        lblDetalle.textContent = `Por: ${estado.usuario}`;
         
         btn.innerHTML = '<i class="fas fa-lock"></i> Realizar Corte';
-        btn.onclick = () => window.location.href = 'cierre_caja.php'; // Redirige a la página de corte
+        btn.onclick = () => window.location.href = 'cierre_caja.php';
     } else {
         lblEstado.textContent = 'CAJA CERRADA';
         lblEstado.style.color = '#dc3545'; // Rojo
         lblMonto.textContent = '$0.00';
-        lblDetalle.textContent = 'No hay turno activo';
+        lblDetalle.textContent = 'Sin turno activo';
         
         btn.innerHTML = '<i class="fas fa-key"></i> Abrir Turno';
-        btn.onclick = () => window.location.href = 'cierre_caja.php'; // Redirige a apertura
+        btn.onclick = () => window.location.href = 'cierre_caja.php';
     }
 }
 
-// Llenar la tabla
 function llenarTabla(movs) {
     const tbody = document.getElementById('tablaBody');
     tbody.innerHTML = '';
 
     if (movs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="padding:20px;">No hay movimientos este día.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="padding:20px;">No hay movimientos registrados hoy.</td></tr>';
         return;
     }
 
@@ -73,7 +78,10 @@ function llenarTabla(movs) {
         const monto = esIngreso ? m.ingreso : m.egreso;
         const claseMonto = esIngreso ? 'monto-ingreso' : 'monto-egreso';
         const signo = esIngreso ? '+' : '-';
-        const hora = new Date(m.fecha).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        
+        // Formatear fecha y hora
+        const fechaObj = new Date(m.fecha);
+        const hora = fechaObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -88,46 +96,91 @@ function llenarTabla(movs) {
     });
 }
 
-// --- 2. GESTIÓN DE MODALES ---
+// ==========================================
+// 2. LÓGICA DE BOTONES (GASTO / INGRESO)
+// ==========================================
+
+// Función para ABRIR MODAL DE GASTO
 function abrirModalGasto() {
     form.reset();
     document.getElementById('modalTitle').textContent = 'Registrar Gasto (Salida)';
+    // Establecemos el tipo oculto como GASTO
     document.getElementById('tipoMovimiento').value = 'GASTO';
-    // Cambiar color de botón
-    document.querySelector('#formMovimiento button[type="submit"]').className = 'form-button btn-danger';
+    
+    // Personalizamos el botón de guardar (Rojo para gastos)
+    const btnGuardar = document.querySelector('#formMovimiento button[type="submit"]');
+    if(btnGuardar) {
+        btnGuardar.className = 'form-button btn-danger';
+        btnGuardar.innerHTML = '<i class="fas fa-save"></i> Registrar Gasto';
+    }
+    
     modal.style.display = 'flex';
 }
 
+// Función para ABRIR MODAL DE INGRESO
 function abrirModalIngreso() {
     form.reset();
     document.getElementById('modalTitle').textContent = 'Registrar Ingreso Extra';
+    // Establecemos el tipo oculto como INGRESO
     document.getElementById('tipoMovimiento').value = 'INGRESO';
-    // Cambiar color de botón
-    document.querySelector('#formMovimiento button[type="submit"]').className = 'form-button btn-success';
+    
+    // Personalizamos el botón de guardar (Verde para ingresos)
+    const btnGuardar = document.querySelector('#formMovimiento button[type="submit"]');
+    if(btnGuardar) {
+        btnGuardar.className = 'form-button btn-success';
+        btnGuardar.innerHTML = '<i class="fas fa-save"></i> Registrar Ingreso';
+    }
+
     modal.style.display = 'flex';
 }
 
-function cerrarModal() { modal.style.display = 'none'; }
+function cerrarModal() {
+    modal.style.display = 'none';
+}
 
+// Función para GUARDAR EL MOVIMIENTO (Llamada al API)
 async function guardarMovimiento() {
+    const descripcion = document.getElementById('descripcion').value.trim();
+    const monto = document.getElementById('monto').value;
+
+    // Validación simple
+    if (!descripcion || !monto || parseFloat(monto) <= 0) {
+        Swal.fire('Datos incompletos', 'Por favor ingresa una descripción y un monto válido.', 'warning');
+        return;
+    }
+
     const formData = new FormData(form);
     formData.append('action', 'registrar_movimiento');
 
     try {
-        const res = await fetch('/local3M/api/caja.php', { method: 'POST', body: formData });
+        const res = await fetch('/local3M/api/caja.php', {
+            method: 'POST',
+            body: formData
+        });
         const json = await res.json();
 
         if (json.success) {
-            Swal.fire({ icon: 'success', title: 'Registrado', timer: 1000, showConfirmButton: false });
+            Swal.fire({
+                icon: 'success',
+                title: 'Movimiento Registrado',
+                showConfirmButton: false,
+                timer: 1500
+            });
             cerrarModal();
-            cargarReporte(); // Actualizar datos
+            cargarReporte(); // Recargar la tabla y los totales para ver el cambio
         } else {
-            Swal.fire('Error', json.error, 'error');
+            Swal.fire('Error', json.error || 'No se pudo guardar el movimiento', 'error');
         }
-    } catch (e) { Swal.fire('Error', 'Error de conexión', 'error'); }
+    } catch (e) {
+        console.error(e);
+        Swal.fire('Error', 'Fallo de conexión con el servidor', 'error');
+    }
 }
 
-// --- 3. EXTRAS ---
+// ==========================================
+// 3. UTILIDADES
+// ==========================================
+
 async function cargarUsuarios() {
     try {
         const res = await fetch('/local3M/api/caja.php?action=usuarios');
@@ -148,28 +201,31 @@ function formatoDinero(amount) {
     return '$' + parseFloat(amount).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
 }
 
-// Exportar CSV simple
-document.getElementById('btnExportar')?.addEventListener('click', () => {
-    let csv = [];
-    const rows = document.querySelectorAll("table tr");
-    
-    for (let i = 0; i < rows.length; i++) {
-        const row = [], cols = rows[i].querySelectorAll("td, th");
-        for (let j = 0; j < cols.length; j++) 
-            row.push(cols[j].innerText);
-        csv.push(row.join(","));        
-    }
+// Exportar Tabla a CSV
+const btnExportar = document.getElementById('btnExportar');
+if(btnExportar) {
+    btnExportar.addEventListener('click', () => {
+        let csv = [];
+        const rows = document.querySelectorAll("#tablaCaja tr");
+        
+        for (let i = 0; i < rows.length; i++) {
+            const row = [], cols = rows[i].querySelectorAll("td, th");
+            for (let j = 0; j < cols.length; j++) 
+                row.push('"' + cols[j].innerText + '"');
+            csv.push(row.join(","));        
+        }
 
-    const csvFile = new Blob([csv.join("\n")], {type: "text/csv"});
-    const downloadLink = document.createElement("a");
-    downloadLink.download = `Corte_${filtroFecha.value}.csv`;
-    downloadLink.href = window.URL.createObjectURL(csvFile);
-    downloadLink.style.display = "none";
-    document.body.appendChild(downloadLink);
-    downloadLink.click();
-});
+        const csvFile = new Blob([csv.join("\n")], {type: "text/csv"});
+        const downloadLink = document.createElement("a");
+        downloadLink.download = `Reporte_Caja_${new Date().toLocaleDateString()}.csv`;
+        downloadLink.href = window.URL.createObjectURL(csvFile);
+        downloadLink.style.display = "none";
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+    });
+}
 
-// Redirección para gestionar turno
+// Redirigir a gestión de caja
 function gestionarCaja() {
-    window.location.href = 'cierre_caja.php'; // Esta página la haremos después si la necesitas
+    window.location.href = 'cierre_caja.php';
 }

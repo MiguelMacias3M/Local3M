@@ -108,7 +108,7 @@ try {
         $diferencia = $real - $teorico;
         $retiro = $real - $fondo;
 
-        // CORRECCIÓN: Guardar retiro con tipo 'RETIRO' para que no cuente como gasto operativo
+        // REGISTRAR RETIRO COMO TIPO 'RETIRO' Y CATEGORÍA 'CIERRE'
         if ($retiro > 0) {
             $sqlRet = "INSERT INTO caja_movimientos 
                        (id_transaccion, tipo, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, fecha, categoria) 

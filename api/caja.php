@@ -14,14 +14,14 @@ include '../config/conexion.php';
 $action = $_GET['action'] ?? ($_POST['action'] ?? null);
 
 try {
-    // --- 1. REPORTES ---
+    // --- 1. REPORTES DEL DÍA ---
     if ($action === 'reporte_dia') {
         $fecha = $_GET['fecha'] ?? date('Y-m-d');
         $usuario = $_GET['usuario'] ?? '';
 
-        // Filtramos usando CATEGORIA != 'Retiro' para ver solo operación
-        // Esto oculta los retiros de caja del balance operativo diario
-        $where = "DATE(fecha) = :fecha AND COALESCE(categoria, '') != 'Retiro'";
+        // CORRECCIÓN DEFINITIVA: Usamos "tipo != 'RETIRO'"
+        // Esto excluye tanto los retiros manuales como los automáticos del cierre.
+        $where = "DATE(fecha) = :fecha AND tipo != 'RETIRO'";
         $params = [':fecha' => $fecha];
 
         if (!empty($usuario) && $usuario !== 'Todos') {
@@ -29,7 +29,7 @@ try {
             $params[':usuario'] = $usuario;
         }
 
-        // 1.1 Totales
+        // 1.1 Totales (Sin contar retiros)
         try {
             $sqlTot = "SELECT 
                         COALESCE(SUM(ingreso), 0) as ingreso, 
@@ -45,11 +45,21 @@ try {
         
         $totales['neto'] = $totales['ingreso'] - $totales['egreso'];
 
-        // 1.2 Movimientos
-        $sqlList = "SELECT id, id_transaccion, fecha, tipo, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, categoria 
-                    FROM caja_movimientos 
-                    WHERE $where 
+        // 1.2 Lista de Movimientos
+        // Aquí SÍ mostramos los retiros para que se vean en la tabla, aunque no sumen al gasto.
+        // Quitamos el filtro solo para la lista visual.
+        $whereLista = "DATE(fecha) = :fecha"; 
+        // Si quieres que TAMPOCO aparezcan en la tabla, usa $where en vez de $whereLista
+        
+        $sqlList = "SELECT * FROM caja_movimientos 
+                    WHERE $whereLista 
                     ORDER BY fecha DESC";
+        
+        // Si hay filtro de usuario, lo aplicamos también aquí
+        if (!empty($usuario) && $usuario !== 'Todos') {
+            $sqlList = "SELECT * FROM caja_movimientos WHERE $whereLista AND usuario = :usuario ORDER BY fecha DESC";
+        }
+
         $stmtList = $conn->prepare($sqlList);
         $stmtList->execute($params);
         $movimientos = $stmtList->fetchAll(PDO::FETCH_ASSOC);
@@ -65,27 +75,25 @@ try {
         exit();
     }
 
-    // --- 2. REGISTRAR MOVIMIENTO (GASTO/INGRESO) ---
+    // --- 2. REGISTRAR MOVIMIENTO MANUAL ---
     if ($action === 'registrar_movimiento') {
         $tipo = $_POST['tipo'];
         $descripcion = trim($_POST['descripcion']);
         $monto = (float)$_POST['monto'];
-        $categoria = $_POST['categoria'] ?? 'General'; 
+        $categoria = $_POST['categoria'] ?? 'General';
 
         if ($monto <= 0 || empty($descripcion)) {
             echo json_encode(['success' => false, 'error' => 'Datos inválidos']);
             exit();
         }
 
-        // Si la categoría es 'Retiro', cambiamos el tipo para mantener coherencia interna
-        if ($tipo === 'GASTO' && ($categoria === 'Retiro' || $categoria === 'Retiro de Efectivo')) {
+        // Si la categoría es Retiro, forzamos el tipo 'RETIRO'
+        if ($tipo === 'GASTO' && (stripos($categoria, 'Retiro') !== false)) {
             $tipo = 'RETIRO';
         }
 
         $idTx = ($tipo === 'GASTO' ? 'GAS' : ($tipo === 'RETIRO' ? 'RET' : 'ING')) . date('ymdHi') . rand(10,99);
-        
         $ingreso = ($tipo === 'INGRESO') ? $monto : 0;
-        // Si es GASTO o RETIRO, es egreso
         $egreso = ($tipo === 'INGRESO') ? 0 : $monto;
 
         $sql = "INSERT INTO caja_movimientos 
@@ -117,7 +125,7 @@ function obtenerEstadoCaja($conn) {
 
     if ($caja) {
         $fechaApertura = $caja['fecha_apertura'];
-        // Sumar todos los movimientos desde la apertura para calcular saldo actual
+        // Aquí SÍ restamos los retiros porque el dinero ya no está en el cajón físico
         $sql = "SELECT COALESCE(SUM(ingreso), 0) as ing, COALESCE(SUM(egreso), 0) as egr 
                 FROM caja_movimientos WHERE fecha >= ?";
         $stmtCalc = $conn->prepare($sql);
@@ -136,4 +144,3 @@ function obtenerEstadoCaja($conn) {
         return ['estado' => 'CERRADA', 'monto_actual' => 0];
     }
 }
-?>

@@ -139,7 +139,16 @@ try {
         
         $stmtUpd = $conn->prepare($sqlUpdate);
         $stmtUpd->execute([
-            $usuario, $movs['ing'], $movs['egr'], $teorico, $real, $diferencia, $fondo, $retiro, $notas, $id
+            $usuario, 
+            $movs['ing'], 
+            $movs['egr'], 
+            $teorico, 
+            $real, 
+            $diferencia, 
+            $fondo, 
+            $retiro, 
+            $notas, 
+            $id
         ]);
 
         $conn->commit();

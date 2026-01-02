@@ -1,42 +1,131 @@
 document.addEventListener('DOMContentLoaded', () => {
     cargarUsuarios();
-    cargarReporte();
+    cargarReporte(); // Carga con fecha de hoy por defecto
 });
 
-// Referencias a elementos del DOM
-const filtroFecha = document.getElementById('filtroFecha');
+// Referencias al DOM
+const filtroFechaInicio = document.getElementById('fechaInicio');
+const filtroFechaFin = document.getElementById('fechaFin');
 const filtroUsuario = document.getElementById('filtroUsuario');
 const modal = document.getElementById('modalMovimiento');
 const form = document.getElementById('formMovimiento');
 
+// Variables globales para exportar lo que se ve en pantalla
+let datosMovimientos = [];
+let datosTotales = {};
+
 // ==========================================
-// 1. CARGA DE REPORTES Y DATOS
+// 1. MANEJO DE FECHAS (Periodos)
+// ==========================================
+function cambiarPeriodo() {
+    const periodo = document.getElementById('filtroPeriodo').value;
+    const hoy = new Date();
+    let inicio = new Date();
+    let fin = new Date();
+
+    // Deshabilitar inputs si no es personalizado
+    if (periodo !== 'personalizado') {
+        filtroFechaInicio.disabled = false; // Dejamos editables por si acaso, o true si prefieres bloquear
+        filtroFechaFin.disabled = false;
+    }
+
+    if (periodo === 'dia') {
+        // Hoy: inicio y fin son hoy
+    } else if (periodo === 'ayer') {
+        inicio.setDate(hoy.getDate() - 1);
+        fin.setDate(hoy.getDate() - 1);
+    } else if (periodo === 'semana') {
+        // Lunes de esta semana
+        const diaSemana = hoy.getDay() || 7; // 1 (Lunes) a 7 (Domingo)
+        // Restamos días para llegar al lunes
+        inicio.setDate(hoy.getDate() - (diaSemana - 1));
+        // Fin es hoy (o el domingo si prefieres semana completa)
+    } else if (periodo === 'mes') {
+        inicio.setDate(1); // Día 1 del mes actual
+        // Fin es hoy
+    } else {
+        // Personalizado: No cambiamos las fechas, el usuario elige
+        return; 
+    }
+
+    // Formatear a YYYY-MM-DD para los inputs HTML
+    filtroFechaInicio.value = inicio.toISOString().split('T')[0];
+    filtroFechaFin.value = fin.toISOString().split('T')[0];
+    
+    // Recargar automáticamente al cambiar el combo
+    if (periodo !== 'personalizado') {
+        cargarReporte();
+    }
+}
+
+// ==========================================
+// 2. CARGA DE REPORTES (API)
 // ==========================================
 
 async function cargarReporte() {
-    const fecha = filtroFecha.value;
+    const inicio = filtroFechaInicio.value;
+    const fin = filtroFechaFin.value;
     const usuario = filtroUsuario.value;
 
     try {
-        // Petición a la API para obtener totales y movimientos
-        const res = await fetch(`/local3M/api/caja.php?action=reporte_dia&fecha=${fecha}&usuario=${usuario}`);
+        const res = await fetch(`/local3M/api/caja.php?action=reporte_rango&inicio=${inicio}&fin=${fin}&usuario=${usuario}`);
         const json = await res.json();
 
         if (json.success) {
-            // Actualizar KPIs (Indicadores)
-            document.getElementById('valIngresos').textContent = formatoDinero(json.totales.ingreso);
-            document.getElementById('valEgresos').textContent = formatoDinero(json.totales.egreso);
-            document.getElementById('valNeto').textContent = formatoDinero(json.totales.neto);
+            datosTotales = json.totales;
+            datosMovimientos = json.movimientos;
+
+            // Actualizar KPIs
+            document.getElementById('valIngresos').textContent = formatoDinero(datosTotales.ingreso);
+            document.getElementById('valEgresos').textContent = formatoDinero(datosTotales.egreso);
+            document.getElementById('valNeto').textContent = formatoDinero(datosTotales.neto);
 
             // Actualizar Estado Caja (Tarjeta superior)
             actualizarEstadoCaja(json.estado_caja);
 
-            // Llenar Tabla de movimientos
-            llenarTabla(json.movimientos);
+            // Llenar Tabla
+            llenarTabla(datosMovimientos);
+        } else {
+            console.error("Error API:", json.error);
         }
-    } catch (e) {
-        console.error("Error cargando reporte:", e);
+    } catch (e) { console.error("Error de conexión:", e); }
+}
+
+function llenarTabla(movs) {
+    const tbody = document.getElementById('tablaBody');
+    tbody.innerHTML = '';
+
+    if (movs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="padding:20px; color:#666;">No hay movimientos en este periodo.</td></tr>';
+        return;
     }
+
+    movs.forEach(m => {
+        const esIngreso = parseFloat(m.ingreso) > 0;
+        const monto = esIngreso ? m.ingreso : m.egreso;
+        const claseMonto = esIngreso ? 'monto-ingreso' : 'monto-egreso';
+        const signo = esIngreso ? '+' : '-';
+        
+        // Formato de fecha legible
+        const fechaObj = new Date(m.fecha);
+        // Ajuste zona horaria si es necesario o confiar en el string del servidor
+        // Usamos toLocaleString para mostrar fecha y hora
+        const fechaHora = fechaObj.toLocaleString('es-MX', {
+            year: '2-digit', month:'2-digit', day:'2-digit', 
+            hour:'2-digit', minute:'2-digit'
+        });
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${fechaHora}</td>
+            <td><span class="badge badge-secondary">${m.tipo}</span></td>
+            <td>${m.descripcion}</td>
+            <td>${m.categoria || '-'}</td>
+            <td>${m.usuario}</td>
+            <td class="text-right ${claseMonto}">${signo}${formatoDinero(monto)}</td>
+        `;
+        tbody.appendChild(tr);
+    });
 }
 
 function actualizarEstadoCaja(estado) {
@@ -52,6 +141,7 @@ function actualizarEstadoCaja(estado) {
         lblDetalle.textContent = `Por: ${estado.usuario}`;
         
         btn.innerHTML = '<i class="fas fa-lock"></i> Realizar Corte';
+        btn.className = 'form-button btn-primary'; // Asegurar estilo
         btn.onclick = () => window.location.href = 'cierre_caja.php';
     } else {
         lblEstado.textContent = 'CAJA CERRADA';
@@ -60,77 +150,101 @@ function actualizarEstadoCaja(estado) {
         lblDetalle.textContent = 'Sin turno activo';
         
         btn.innerHTML = '<i class="fas fa-key"></i> Abrir Turno';
+        btn.className = 'form-button btn-success'; // Cambiar a verde para abrir
         btn.onclick = () => window.location.href = 'cierre_caja.php';
     }
 }
 
-function llenarTabla(movs) {
-    const tbody = document.getElementById('tablaBody');
-    tbody.innerHTML = '';
-
-    if (movs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="padding:20px;">No hay movimientos registrados hoy.</td></tr>';
+// ==========================================
+// 3. EXPORTAR A EXCEL (SheetJS)
+// ==========================================
+function exportarExcel() {
+    if (!datosMovimientos || datosMovimientos.length === 0) {
+        Swal.fire('Sin datos', 'No hay movimientos para exportar.', 'info');
         return;
     }
 
-    movs.forEach(m => {
+    // 1. Preparar datos (Mapeo limpio)
+    const datosExcel = datosMovimientos.map(m => {
         const esIngreso = parseFloat(m.ingreso) > 0;
-        const monto = esIngreso ? m.ingreso : m.egreso;
-        const claseMonto = esIngreso ? 'monto-ingreso' : 'monto-egreso';
-        const signo = esIngreso ? '+' : '-';
-        
-        // Formatear fecha y hora
-        const fechaObj = new Date(m.fecha);
-        const hora = fechaObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${hora}</td>
-            <td><span class="badge badge-secondary">${m.tipo}</span></td>
-            <td>${m.descripcion}</td>
-            <td>${m.categoria || '-'}</td>
-            <td>${m.usuario}</td>
-            <td class="text-right ${claseMonto}">${signo}${formatoDinero(monto)}</td>
-        `;
-        tbody.appendChild(tr);
+        return {
+            "Fecha": m.fecha,
+            "Tipo": m.tipo,
+            "Descripción": m.descripcion,
+            "Categoría": m.categoria || '-',
+            "Usuario": m.usuario,
+            "Ingreso": esIngreso ? parseFloat(m.ingreso) : 0,
+            "Egreso": esIngreso ? 0 : parseFloat(m.egreso)
+        };
     });
+
+    // 2. Agregar fila de totales al final
+    datosExcel.push({
+        "Fecha": "TOTALES",
+        "Tipo": "", "Descripción": "", "Categoría": "", "Usuario": "",
+        "Ingreso": parseFloat(datosTotales.ingreso),
+        "Egreso": parseFloat(datosTotales.egreso)
+    });
+    // Agregar fila de balance
+    datosExcel.push({
+        "Fecha": "BALANCE NETO",
+        "Tipo": "", "Descripción": "", "Categoría": "", "Usuario": "",
+        "Ingreso": "",
+        "Egreso": parseFloat(datosTotales.neto)
+    });
+
+    // 3. Crear Libro y Hoja
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(datosExcel);
+
+    // Ajustar anchos de columna (Opcional pero recomendado)
+    const wscols = [
+        {wch: 20}, // Fecha
+        {wch: 10}, // Tipo
+        {wch: 40}, // Descripción
+        {wch: 15}, // Categoría
+        {wch: 15}, // Usuario
+        {wch: 12}, // Ingreso
+        {wch: 12}  // Egreso
+    ];
+    ws['!cols'] = wscols;
+
+    XLSX.utils.book_append_sheet(wb, ws, "Reporte Caja");
+
+    // 4. Descargar archivo
+    const fechaNombre = filtroFechaInicio.value === filtroFechaFin.value 
+                        ? filtroFechaInicio.value 
+                        : `${filtroFechaInicio.value}_al_${filtroFechaFin.value}`;
+    
+    XLSX.writeFile(wb, `Reporte_Caja_3M_${fechaNombre}.xlsx`);
 }
 
 // ==========================================
-// 2. LÓGICA DE BOTONES (GASTO / INGRESO)
+// 4. GESTIÓN DE MODALES
 // ==========================================
-
-// Función para ABRIR MODAL DE GASTO
 function abrirModalGasto() {
     form.reset();
-    document.getElementById('modalTitle').textContent = 'Registrar Gasto (Salida)';
-    // Establecemos el tipo oculto como GASTO
+    document.getElementById('modalTitle').textContent = 'Registrar Gasto';
     document.getElementById('tipoMovimiento').value = 'GASTO';
     
-    // Personalizamos el botón de guardar (Rojo para gastos)
-    const btnGuardar = document.querySelector('#formMovimiento button[type="submit"]');
-    if(btnGuardar) {
-        btnGuardar.className = 'form-button btn-danger';
-        btnGuardar.innerHTML = '<i class="fas fa-save"></i> Registrar Gasto';
-    }
+    // Botón rojo
+    const btnSubmit = document.querySelector('#formMovimiento button[type="submit"]');
+    btnSubmit.className = 'form-button btn-danger';
+    btnSubmit.textContent = 'Registrar Gasto';
     
     modal.style.display = 'flex';
 }
 
-// Función para ABRIR MODAL DE INGRESO
 function abrirModalIngreso() {
     form.reset();
-    document.getElementById('modalTitle').textContent = 'Registrar Ingreso Extra';
-    // Establecemos el tipo oculto como INGRESO
+    document.getElementById('modalTitle').textContent = 'Registrar Ingreso';
     document.getElementById('tipoMovimiento').value = 'INGRESO';
     
-    // Personalizamos el botón de guardar (Verde para ingresos)
-    const btnGuardar = document.querySelector('#formMovimiento button[type="submit"]');
-    if(btnGuardar) {
-        btnGuardar.className = 'form-button btn-success';
-        btnGuardar.innerHTML = '<i class="fas fa-save"></i> Registrar Ingreso';
-    }
-
+    // Botón verde
+    const btnSubmit = document.querySelector('#formMovimiento button[type="submit"]');
+    btnSubmit.className = 'form-button btn-success';
+    btnSubmit.textContent = 'Registrar Ingreso';
+    
     modal.style.display = 'flex';
 }
 
@@ -138,14 +252,12 @@ function cerrarModal() {
     modal.style.display = 'none';
 }
 
-// Función para GUARDAR EL MOVIMIENTO (Llamada al API)
 async function guardarMovimiento() {
     const descripcion = document.getElementById('descripcion').value.trim();
     const monto = document.getElementById('monto').value;
 
-    // Validación simple
     if (!descripcion || !monto || parseFloat(monto) <= 0) {
-        Swal.fire('Datos incompletos', 'Por favor ingresa una descripción y un monto válido.', 'warning');
+        Swal.fire('Datos incompletos', 'Revisa descripción y monto.', 'warning');
         return;
     }
 
@@ -153,34 +265,22 @@ async function guardarMovimiento() {
     formData.append('action', 'registrar_movimiento');
 
     try {
-        const res = await fetch('/local3M/api/caja.php', {
-            method: 'POST',
-            body: formData
-        });
+        const res = await fetch('/local3M/api/caja.php', { method: 'POST', body: formData });
         const json = await res.json();
-
+        
         if (json.success) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Movimiento Registrado',
-                showConfirmButton: false,
-                timer: 1500
-            });
+            Swal.fire({ icon: 'success', title: 'Registrado', timer: 1000, showConfirmButton: false });
             cerrarModal();
-            cargarReporte(); // Recargar la tabla y los totales para ver el cambio
+            cargarReporte(); // Recargar datos
         } else {
-            Swal.fire('Error', json.error || 'No se pudo guardar el movimiento', 'error');
+            Swal.fire('Error', json.error || 'Error desconocido', 'error');
         }
-    } catch (e) {
-        console.error(e);
-        Swal.fire('Error', 'Fallo de conexión con el servidor', 'error');
-    }
+    } catch (e) { Swal.fire('Error', 'Fallo de conexión', 'error'); }
 }
 
 // ==========================================
-// 3. UTILIDADES
+// 5. UTILIDADES
 // ==========================================
-
 async function cargarUsuarios() {
     try {
         const res = await fetch('/local3M/api/caja.php?action=usuarios');
@@ -201,31 +301,6 @@ function formatoDinero(amount) {
     return '$' + parseFloat(amount).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
 }
 
-// Exportar Tabla a CSV
-const btnExportar = document.getElementById('btnExportar');
-if(btnExportar) {
-    btnExportar.addEventListener('click', () => {
-        let csv = [];
-        const rows = document.querySelectorAll("#tablaCaja tr");
-        
-        for (let i = 0; i < rows.length; i++) {
-            const row = [], cols = rows[i].querySelectorAll("td, th");
-            for (let j = 0; j < cols.length; j++) 
-                row.push('"' + cols[j].innerText + '"');
-            csv.push(row.join(","));        
-        }
-
-        const csvFile = new Blob([csv.join("\n")], {type: "text/csv"});
-        const downloadLink = document.createElement("a");
-        downloadLink.download = `Reporte_Caja_${new Date().toLocaleDateString()}.csv`;
-        downloadLink.href = window.URL.createObjectURL(csvFile);
-        downloadLink.style.display = "none";
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-    });
-}
-
-// Redirigir a gestión de caja
 function gestionarCaja() {
     window.location.href = 'cierre_caja.php';
 }

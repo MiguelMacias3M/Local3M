@@ -14,24 +14,26 @@ include '../config/conexion.php';
 $action = $_GET['action'] ?? ($_POST['action'] ?? null);
 
 try {
-    // --- 1. REPORTES (RANGO DE FECHAS) ---
-    if ($action === 'reporte_rango') {
-        // Recibimos fecha inicio y fin. Si no llegan, usamos hoy.
-        $inicio = $_GET['inicio'] ?? date('Y-m-d');
-        $fin = $_GET['fin'] ?? date('Y-m-d');
+    // --- 1. REPORTES DEL DÍA ---
+    if ($action === 'reporte_dia') {
+        $fecha = $_GET['fecha'] ?? date('Y-m-d');
         $usuario = $_GET['usuario'] ?? '';
 
-        // Filtro por rango de fechas (inclusive)
-        // Ignoramos 'Retiro' para el balance operativo
-        $where = "DATE(fecha) BETWEEN :inicio AND :fin AND tipo != 'RETIRO'";
-        $params = [':inicio' => $inicio, ':fin' => $fin];
+        // CORRECCIÓN VITAL: Filtro expandido
+        // Ignoramos 'Retiro', 'Retiro de Efectivo', 'Cierre' y el tipo 'RETIRO'
+        // COALESCE asegura que si categoria es NULL, no rompa la consulta
+        $where = "DATE(fecha) = :fecha 
+                  AND tipo != 'RETIRO' 
+                  AND COALESCE(categoria, '') NOT IN ('Retiro', 'Retiro de Efectivo', 'Cierre')";
+                  
+        $params = [':fecha' => $fecha];
 
         if (!empty($usuario) && $usuario !== 'Todos') {
             $where .= " AND usuario = :usuario";
             $params[':usuario'] = $usuario;
         }
 
-        // 1.1 Totales
+        // 1.1 Totales (Gastos Operativos Reales)
         try {
             $sqlTot = "SELECT 
                         COALESCE(SUM(ingreso), 0) as ingreso, 
@@ -47,29 +49,27 @@ try {
         
         $totales['neto'] = $totales['ingreso'] - $totales['egreso'];
 
-        // 1.2 Lista de Movimientos (Para la tabla y el Excel)
-        // Aquí ajustamos el filtro para la lista si es necesario
-        $whereLista = "DATE(fecha) BETWEEN :inicio AND :fin";
+        // 1.2 Lista de Movimientos
+        // Para la tabla visual, usamos un filtro más suave si quieres ver los retiros (opcional)
+        // Pero para ser consistentes con los totales, usaremos el mismo filtro $where por ahora.
+        // Si quisieras ver los retiros en la lista pero que no sumen, tendríamos que quitar el filtro aquí.
+        // Lo dejamos igual para evitar confusiones:
+        
+        // SIN EMBARGO, para que veas que el cierre se hizo, voy a relajar el filtro SOLO para la lista:
+        $whereLista = "DATE(fecha) = :fecha"; 
         if (!empty($usuario) && $usuario !== 'Todos') {
             $whereLista .= " AND usuario = :usuario";
         }
 
-        $sqlList = "SELECT id, fecha, tipo, descripcion, categoria, usuario, ingreso, egreso
-                    FROM caja_movimientos 
+        $sqlList = "SELECT * FROM caja_movimientos 
                     WHERE $whereLista 
                     ORDER BY fecha DESC";
         
         $stmtList = $conn->prepare($sqlList);
         // Reusamos params pero ajustamos si el where cambió
-        $paramsList = [':inicio' => $inicio, ':fin' => $fin];
-        if (!empty($usuario) && $usuario !== 'Todos') {
-            $paramsList[':usuario'] = $usuario;
-        }
-        
-        $stmtList->execute($paramsList);
+        $stmtList->execute([':fecha' => $fecha] + (!empty($usuario) && $usuario !== 'Todos' ? [':usuario' => $usuario] : []));
         $movimientos = $stmtList->fetchAll(PDO::FETCH_ASSOC);
 
-        // Estado de caja (solo relevante para 'hoy', pero lo enviamos igual)
         $estadoCaja = obtenerEstadoCaja($conn);
 
         echo json_encode([
@@ -93,6 +93,7 @@ try {
             exit();
         }
 
+        // Si es un retiro manual, aseguramos que el tipo sea 'RETIRO'
         if ($tipo === 'GASTO' && (stripos($categoria, 'Retiro') !== false)) {
             $tipo = 'RETIRO';
         }

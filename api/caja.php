@@ -1,7 +1,8 @@
 <?php
 session_start();
+// Desactivar errores en pantalla para no ensuciar el JSON
 ini_set('display_errors', 0); 
-error_reporting(E_ALL); 
+error_reporting(0); 
 header('Content-Type: application/json; charset=utf-8');
 
 if (!isset($_SESSION['nombre'])) {
@@ -14,68 +15,74 @@ include '../config/conexion.php';
 $action = $_GET['action'] ?? ($_POST['action'] ?? null);
 
 try {
-    // --- 1. REPORTES DEL DÍA ---
-    if ($action === 'reporte_dia') {
-        $fecha = $_GET['fecha'] ?? date('Y-m-d');
+    // --- 1. REPORTES (RANGO O DÍA) ---
+    if ($action === 'reporte_dia' || $action === 'reporte_rango') {
+        
+        // Manejo flexible de parámetros (soporta ambos modos)
+        $inicio = $_GET['inicio'] ?? ($_GET['fecha'] ?? date('Y-m-d'));
+        $fin    = $_GET['fin']    ?? ($_GET['fecha'] ?? date('Y-m-d'));
         $usuario = $_GET['usuario'] ?? '';
 
-        // CORRECCIÓN VITAL: Filtro expandido
-        // Ignoramos 'Retiro', 'Retiro de Efectivo', 'Cierre' y el tipo 'RETIRO'
-        // COALESCE asegura que si categoria es NULL, no rompa la consulta
-        $where = "DATE(fecha) = :fecha 
-                  AND tipo != 'RETIRO' 
-                  AND COALESCE(categoria, '') NOT IN ('Retiro', 'Retiro de Efectivo', 'Cierre')";
-                  
-        $params = [':fecha' => $fecha];
-
+        // 1. CONSULTA SQL SIMPLE (Sin comparaciones de texto complejas para evitar error de Collation)
+        $sql = "SELECT * FROM caja_movimientos 
+                WHERE DATE(fecha) BETWEEN :inicio AND :fin 
+                ORDER BY fecha DESC";
+        
+        $params = [':inicio' => $inicio, ':fin' => $fin];
+        
+        // Si hay filtro de usuario, lo aplicamos en SQL (es seguro porque es comparación exacta =)
         if (!empty($usuario) && $usuario !== 'Todos') {
-            $where .= " AND usuario = :usuario";
+            $sql = "SELECT * FROM caja_movimientos 
+                    WHERE DATE(fecha) BETWEEN :inicio AND :fin 
+                    AND usuario = :usuario 
+                    ORDER BY fecha DESC";
             $params[':usuario'] = $usuario;
         }
 
-        // 1.1 Totales (Gastos Operativos Reales)
-        try {
-            $sqlTot = "SELECT 
-                        COALESCE(SUM(ingreso), 0) as ingreso, 
-                        COALESCE(SUM(egreso), 0) as egreso
-                       FROM caja_movimientos 
-                       WHERE $where";
-            $stmt = $conn->prepare($sqlTot);
-            $stmt->execute($params);
-            $totales = $stmt->fetch(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            $totales = ['ingreso'=>0, 'egreso'=>0];
+        $stmt = $conn->prepare($sql);
+        $stmt->execute($params);
+        $todosLosMovimientos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // 2. PROCESAMIENTO EN PHP (Aquí hacemos los filtros de 'Retiro' para evitar errores SQL)
+        $ingresoTotal = 0;
+        $egresoTotal  = 0;
+        $movimientosFiltrados = []; // Lista para la tabla
+
+        foreach ($todosLosMovimientos as $m) {
+            // Normalizar textos para comparación segura
+            $tipo = strtoupper(trim($m['tipo']));
+            $categoria = isset($m['categoria']) ? ucwords(strtolower(trim($m['categoria']))) : '';
+
+            // Detectar si es un RETIRO (Cierre de caja o Retiro manual)
+            // Estos NO deben sumar a los gastos operativos del negocio
+            $esRetiro = ($tipo === 'RETIRO') || 
+                        ($categoria === 'Retiro') || 
+                        ($categoria === 'Retiro De Efectivo') || 
+                        ($categoria === 'Cierre');
+
+            if (!$esRetiro) {
+                // Solo sumamos si NO es un retiro
+                $ingresoTotal += (float)$m['ingreso'];
+                $egresoTotal  += (float)$m['egreso'];
+            }
+
+            // Agregamos todo a la lista visual (tabla), o puedes filtrar también aquí si prefieres
+            $movimientosFiltrados[] = $m;
         }
-        
-        $totales['neto'] = $totales['ingreso'] - $totales['egreso'];
 
-        // 1.2 Lista de Movimientos
-        // Para la tabla visual, usamos un filtro más suave si quieres ver los retiros (opcional)
-        // Pero para ser consistentes con los totales, usaremos el mismo filtro $where por ahora.
-        // Si quisieras ver los retiros en la lista pero que no sumen, tendríamos que quitar el filtro aquí.
-        // Lo dejamos igual para evitar confusiones:
-        
-        // SIN EMBARGO, para que veas que el cierre se hizo, voy a relajar el filtro SOLO para la lista:
-        $whereLista = "DATE(fecha) = :fecha"; 
-        if (!empty($usuario) && $usuario !== 'Todos') {
-            $whereLista .= " AND usuario = :usuario";
-        }
+        $totales = [
+            'ingreso' => $ingresoTotal,
+            'egreso'  => $egresoTotal,
+            'neto'    => $ingresoTotal - $egresoTotal
+        ];
 
-        $sqlList = "SELECT * FROM caja_movimientos 
-                    WHERE $whereLista 
-                    ORDER BY fecha DESC";
-        
-        $stmtList = $conn->prepare($sqlList);
-        // Reusamos params pero ajustamos si el where cambió
-        $stmtList->execute([':fecha' => $fecha] + (!empty($usuario) && $usuario !== 'Todos' ? [':usuario' => $usuario] : []));
-        $movimientos = $stmtList->fetchAll(PDO::FETCH_ASSOC);
-
+        // 3. ESTADO DE CAJA ACTUAL
         $estadoCaja = obtenerEstadoCaja($conn);
 
         echo json_encode([
             'success' => true,
             'totales' => $totales,
-            'movimientos' => $movimientos,
+            'movimientos' => $movimientosFiltrados,
             'estado_caja' => $estadoCaja
         ]);
         exit();
@@ -93,8 +100,8 @@ try {
             exit();
         }
 
-        // Si es un retiro manual, aseguramos que el tipo sea 'RETIRO'
-        if ($tipo === 'GASTO' && (stripos($categoria, 'Retiro') !== false)) {
+        // Normalización de Retiros
+        if ($tipo === 'GASTO' && stripos($categoria, 'Retiro') !== false) {
             $tipo = 'RETIRO';
         }
 
@@ -113,7 +120,7 @@ try {
         exit();
     }
 
-    // --- 3. USUARIOS ---
+    // --- 3. LISTA DE USUARIOS ---
     if ($action === 'usuarios') {
         $stmt = $conn->query("SELECT DISTINCT usuario FROM caja_movimientos ORDER BY usuario");
         $users = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -125,28 +132,35 @@ try {
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
 
+// Función auxiliar
 function obtenerEstadoCaja($conn) {
-    $stmt = $conn->query("SELECT * FROM caja_cierres WHERE estado = 'ABIERTA' ORDER BY id DESC LIMIT 1");
-    $caja = $stmt->fetch(PDO::FETCH_ASSOC);
+    try {
+        $stmt = $conn->query("SELECT * FROM caja_cierres WHERE estado = 'ABIERTA' ORDER BY id DESC LIMIT 1");
+        $caja = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($caja) {
-        $fechaApertura = $caja['fecha_apertura'];
-        $sql = "SELECT COALESCE(SUM(ingreso), 0) as ing, COALESCE(SUM(egreso), 0) as egr 
-                FROM caja_movimientos WHERE fecha >= ?";
-        $stmtCalc = $conn->prepare($sql);
-        $stmtCalc->execute([$fechaApertura]);
-        $movs = $stmtCalc->fetch(PDO::FETCH_ASSOC);
+        if ($caja) {
+            $fechaApertura = $caja['fecha_apertura'];
+            // Cálculo directo y simple
+            $sql = "SELECT COALESCE(SUM(ingreso), 0) as ing, COALESCE(SUM(egreso), 0) as egr 
+                    FROM caja_movimientos WHERE fecha >= ?";
+            $stmtCalc = $conn->prepare($sql);
+            $stmtCalc->execute([$fechaApertura]);
+            $movs = $stmtCalc->fetch(PDO::FETCH_ASSOC);
 
-        $enCaja = (float)$caja['saldo_inicial'] + $movs['ing'] - $movs['egr'];
+            // En el arqueo físico, los retiros (egresos) SÍ se restan porque el dinero sale del cajón
+            $enCaja = (float)$caja['saldo_inicial'] + $movs['ing'] - $movs['egr'];
 
-        return [
-            'estado' => 'ABIERTA',
-            'usuario' => $caja['usuario_apertura'],
-            'monto_actual' => $enCaja,
-            'inicio' => $caja['fecha_apertura']
-        ];
-    } else {
-        return ['estado' => 'CERRADA', 'monto_actual' => 0];
+            return [
+                'estado' => 'ABIERTA',
+                'usuario' => $caja['usuario_apertura'],
+                'monto_actual' => $enCaja,
+                'inicio' => $caja['fecha_apertura']
+            ];
+        } else {
+            return ['estado' => 'CERRADA', 'monto_actual' => 0];
+        }
+    } catch (Exception $e) {
+        return ['estado' => 'ERROR', 'monto_actual' => 0];
     }
 }
 ?>

@@ -27,15 +27,16 @@ try {
     $params = [];
 
     // 2. Construir la consulta de búsqueda CORREGIDA
-    // Usamos :q1, :q2, etc. para evitar el error HY093
+    // QUITE: LOWER() - Esto causaba el choque de collations.
+    // La búsqueda sigue siendo insensible a mayúsculas/minúsculas por la configuración de la BD.
     if ($q !== '') {
-        $where = "WHERE (LOWER(nombre_cliente)   LIKE :q1
-                       OR LOWER(tipo_reparacion) LIKE :q2
-                       OR LOWER(modelo)          LIKE :q3
-                       OR LOWER(codigo_barras)   LIKE :q4
-                       OR LOWER(telefono)        LIKE :q5)";
+        $where = "WHERE (nombre_cliente     LIKE :q1
+                       OR tipo_reparacion   LIKE :q2
+                       OR modelo            LIKE :q3
+                       OR codigo_barras     LIKE :q4
+                       OR telefono          LIKE :q5)";
         
-        $term = '%' . mb_strtolower($q, 'UTF-8') . '%';
+        $term = '%' . $q . '%';
         
         // Asignamos el mismo término a todos los parámetros
         $params[':q1'] = $term;
@@ -80,6 +81,7 @@ try {
 } catch (PDOException $e) {
     header('HTTP/1.1 500 Internal Server Error');
     header('Content-Type: application/json; charset=utf-8');
+    // Mostramos mensaje genérico para usuario, el específico solo para debug si es necesario
     echo json_encode(['success' => false, 'error' => 'Error de BBDD: ' . $e->getMessage()]);
     exit;
 } catch (Throwable $e) {
@@ -88,4 +90,4 @@ try {
     echo json_encode(['success' => false, 'error' => 'Error inesperado: ' . $e->getMessage()]);
     exit;
 }
-?>
+?>ggi

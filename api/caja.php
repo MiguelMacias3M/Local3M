@@ -1,5 +1,6 @@
 <?php
 session_start();
+date_default_timezone_set('America/Mexico_City'); // Forzar zona horaria de México
 // 1. Configuración de errores para depuración
 ini_set('display_errors', 0); // En producción 0, pero si sigue fallando cámbialo a 1 temporalmente
 error_reporting(E_ALL); 
@@ -112,12 +113,15 @@ try {
         $ingreso = ($tipo === 'INGRESO') ? $monto : 0;
         $egreso = ($tipo === 'INGRESO') ? 0 : $monto;
 
+        // Usamos la fecha de PHP (Mexico) en lugar de NOW() para consistencia
+        $fechaMovimiento = date('Y-m-d H:i:s');
+
         $sql = "INSERT INTO caja_movimientos 
                 (id_transaccion, tipo, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, fecha, categoria) 
-                VALUES (?, ?, ?, 1, ?, ?, ?, ?, NOW(), ?)";
+                VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $conn->prepare($sql);
-        $stmt->execute([$idTx, $tipo, $descripcion, $monto, $ingreso, $egreso, $_SESSION['nombre'], $categoria]);
+        $stmt->execute([$idTx, $tipo, $descripcion, $monto, $ingreso, $egreso, $_SESSION['nombre'], $fechaMovimiento, $categoria]);
 
         echo json_encode(['success' => true]);
         exit();

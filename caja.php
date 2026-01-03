@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="/local3M/css/caja.css?v=FINAL_MODAL">
 
 <div class="page-title">
-    <h1>Flujo de Caja</h1>
+    <h1>Flujo de Caja 3M</h1>
     <p>Consulta ingresos, gastos y el estado actual de la caja.</p>
 </div>
 

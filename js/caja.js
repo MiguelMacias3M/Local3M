@@ -10,36 +10,29 @@ const modal = document.getElementById('modalMovimiento');
 const form = document.getElementById('formMovimiento');
 
 // ==========================================
-// 0. INICIALIZACIÓN DE FECHA (SOLUCIÓN ZONA HORARIA)
+// 0. INICIALIZACIÓN DE FECHA (SOLUCIÓN FINAL CLIENTE)
 // ==========================================
 
-async function inicializarFecha() {
+function inicializarFecha() {
     // Si no existe el input, no hacemos nada
     if (!filtroFecha) return;
 
-    try {
-        // Opción A: Preguntar al servidor qué día es (Lo más seguro)
-        // Usamos ruta relativa 'api/caja.php' para que funcione en cualquier carpeta
-        const res = await fetch('api/caja.php?action=fecha_servidor');
-        const data = await res.json();
+    // ESTA ES LA CLAVE: 
+    // Usamos la API internacional del navegador para pedir la fecha EXACTA en CDMX.
+    // 'en-CA' nos da el formato YYYY-MM-DD automáticamente.
+    // Esto ignora si el celular tiene hora de China o si el servidor está en Irlanda.
+    const fechaMexico = new Date().toLocaleDateString('en-CA', {
+        timeZone: 'America/Mexico_City',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    });
 
-        if (data.success && data.fecha) {
-            filtroFecha.value = data.fecha;
-            console.log("📅 Fecha sincronizada con servidor (MX):", data.fecha);
-        } else {
-            throw new Error("No se obtuvo fecha del servidor");
-        }
-    } catch (e) {
-        // Opción B (Fallback): Calcular en el navegador forzando zona horaria de México
-        console.warn("⚠️ Usando fecha local forzada a MX (Fallback)");
-        const hoyMexico = new Date().toLocaleDateString('en-CA', {
-            timeZone: 'America/Mexico_City',
-            year: 'numeric', month: '2-digit', day: '2-digit'
-        });
-        filtroFecha.value = hoyMexico;
-    }
-
-    // UNA VEZ PUESTA LA FECHA CORRECTA, CARGAMOS EL REPORTE
+    console.log("📅 Fecha Forzada a Mexico City:", fechaMexico);
+    
+    filtroFecha.value = fechaMexico;
+    
+    // Una vez puesta la fecha correcta, cargamos el reporte
     cargarReporte();
 }
 
@@ -56,7 +49,8 @@ async function cargarReporte() {
 
     try {
         // Petición a la API para obtener totales y movimientos
-        const res = await fetch(`api/caja.php?action=reporte_dia&fecha=${fecha}&usuario=${usuario}`);
+        // Agregamos un timestamp _t para evitar que el navegador guarde versiones viejas del reporte
+        const res = await fetch(`api/caja.php?action=reporte_dia&fecha=${fecha}&usuario=${usuario}&_t=${Date.now()}`);
         const json = await res.json();
 
         if (json.success) {
@@ -127,7 +121,7 @@ function llenarTabla(movs) {
         // Formatear hora de forma segura
         let hora = '';
         try {
-            // Reemplazar guiones por barras para compatibilidad con Safari/iOS si fuera necesario
+            // Reemplazar guiones por barras para compatibilidad con Safari/iOS
             const fechaSafe = m.fecha.replace(/-/g, '/'); 
             const fechaObj = new Date(fechaSafe);
             hora = fechaObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});

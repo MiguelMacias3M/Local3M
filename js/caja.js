@@ -1,3 +1,10 @@
+// Truco: 'en-CA' da formato YYYY-MM-DD directo
+const hoyMexico = new Date().toLocaleDateString('en-CA', {
+    timeZone: 'America/Mexico_City',
+    year: 'numeric', month: '2-digit', day: '2-digit'
+});
+document.getElementById('fecha').value = hoyMexico;
+
 document.addEventListener('DOMContentLoaded', () => {
     cargarUsuarios();
     cargarReporte();

@@ -89,7 +89,13 @@ try {
             'success' => true,
             'totales' => $totales,
             'movimientos' => $movimientosFiltrados,
-            'estado_caja' => $estadoCaja
+            'estado_caja' => $estadoCaja,
+            'debug_info' => [ // Para verificar qué fecha está usando el servidor
+                'servidor_fecha_actual' => date('Y-m-d H:i:s'),
+                'servidor_zona' => date_default_timezone_get(),
+                'filtro_inicio' => $inicio,
+                'filtro_fin' => $fin
+            ]
         ], JSON_INVALID_UTF8_SUBSTITUTE); // Evita errores por acentos
         exit();
     }

@@ -1,36 +1,43 @@
 <?php
 session_start();
-// Desactivar errores en pantalla para no ensuciar el JSON
-ini_set('display_errors', 0); 
-error_reporting(0); 
+// 1. Configuración de errores para depuración
+ini_set('display_errors', 0); // En producción 0, pero si sigue fallando cámbialo a 1 temporalmente
+error_reporting(E_ALL); 
 header('Content-Type: application/json; charset=utf-8');
 
-if (!isset($_SESSION['nombre'])) {
-    echo json_encode(['success' => false, 'error' => 'No autorizado']);
-    exit();
-}
-
-include '../config/conexion.php';
-
-$action = $_GET['action'] ?? ($_POST['action'] ?? null);
-
 try {
+    // Verificar sesión
+    if (!isset($_SESSION['nombre'])) {
+        throw new Exception('No autorizado');
+    }
+
+    // Verificar archivo de conexión
+    if (!file_exists('../config/conexion.php')) {
+        throw new Exception('Falta el archivo de conexión');
+    }
+    include '../config/conexion.php';
+
+    // Validar conexión
+    if (!isset($conn)) {
+        throw new Exception('La conexión a la base de datos falló');
+    }
+
+    $action = $_GET['action'] ?? ($_POST['action'] ?? null);
+
     // --- 1. REPORTES (RANGO O DÍA) ---
     if ($action === 'reporte_dia' || $action === 'reporte_rango') {
         
-        // Manejo flexible de parámetros (soporta ambos modos)
         $inicio = $_GET['inicio'] ?? ($_GET['fecha'] ?? date('Y-m-d'));
         $fin    = $_GET['fin']    ?? ($_GET['fecha'] ?? date('Y-m-d'));
         $usuario = $_GET['usuario'] ?? '';
 
-        // 1. CONSULTA SQL SIMPLE (Sin comparaciones de texto complejas para evitar error de Collation)
+        // CONSULTA
         $sql = "SELECT * FROM caja_movimientos 
                 WHERE DATE(fecha) BETWEEN :inicio AND :fin 
                 ORDER BY fecha DESC";
         
         $params = [':inicio' => $inicio, ':fin' => $fin];
         
-        // Si hay filtro de usuario, lo aplicamos en SQL (es seguro porque es comparación exacta =)
         if (!empty($usuario) && $usuario !== 'Todos') {
             $sql = "SELECT * FROM caja_movimientos 
                     WHERE DATE(fecha) BETWEEN :inicio AND :fin 
@@ -43,30 +50,27 @@ try {
         $stmt->execute($params);
         $todosLosMovimientos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // 2. PROCESAMIENTO EN PHP (Aquí hacemos los filtros de 'Retiro' para evitar errores SQL)
+        // PROCESAMIENTO
         $ingresoTotal = 0;
         $egresoTotal  = 0;
-        $movimientosFiltrados = []; // Lista para la tabla
+        $movimientosFiltrados = []; 
 
         foreach ($todosLosMovimientos as $m) {
-            // Normalizar textos para comparación segura
             $tipo = strtoupper(trim($m['tipo']));
+            // Manejo seguro de 'categoria' por si viene null
             $categoria = isset($m['categoria']) ? ucwords(strtolower(trim($m['categoria']))) : '';
 
-            // Detectar si es un RETIRO (Cierre de caja o Retiro manual)
-            // Estos NO deben sumar a los gastos operativos del negocio
+            // Detectar Retiros
             $esRetiro = ($tipo === 'RETIRO') || 
                         ($categoria === 'Retiro') || 
                         ($categoria === 'Retiro De Efectivo') || 
                         ($categoria === 'Cierre');
 
             if (!$esRetiro) {
-                // Solo sumamos si NO es un retiro
                 $ingresoTotal += (float)$m['ingreso'];
                 $egresoTotal  += (float)$m['egreso'];
             }
 
-            // Agregamos todo a la lista visual (tabla), o puedes filtrar también aquí si prefieres
             $movimientosFiltrados[] = $m;
         }
 
@@ -76,15 +80,16 @@ try {
             'neto'    => $ingresoTotal - $egresoTotal
         ];
 
-        // 3. ESTADO DE CAJA ACTUAL
+        // Estado de caja
         $estadoCaja = obtenerEstadoCaja($conn);
 
+        // RESPUESTA JSON SEGURA
         echo json_encode([
             'success' => true,
             'totales' => $totales,
             'movimientos' => $movimientosFiltrados,
             'estado_caja' => $estadoCaja
-        ]);
+        ], JSON_INVALID_UTF8_SUBSTITUTE); // Evita errores por acentos
         exit();
     }
 
@@ -96,11 +101,9 @@ try {
         $categoria = $_POST['categoria'] ?? 'General';
 
         if ($monto <= 0 || empty($descripcion)) {
-            echo json_encode(['success' => false, 'error' => 'Datos inválidos']);
-            exit();
+            throw new Exception('Datos inválidos');
         }
 
-        // Normalización de Retiros
         if ($tipo === 'GASTO' && stripos($categoria, 'Retiro') !== false) {
             $tipo = 'RETIRO';
         }
@@ -124,12 +127,15 @@ try {
     if ($action === 'usuarios') {
         $stmt = $conn->query("SELECT DISTINCT usuario FROM caja_movimientos ORDER BY usuario");
         $users = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        echo json_encode(['success' => true, 'data' => $users]);
+        echo json_encode(['success' => true, 'data' => $users], JSON_INVALID_UTF8_SUBSTITUTE);
         exit();
     }
 
-} catch (Exception $e) {
+} catch (Throwable $e) { // Captura Exception Y Error (PHP 7+)
+    // Si algo falla, devuelve JSON con el error real
+    http_response_code(500); // Opcional: marca error de servidor
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    exit();
 }
 
 // Función auxiliar
@@ -140,14 +146,12 @@ function obtenerEstadoCaja($conn) {
 
         if ($caja) {
             $fechaApertura = $caja['fecha_apertura'];
-            // Cálculo directo y simple
             $sql = "SELECT COALESCE(SUM(ingreso), 0) as ing, COALESCE(SUM(egreso), 0) as egr 
                     FROM caja_movimientos WHERE fecha >= ?";
             $stmtCalc = $conn->prepare($sql);
             $stmtCalc->execute([$fechaApertura]);
             $movs = $stmtCalc->fetch(PDO::FETCH_ASSOC);
 
-            // En el arqueo físico, los retiros (egresos) SÍ se restan porque el dinero sale del cajón
             $enCaja = (float)$caja['saldo_inicial'] + $movs['ing'] - $movs['egr'];
 
             return [
@@ -159,7 +163,7 @@ function obtenerEstadoCaja($conn) {
         } else {
             return ['estado' => 'CERRADA', 'monto_actual' => 0];
         }
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         return ['estado' => 'ERROR', 'monto_actual' => 0];
     }
 }

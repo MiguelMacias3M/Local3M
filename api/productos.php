@@ -1,16 +1,18 @@
 <?php
 session_start();
-// 1. CORRECCIÓN IMPORTANTE: Definir charset UTF-8 en la cabecera
 header('Content-Type: application/json; charset=utf-8');
-ini_set('display_errors', 0);
-error_reporting(0);
 
+// --- DEBUG TEMPORAL: ACTIVAR PARA VER ERRORES REALES ---
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
+// 1. Verificar sesión
 if (!isset($_SESSION['nombre'])) {
     echo json_encode(['success' => false, 'error' => 'No autorizado']);
     exit();
 }
 
-// Verificar que existe el archivo de conexión
+// 2. Verificar conexión
 if (!file_exists('../config/conexion.php')) {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'Error: Falta config/conexion.php']);
@@ -18,6 +20,15 @@ if (!file_exists('../config/conexion.php')) {
 }
 
 include '../config/conexion.php';
+
+// 3. FORZAR UTF-8 EN LA BASE DE DATOS (IMPORTANTE)
+if (isset($conn)) {
+    try {
+        $conn->exec("SET NAMES 'utf8'");
+    } catch (Exception $e) {
+        // Ignoramos si falla para no detener el script
+    }
+}
 
 $action = $_GET['action'] ?? ($_POST['action'] ?? null);
 
@@ -32,28 +43,35 @@ try {
         $stmt->execute([':q' => "%$q%"]);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // 2. CORRECCIÓN IMPORTANTE: Usar JSON_INVALID_UTF8_SUBSTITUTE
-        // Esto evita que el JSON se rompa si hay acentos o ñ
-        echo json_encode(['success' => true, 'data' => $data], JSON_INVALID_UTF8_SUBSTITUTE);
+        // --- BLINDAJE PARA VERSIONES ANTIGUAS DE PHP ---
+        // Verificamos si existe la constante moderna
+        if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
+            echo json_encode(['success' => true, 'data' => $data], JSON_INVALID_UTF8_SUBSTITUTE);
+        } else {
+            // FALLBACK: Si PHP es viejo (< 7.2), limpiamos los acentos a mano
+            array_walk_recursive($data, function(&$item) {
+                if (is_string($item) && !mb_detect_encoding($item, 'UTF-8', true)) {
+                    $item = utf8_encode($item); // Convierte ISO-8859-1 a UTF-8
+                }
+            });
+            echo json_encode(['success' => true, 'data' => $data]);
+        }
         exit();
     }
 
     // --- 2. GUARDAR (CREAR O EDITAR) ---
     if ($action === 'guardar') {
-        $id = $_POST['id_productos'] ?? ''; // Si viene ID, es editar. Si no, es nuevo.
+        $id = $_POST['id_productos'] ?? '';
         $nombre = trim($_POST['nombre_producto']);
         $precio = $_POST['precio_producto'];
         $stock = $_POST['cantidad_piezas'];
         $codigo = trim($_POST['codigo_barras']);
         $ubicacion = $_POST['ubicacion'] ?? ''; 
 
-        // Validación básica
         if (empty($nombre) || empty($precio)) {
-            echo json_encode(['success' => false, 'error' => 'Nombre y Precio son obligatorios']);
-            exit();
+            throw new Exception('Nombre y Precio son obligatorios');
         }
 
-        // Si no hay código, generamos uno aleatorio
         if (empty($codigo)) {
             $codigo = 'PROD' . date('ymd') . rand(100, 999);
         }
@@ -80,10 +98,7 @@ try {
     // --- 3. ELIMINAR ---
     if ($action === 'eliminar') {
         $id = $_POST['id'] ?? null;
-        if (!$id) {
-            echo json_encode(['success' => false, 'error' => 'Falta ID']);
-            exit();
-        }
+        if (!$id) throw new Exception('Falta ID');
         
         $stmt = $conn->prepare("DELETE FROM productos WHERE id_productos = ?");
         $stmt->execute([$id]);
@@ -91,19 +106,34 @@ try {
         exit();
     }
 
-    // --- 4. OBTENER UN PRODUCTO (Para editar) ---
+    // --- 4. OBTENER (PARA EDITAR) ---
     if ($action === 'obtener') {
         $id = $_GET['id'] ?? null;
         $stmt = $conn->prepare("SELECT * FROM productos WHERE id_productos = ?");
         $stmt->execute([$id]);
         $prod = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        echo json_encode(['success' => true, 'data' => $prod], JSON_INVALID_UTF8_SUBSTITUTE);
+        // Aplicamos la misma lógica de blindaje UTF-8 aquí también
+        if ($prod) {
+            if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
+                echo json_encode(['success' => true, 'data' => $prod], JSON_INVALID_UTF8_SUBSTITUTE);
+            } else {
+                array_walk_recursive($prod, function(&$item) {
+                    if (is_string($item) && !mb_detect_encoding($item, 'UTF-8', true)) {
+                        $item = utf8_encode($item);
+                    }
+                });
+                echo json_encode(['success' => true, 'data' => $prod]);
+            }
+        } else {
+            echo json_encode(['success' => false, 'error' => 'No encontrado']);
+        }
         exit();
     }
 
 } catch (Exception $e) {
+    // En caso de error, intentamos responder en JSON aunque sea un error 500
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => $e->getMessage()], JSON_INVALID_UTF8_SUBSTITUTE);
+    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
 ?>

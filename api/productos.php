@@ -1,11 +1,19 @@
 <?php
 session_start();
-header('Content-Type: application/json');
+// 1. CORRECCIÓN IMPORTANTE: Definir charset UTF-8 en la cabecera
+header('Content-Type: application/json; charset=utf-8');
 ini_set('display_errors', 0);
 error_reporting(0);
 
 if (!isset($_SESSION['nombre'])) {
     echo json_encode(['success' => false, 'error' => 'No autorizado']);
+    exit();
+}
+
+// Verificar que existe el archivo de conexión
+if (!file_exists('../config/conexion.php')) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Error: Falta config/conexion.php']);
     exit();
 }
 
@@ -23,18 +31,21 @@ try {
         $stmt = $conn->prepare($sql);
         $stmt->execute([':q' => "%$q%"]);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        echo json_encode(['success' => true, 'data' => $data]);
+        
+        // 2. CORRECCIÓN IMPORTANTE: Usar JSON_INVALID_UTF8_SUBSTITUTE
+        // Esto evita que el JSON se rompa si hay acentos o ñ
+        echo json_encode(['success' => true, 'data' => $data], JSON_INVALID_UTF8_SUBSTITUTE);
         exit();
     }
 
     // --- 2. GUARDAR (CREAR O EDITAR) ---
     if ($action === 'guardar') {
         $id = $_POST['id_productos'] ?? ''; // Si viene ID, es editar. Si no, es nuevo.
-        $nombre = $_POST['nombre_producto'];
+        $nombre = trim($_POST['nombre_producto']);
         $precio = $_POST['precio_producto'];
         $stock = $_POST['cantidad_piezas'];
-        $codigo = $_POST['codigo_barras'];
-        $ubicacion = $_POST['ubicacion'] ?? ''; // Opcional
+        $codigo = trim($_POST['codigo_barras']);
+        $ubicacion = $_POST['ubicacion'] ?? ''; 
 
         // Validación básica
         if (empty($nombre) || empty($precio)) {
@@ -53,8 +64,6 @@ try {
                     nombre_producto = ?, precio_producto = ?, cantidad_piezas = ?, codigo_barras = ?, id_ubicacion = ?
                     WHERE id_productos = ?";
             $stmt = $conn->prepare($sql);
-            // Nota: id_ubicacion lo tratamos como string simple o int según tu BD. 
-            // Si usas una tabla aparte para ubicaciones, ajusta aquí. Asumiré que guardas el ID o texto.
             $stmt->execute([$nombre, $precio, $stock, $codigo, $ubicacion, $id]);
         } else {
             // NUEVO
@@ -88,11 +97,13 @@ try {
         $stmt = $conn->prepare("SELECT * FROM productos WHERE id_productos = ?");
         $stmt->execute([$id]);
         $prod = $stmt->fetch(PDO::FETCH_ASSOC);
-        echo json_encode(['success' => true, 'data' => $prod]);
+        
+        echo json_encode(['success' => true, 'data' => $prod], JSON_INVALID_UTF8_SUBSTITUTE);
         exit();
     }
 
 } catch (Exception $e) {
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => $e->getMessage()], JSON_INVALID_UTF8_SUBSTITUTE);
 }
 ?>

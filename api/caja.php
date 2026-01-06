@@ -213,16 +213,39 @@ try {
         if (!$caja) throw new Exception('No hay una caja abierta para cerrar');
 
         // Calcular saldos del sistema
+        // MODIFICADO: Usamos la misma lógica que en obtenerEstadoCaja
+        // Solo sumamos ingresos y restamos retiros si es necesario, pero IGNORAMOS gastos comunes
+        // para el cálculo de "efectivo esperado".
         $sqlCalc = "SELECT 
                     COALESCE(SUM(ingreso), 0) as total_ingresos, 
-                    COALESCE(SUM(egreso), 0) as total_gastos 
+                    COALESCE(SUM(egreso), 0) as total_egresos 
                     FROM caja_movimientos 
                     WHERE fecha >= ?";
-        $stmtCalc = $conn->prepare($sqlCalc);
-        $stmtCalc->execute([$caja['fecha_apertura']]);
-        $movs = $stmtCalc->fetch(PDO::FETCH_ASSOC);
+        
+        // Pero espera, necesitamos filtrar qué egresos sí restan (RETIROS) y cuáles no (GASTOS)
+        // La consulta SQL anterior suma TODO egreso. Vamos a hacerlo más fino.
+        
+        $sqlMovs = "SELECT tipo, ingreso, egreso FROM caja_movimientos WHERE fecha >= ?";
+        $stmtMovs = $conn->prepare($sqlMovs);
+        $stmtMovs->execute([$caja['fecha_apertura']]);
+        $movimientos = $stmtMovs->fetchAll(PDO::FETCH_ASSOC);
 
-        $saldoSistema = (float)$caja['saldo_inicial'] + $movs['total_ingresos'] - $movs['total_gastos'];
+        $totalIngresos = 0;
+        $totalRetiros = 0;
+
+        foreach ($movimientos as $m) {
+            $totalIngresos += (float)$m['ingreso'];
+            
+            // LÓGICA DE NEGOCIO:
+            // Solo restamos del efectivo en caja si es un RETIRO explícito.
+            // Los GASTOS se registran pero NO restan del efectivo esperado (según tu petición).
+            if ($m['tipo'] === 'RETIRO') {
+                $totalRetiros += (float)$m['egreso'];
+            }
+        }
+
+        // Saldo esperado = Inicial + Ingresos - Retiros (Ignorando Gastos)
+        $saldoSistema = (float)$caja['saldo_inicial'] + $totalIngresos - $totalRetiros;
         
         // Recibir datos del usuario
         $montoReal = (float)$_POST['monto_final_real'];
@@ -262,7 +285,7 @@ try {
 }
 
 // ==========================================
-// FUNCIÓN AUXILIAR
+// FUNCIÓN AUXILIAR: ESTADO CAJA (LÓGICA MODIFICADA)
 // ==========================================
 function obtenerEstadoCaja($conn) {
     try {
@@ -272,14 +295,28 @@ function obtenerEstadoCaja($conn) {
         if ($caja) {
             $fechaApertura = $caja['fecha_apertura'];
             
-            // Calculamos saldo actual desde la apertura
-            $sql = "SELECT COALESCE(SUM(ingreso), 0) as ing, COALESCE(SUM(egreso), 0) as egr 
-                    FROM caja_movimientos WHERE fecha >= ?";
+            // Obtenemos todos los movimientos desde la apertura
+            $sql = "SELECT tipo, ingreso, egreso FROM caja_movimientos WHERE fecha >= ?";
             $stmtCalc = $conn->prepare($sql);
             $stmtCalc->execute([$fechaApertura]);
-            $movs = $stmtCalc->fetch(PDO::FETCH_ASSOC);
+            $movs = $stmtCalc->fetchAll(PDO::FETCH_ASSOC);
 
-            $enCaja = (float)$caja['saldo_inicial'] + $movs['ing'] - $movs['egr'];
+            $totalIngresos = 0;
+            $totalRetiros = 0;
+
+            foreach ($movs as $m) {
+                $totalIngresos += (float)$m['ingreso'];
+                
+                // AQUÍ ESTÁ EL CAMBIO CLAVE:
+                // Solo restamos si el tipo es 'RETIRO'.
+                // Los tipos 'GASTO' se ignoran para el cálculo de efectivo en caja.
+                if ($m['tipo'] === 'RETIRO') {
+                    $totalRetiros += (float)$m['egreso'];
+                }
+            }
+
+            // Saldo en Caja = Inicial + Ingresos - Retiros
+            $enCaja = (float)$caja['saldo_inicial'] + $totalIngresos - $totalRetiros;
 
             return [
                 'estado' => 'ABIERTA',

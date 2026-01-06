@@ -3,7 +3,7 @@ session_start();
 header('Content-Type: application/json; charset=utf-8');
 
 // --- DEBUG TEMPORAL: ACTIVAR PARA VER ERRORES REALES ---
-ini_set('display_errors', 1);
+ini_set('display_errors', 0); // Lo ponemos en 0 para producción, cámbialo a 1 si necesitas ver errores en pantalla
 error_reporting(E_ALL);
 
 // 1. Verificar sesión
@@ -21,37 +21,41 @@ if (!file_exists('../config/conexion.php')) {
 
 include '../config/conexion.php';
 
-// 3. FORZAR UTF-8 EN LA BASE DE DATOS (IMPORTANTE)
+// 3. FORZAR UTF-8 EN LA BASE DE DATOS
 if (isset($conn)) {
     try {
         $conn->exec("SET NAMES 'utf8'");
     } catch (Exception $e) {
-        // Ignoramos si falla para no detener el script
+        // Ignoramos si falla
     }
 }
 
 $action = $_GET['action'] ?? ($_POST['action'] ?? null);
 
 try {
-    // --- 1. LISTAR / BUSCAR ---
+    // --- 1. LISTAR / BUSCAR (CORREGIDO ERROR HY093) ---
     if ($action === 'listar') {
         $q = $_GET['q'] ?? '';
+        
+        // CAMBIO: Usamos '?' en lugar de ':q' repetido para máxima compatibilidad
         $sql = "SELECT * FROM productos WHERE 
-                LOWER(nombre_producto) LIKE :q OR codigo_barras LIKE :q 
+                LOWER(nombre_producto) LIKE ? OR codigo_barras LIKE ? 
                 ORDER BY id_productos DESC LIMIT 50";
+        
         $stmt = $conn->prepare($sql);
-        $stmt->execute([':q' => "%$q%"]);
+        // Enviamos el parámetro dos veces: una para nombre y otra para código
+        $stmt->execute(["%$q%", "%$q%"]);
+        
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // --- BLINDAJE PARA VERSIONES ANTIGUAS DE PHP ---
-        // Verificamos si existe la constante moderna
         if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
             echo json_encode(['success' => true, 'data' => $data], JSON_INVALID_UTF8_SUBSTITUTE);
         } else {
-            // FALLBACK: Si PHP es viejo (< 7.2), limpiamos los acentos a mano
+            // FALLBACK: Limpieza manual de acentos
             array_walk_recursive($data, function(&$item) {
                 if (is_string($item) && !mb_detect_encoding($item, 'UTF-8', true)) {
-                    $item = utf8_encode($item); // Convierte ISO-8859-1 a UTF-8
+                    $item = utf8_encode($item); 
                 }
             });
             echo json_encode(['success' => true, 'data' => $data]);
@@ -113,7 +117,6 @@ try {
         $stmt->execute([$id]);
         $prod = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        // Aplicamos la misma lógica de blindaje UTF-8 aquí también
         if ($prod) {
             if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
                 echo json_encode(['success' => true, 'data' => $prod], JSON_INVALID_UTF8_SUBSTITUTE);
@@ -132,7 +135,6 @@ try {
     }
 
 } catch (Exception $e) {
-    // En caso de error, intentamos responder en JSON aunque sea un error 500
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }

@@ -150,7 +150,11 @@ try {
         }
 
         // Registrar en Caja
-        $sqlCaja = "INSERT INTO caja_movimientos (id_transaccion, tipo, ref_id, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, cliente, fecha, categoria) VALUES (?, 'VENTA', 0, 'Venta de Productos', 1, ?, ?, 0, ?, 'Público General', NOW(), 'Venta')";
+        // AQUI ESTÁ LA CATEGORÍA 'Venta' QUE PEDISTE
+        $sqlCaja = "INSERT INTO caja_movimientos 
+                    (id_transaccion, tipo, ref_id, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, cliente, fecha, categoria) 
+                    VALUES (?, 'INGRESO', 0, 'Venta de Productos', 1, ?, ?, 0, ?, 'Público General', NOW(), 'Venta')";
+        
         $stmtCaja = $conn->prepare($sqlCaja);
         $stmtCaja->execute([$idTx, $totalVenta, $totalVenta, $usuario]);
 

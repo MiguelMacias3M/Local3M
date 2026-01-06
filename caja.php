@@ -1,9 +1,9 @@
 <?php include 'templates/header.php'; ?>
 
 <!-- 
-    IMPORTANTE: ?v=FINAL_MODAL para forzar la carga de los nuevos estilos 
+    IMPORTANTE: ?v=FINAL_FIX_DUPLICADOS para forzar la carga de los nuevos estilos 
 -->
-<link rel="stylesheet" href="/local3M/css/caja.css?v=FINAL_MODAL">
+<link rel="stylesheet" href="/local3M/css/caja.css?v=FINAL_FIX_DUPLICADOS">
 
 <div class="page-title">
     <h1>Flujo de Caja 3M</h1>
@@ -112,15 +112,16 @@
 </div>
 
 <!-- 
-    MODAL (UBICADO AL FINAL DEL ARCHIVO PARA EVITAR ERRORES DE POSICIÓN)
-    Usamos clases 'custom-overlay' y 'custom-modal' para evitar conflictos con Bootstrap
+    MODAL CORREGIDO:
+    1. Quitamos 'onsubmit' del form (lo maneja JS).
+    2. Quitamos 'onclick' del botón Submit (lo maneja el evento submit).
 -->
 <div id="modalMovimiento" class="custom-overlay" style="display:none;">
     <div class="custom-modal">
         <button class="custom-close" onclick="cerrarModal()">&times;</button>
         <h2 id="modalTitle">Registrar Gasto</h2>
         
-        <form id="formMovimiento" onsubmit="return false;">
+        <form id="formMovimiento">
             <input type="hidden" id="tipoMovimiento" name="tipo">
             
             <div class="form-group">
@@ -148,7 +149,8 @@
 
             <div class="modal-footer">
                 <button type="button" class="form-button btn-secondary" onclick="cerrarModal()">Cancelar</button>
-                <button type="submit" class="form-button btn-primary" onclick="guardarMovimiento()">Guardar</button>
+                <!-- CORRECCIÓN: Se quitó onclick="guardarMovimiento()" para evitar doble envío -->
+                <button type="submit" class="form-button btn-primary">Guardar</button>
             </div>
         </form>
     </div>
@@ -156,6 +158,6 @@
 
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="/local3M/js/caja.js?v=1.0"></script>
+<script src="/local3M/js/caja.js?v=<?php echo time(); ?>"></script>
 
 <?php include 'templates/footer.php'; ?>

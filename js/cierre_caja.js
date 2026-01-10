@@ -7,7 +7,7 @@ let saldoTeoricoGlobal = 0;
 // 1. Verificar Estado
 async function verificarEstado() {
     try {
-        const res = await fetch('/local3M/api/cierre_caja.php?action=estado');
+        const res = await fetch('/api/cierre_caja.php?action=estado');
         const json = await res.json();
         
         document.getElementById('loader').style.display = 'none';
@@ -64,7 +64,7 @@ async function abrirCaja() {
     formData.append('saldo_inicial', inicial);
 
     try {
-        const res = await fetch('/local3M/api/cierre_caja.php', { method: 'POST', body: formData });
+        const res = await fetch('/api/cierre_caja.php', { method: 'POST', body: formData });
         const json = await res.json();
 
         if (json.success) {
@@ -120,7 +120,7 @@ async function cerrarCaja() {
     formData.append('notas', document.getElementById('notas').value);
 
     try {
-        const res = await fetch('/local3M/api/cierre_caja.php', { method: 'POST', body: formData });
+        const res = await fetch('/api/cierre_caja.php', { method: 'POST', body: formData });
         const json = await res.json();
 
         if (json.success) {

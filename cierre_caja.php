@@ -1,7 +1,7 @@
 <?php include 'templates/header.php'; ?>
 
 <!-- Estilos -->
-<link rel="stylesheet" href="/local3M/css/cierre_caja.css?v=1.0">
+<link rel="stylesheet" href="/css/cierre_caja.css?v=1.0">
 
 <div class="page-title">
     <h1>Gestión de Turno</h1>
@@ -124,6 +124,6 @@
 
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="/local3M/js/cierre_caja.js?v=1.0"></script>
+<script src="/js/cierre_caja.js?v=1.0"></script>
 
 <?php include 'templates/footer.php'; ?>

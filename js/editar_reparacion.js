@@ -102,7 +102,7 @@ async function enviarDatos(accion) {
     data.action = accion;
 
     try {
-        const res = await fetch('/local3M/api/editar_reparacion.php', {
+        const res = await fetch('/api/editar_reparacion.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)

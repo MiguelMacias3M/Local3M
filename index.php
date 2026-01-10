@@ -5,7 +5,7 @@ if (isset($_SESSION['nombre'])) {
     //
     // CORRECCIÓN: Usar la misma ruta absoluta que en header.php
     //
-    header('Location: /local3M/dashboard.php');
+    header('Location: /dashboard.php');
     exit();
 }
 ?>
@@ -18,7 +18,7 @@ if (isset($_SESSION['nombre'])) {
     <title>Login - 3M-TECNOLOGY</title>
 
     <!-- CAMBIO: Ruta absoluta al CSS -->
-    <link rel="stylesheet" href="/local3M/css/login.css">
+    <link rel="stylesheet" href="/css/login.css">
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
@@ -58,6 +58,6 @@ if (isset($_SESSION['nombre'])) {
     </div>
 
     <!-- CAMBIO: Ruta absoluta al JS -->
-    <script src="/local3M/js/login.js"></script>
+    <script src="/js/login.js"></script>
 </body>
 </html>

@@ -14,7 +14,7 @@ if (!isset($_SESSION['nombre'])) {
     //
     // ESTE ES EL GRAN CAMBIO: Usamos la ruta absoluta
     //
-    header('Location: /local3M/index.php'); 
+    header('Location: /index.php'); 
     exit(); // Detiene la ejecución del resto de la página
 }
 ?>
@@ -25,7 +25,7 @@ if (!isset($_SESSION['nombre'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel - 3M TECHNOLOGY</title> 
     
-    <link rel="stylesheet" href="/local3M/css/panel.css">
+    <link rel="stylesheet" href="/css/panel.css">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
@@ -37,13 +37,13 @@ if (!isset($_SESSION['nombre'])) {
             <div class="navbar-brand">3M TECHNOLOGY</div>
             <ul class="navbar-menu">
                 
-                <li><a href="/local3M/dashboard.php"><i class="fas fa-home"></i> Panel</a></li>
-                <li><a href="/local3M/reparacion.php"><i class="fas fa-plus-circle"></i> Nueva Reparación</a></li>
-                <li><a href="/local3M/control.php"><i class="fas fa-clipboard-list"></i> Control</a></li>
-                <li><a href="/local3M/venta.php"><i class="fas fas fa-donate"></i> Venta</a></li>
-                <li><a href="/local3M/productos.php"><i class="fas 	fas fa-boxes"></i> Productos</a></li>
-                <li><a href="/local3M/mercancia.php"><i class="fas fa-clipboard-list"></i> Mercancía</a></li>
-                <li><a href="/local3M/caja.php"><i class="fas fa-cash-register"></i> Caja</a></li>
+                <li><a href="/dashboard.php"><i class="fas fa-home"></i> Panel</a></li>
+                <li><a href="/reparacion.php"><i class="fas fa-plus-circle"></i> Nueva Reparación</a></li>
+                <li><a href="/control.php"><i class="fas fa-clipboard-list"></i> Control</a></li>
+                <li><a href="/venta.php"><i class="fas fas fa-donate"></i> Venta</a></li>
+                <li><a href="/productos.php"><i class="fas 	fas fa-boxes"></i> Productos</a></li>
+                <li><a href="/mercancia.php"><i class="fas fa-clipboard-list"></i> Mercancía</a></li>
+                <li><a href="/caja.php"><i class="fas fa-cash-register"></i> Caja</a></li>
                 
                 </ul>
         </div>
@@ -51,7 +51,7 @@ if (!isset($_SESSION['nombre'])) {
         <div class="navbar-user">
             <span>Bienvenido, <?php echo htmlspecialchars($_SESSION['nombre']); ?></span>
             <span></span>
-            <a href="/local3M/logout.php" class="logout-button">  Cerrar Sesión</a>
+            <a href="/logout.php" class="logout-button">  Cerrar Sesión</a>
         </div>
     </nav>
 

@@ -1,7 +1,7 @@
 <?php include 'templates/header.php'; ?>
 
 <!-- Estilos específicos -->
-<link rel="stylesheet" href="/local3M/css/mercancia.css?v=1.0">
+<link rel="stylesheet" href="/css/mercancia.css?v=1.0">
 
 <div class="page-title">
     <h1>Inventario de Mercancía</h1>
@@ -106,6 +106,6 @@
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
-<script src="/local3M/js/mercancia.js?v=1.0"></script>
+<script src="/js/mercancia.js?v=1.0"></script>
 
 <?php include 'templates/footer.php'; ?>

@@ -28,7 +28,7 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($idTrans);
 ?>
 
 <!-- Estilos específicos -->
-<link rel="stylesheet" href="/local3M/css/editar_reparacion.css?v=1.0">
+<link rel="stylesheet" href="/css/editar_reparacion.css?v=1.0">
 
 <div class="page-title">
     <h1>Editar Reparación #<?= $id ?></h1>
@@ -176,6 +176,6 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($idTrans);
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
-<script src="/local3M/js/editar_reparacion.js"></script>
+<script src="/js/editar_reparacion.js"></script>
 
 <?php include 'templates/footer.php'; ?>

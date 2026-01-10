@@ -3,7 +3,7 @@
 <!-- 
     IMPORTANTE: ?v=FINAL_FIX_DUPLICADOS para forzar la carga de los nuevos estilos 
 -->
-<link rel="stylesheet" href="/local3M/css/caja.css?v=FINAL_FIX_DUPLICADOS">
+<link rel="stylesheet" href="/css/caja.css?v=FINAL_FIX_DUPLICADOS">
 
 <div class="page-title">
     <h1>Flujo de Caja 3M</h1>
@@ -158,6 +158,6 @@
 
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="/local3M/js/caja.js?v=<?php echo time(); ?>"></script>
+<script src="/js/caja.js?v=<?php echo time(); ?>"></script>
 
 <?php include 'templates/footer.php'; ?>

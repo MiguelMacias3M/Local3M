@@ -96,7 +96,7 @@ $total = 0;
             window.close();
             // Redirigir a venta.php con ruta absoluta si no se cierra
             setTimeout(function() {
-                window.location.href = '/local3M/venta.php';
+                window.location.href = '/venta.php';
             }, 300);
         }
         

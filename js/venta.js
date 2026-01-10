@@ -39,7 +39,7 @@ if(searchInput) {
 async function cargarProductos(query = '') {
     try {
         // Ruta absoluta
-        const res = await fetch(`/local3M/api/procesar_venta.php?action=buscar&q=${encodeURIComponent(query)}`);
+        const res = await fetch(`/api/procesar_venta.php?action=buscar&q=${encodeURIComponent(query)}`);
         
         if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
         
@@ -88,7 +88,7 @@ async function buscarPorCodigo(codigo) {
     if (!codigo) return;
     
     // Usamos la misma API de búsqueda
-    const res = await fetch(`/local3M/api/procesar_venta.php?action=buscar&q=${encodeURIComponent(codigo)}`);
+    const res = await fetch(`/api/procesar_venta.php?action=buscar&q=${encodeURIComponent(codigo)}`);
     const json = await res.json();
     
     if (json.success && json.data.length > 0) {
@@ -114,7 +114,7 @@ async function agregarAlCarrito(id) {
     formData.append('id', id);
     formData.append('cantidad', 1);
 
-    const res = await fetch('/local3M/api/procesar_venta.php?action=agregar', {
+    const res = await fetch('/api/procesar_venta.php?action=agregar', {
         method: 'POST',
         body: formData
     });
@@ -129,7 +129,7 @@ async function agregarAlCarrito(id) {
 
 // 4. Actualizar Carrito
 async function actualizarCarrito() {
-    const res = await fetch('/local3M/api/procesar_venta.php?action=get_carrito');
+    const res = await fetch('/api/procesar_venta.php?action=get_carrito');
     const json = await res.json();
     
     if (json.success) {
@@ -174,12 +174,12 @@ function renderCarrito(items) {
 async function eliminarDelCarrito(index) {
     const formData = new FormData();
     formData.append('index', index);
-    await fetch('/local3M/api/procesar_venta.php?action=eliminar', { method: 'POST', body: formData });
+    await fetch('/api/procesar_venta.php?action=eliminar', { method: 'POST', body: formData });
     actualizarCarrito();
 }
 
 async function limpiarCarrito() {
-    await fetch('/local3M/api/procesar_venta.php?action=limpiar');
+    await fetch('/api/procesar_venta.php?action=limpiar');
     actualizarCarrito();
 }
 
@@ -203,7 +203,7 @@ async function finalizarVenta() {
     btnFinalizar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
 
     try {
-        const res = await fetch('/local3M/api/procesar_venta.php?action=finalizar', { method: 'POST' });
+        const res = await fetch('/api/procesar_venta.php?action=finalizar', { method: 'POST' });
         const json = await res.json();
 
         if (json.success) {
@@ -215,7 +215,7 @@ async function finalizarVenta() {
             });
             
             // Abrir ticket de venta
-            window.open('/local3M/generar_ticket_venta.php?id_transaccion=' + json.id_transaccion, '_blank');
+            window.open('/generar_ticket_venta.php?id_transaccion=' + json.id_transaccion, '_blank');
             
             actualizarCarrito();
             cargarProductos(); // Recargar inventario visual

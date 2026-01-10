@@ -2,7 +2,7 @@
 include 'templates/header.php';
 ?>
 
-<link rel="stylesheet" href="/local3M/css/productos.css?v=1.0">
+<link rel="stylesheet" href="/css/productos.css?v=1.0">
 
 <div class="page-title">
     <h1>Inventario de Productos</h1>
@@ -91,6 +91,6 @@ include 'templates/header.php';
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <!-- JsBarcode para imprimir códigos en el futuro si quieres -->
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
-<script src="/local3M/js/productos.js?v=1.0"></script>
+<script src="/js/productos.js?v=1.0"></script>
 
 <?php include 'templates/footer.php'; ?>

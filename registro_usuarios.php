@@ -1,7 +1,7 @@
 <?php include 'templates/header.php'; ?>
 
 <!-- Estilos específicos -->
-<link rel="stylesheet" href="/local3M/css/usuarios.css?v=1.0">
+<link rel="stylesheet" href="/css/usuarios.css?v=1.0">
 
 <div class="page-title">
     <h1>Gestión de Usuarios</h1>
@@ -79,6 +79,6 @@
 
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="/local3M/js/usuarios.js?v=1.0"></script>
+<script src="/js/usuarios.js?v=1.0"></script>
 
 <?php include 'templates/footer.php'; ?>

@@ -12,7 +12,7 @@ $usuario_sesion = $_SESSION['nombre'] ?? 'Sistema';
 
 ?>
 
-<link rel="stylesheet" href="/css/reparacion.css">
+<link rel="stylesheet" href="/local3M/css/reparacion.css">
 
 <div class="page-title">
     <h1>Nueva Orden de Reparación</h1>
@@ -92,7 +92,7 @@ $usuario_sesion = $_SESSION['nombre'] ?? 'Sistema';
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="/js/reparacion.js"></script>
+<script src="/local3M/js/reparacion.js"></script>
 
 <?php
 // 3. Incluimos el footer (cierre de HTML, script anti-caché, etc.)

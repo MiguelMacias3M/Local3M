@@ -14,7 +14,7 @@ inputBuscar.addEventListener('input', () => {
 
 async function cargarProductos(query = '') {
     try {
-        const res = await fetch(`/api/productos.php?action=listar&q=${encodeURIComponent(query)}`);
+        const res = await fetch(`/local3M/api/productos.php?action=listar&q=${encodeURIComponent(query)}`);
         const json = await res.json();
         
         tbody.innerHTML = '';
@@ -56,7 +56,7 @@ function abrirModal() {
 // Abrir Modal (Editar)
 async function editarProducto(id) {
     try {
-        const res = await fetch(`/api/productos.php?action=obtener&id=${id}`);
+        const res = await fetch(`/local3M/api/productos.php?action=obtener&id=${id}`);
         const json = await res.json();
         if (json.success) {
             const p = json.data;
@@ -83,7 +83,7 @@ async function guardarProducto() {
     formData.append('action', 'guardar');
 
     try {
-        const res = await fetch('/api/productos.php', {
+        const res = await fetch('/local3M/api/productos.php', {
             method: 'POST',
             body: formData
         });
@@ -115,7 +115,7 @@ function eliminarProducto(id) {
             formData.append('action', 'eliminar');
             formData.append('id', id);
             
-            await fetch('/api/productos.php', { method: 'POST', body: formData });
+            await fetch('/local3M/api/productos.php', { method: 'POST', body: formData });
             cargarProductos(inputBuscar.value);
             Swal.fire('Eliminado', '', 'success');
         }

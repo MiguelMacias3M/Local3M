@@ -40,7 +40,7 @@ async function cargarPagina() {
 
     try {
         // Usamos ruta absoluta para la API para evitar errores de carpetas
-        const url = new URL('/api/get_reparaciones.php', window.location.origin);
+        const url = new URL('/local3M/api/get_reparaciones.php', window.location.origin);
         url.searchParams.set('offset', offset);
         url.searchParams.set('limit', LIMIT);
         if (busqueda) url.searchParams.set('q', busqueda);
@@ -92,7 +92,7 @@ function renderFilas(chunk, baseIndex) {
                 <button class='form-button btn-info' data-action="ver" data-index="${idx}">
                     <i class="fas fa-eye"></i> Ver
                 </button>
-                <a href='/editar_reparacion.php?id=${row.id}' class='form-button btn-warning'>
+                <a href='/local3M/editar_reparacion.php?id=${row.id}' class='form-button btn-warning'>
                     <i class="fas fa-edit"></i> Editar
                 </a>
                 <button class='form-button btn-danger' data-action="eliminar" data-id="${row.id}">
@@ -173,7 +173,7 @@ function confirmarEliminar(id) {
         showLoaderOnConfirm: true,
         preConfirm: (password) => {
             // Petición POST a la API
-            return fetch('/api/eliminar_reparacion.php', {
+            return fetch('/local3M/api/eliminar_reparacion.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: id, password: password })
@@ -279,7 +279,7 @@ function mostrarDetalles(row){
 function cerrarModal(){ modalDetalles.style.display = "none"; }
 
 function imprimirTicket(idTransaccion){
-    window.location.href = '/generar_ticket_id.php?id_transaccion=' + encodeURIComponent(idTransaccion);
+    window.location.href = '/local3M/generar_ticket_id.php?id_transaccion=' + encodeURIComponent(idTransaccion);
 }
 
 // ===== Modal Código de Barras =====
@@ -302,7 +302,7 @@ async function mostrarCodigo(id) {
 
     try {
         // Petición a la API para obtener o generar el código
-        const res = await fetch(`/api/get_codigo_reparacion.php?id=${encodeURIComponent(id)}`, { headers: { 'Accept': 'application/json' } });
+        const res = await fetch(`/local3M/api/get_codigo_reparacion.php?id=${encodeURIComponent(id)}`, { headers: { 'Accept': 'application/json' } });
         const data = await res.json();
         if (!res.ok || !data.success) throw new Error(data.error || 'No se pudo obtener el código.');
 

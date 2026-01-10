@@ -121,7 +121,7 @@ function enviarCarrito() {
         id_transaccion: ID_TRANSACCION 
     };
 
-    fetch('/api/registrar_reparaciones.php', {
+    fetch('/local3M/api/registrar_reparaciones.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -168,11 +168,11 @@ function imprimirUltimaYLimpiar(idTransaccion) {
     if (idTransaccion) {
         // Abrimos el ticket con el ID específico de la transacción
         // Fíjate que aquí NO usamos ?ts=, usamos ?id_transaccion=
-        window.open('/generar_ticket.php?id_transaccion=' + encodeURIComponent(idTransaccion), '_blank');
+        window.open('/local3M/generar_ticket.php?id_transaccion=' + encodeURIComponent(idTransaccion), '_blank');
     } else {
         // Respaldo por si acaso
         if (typeof ID_TRANSACCION !== 'undefined') {
-             window.open('/generar_ticket.php?id_transaccion=' + encodeURIComponent(ID_TRANSACCION), '_blank');
+             window.open('/local3M/generar_ticket.php?id_transaccion=' + encodeURIComponent(ID_TRANSACCION), '_blank');
         } else {
             Swal.fire('Error', 'No se pudo obtener el folio del ticket.', 'error');
         }

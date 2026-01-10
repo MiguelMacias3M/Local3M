@@ -14,7 +14,7 @@ inputBuscar.addEventListener('input', () => {
 
 async function cargarMercancia(query = '') {
     try {
-        const res = await fetch(`/api/mercancia.php?action=listar&q=${encodeURIComponent(query)}`);
+        const res = await fetch(`/local3M/api/mercancia.php?action=listar&q=${encodeURIComponent(query)}`);
         const json = await res.json();
         
         tbody.innerHTML = '';
@@ -59,7 +59,7 @@ async function modificarStock(id, tipo) {
         formData.append('id', id);
         formData.append('tipo', tipo);
 
-        await fetch('/api/mercancia.php', { method: 'POST', body: formData });
+        await fetch('/local3M/api/mercancia.php', { method: 'POST', body: formData });
         cargarMercancia(inputBuscar.value);
     } catch (e) { Swal.fire('Error', 'No se pudo actualizar stock', 'error'); }
 }
@@ -76,7 +76,7 @@ function abrirModal() {
 // Modal Editar
 async function editarMercancia(id) {
     try {
-        const res = await fetch(`/api/mercancia.php?action=obtener&id=${id}`);
+        const res = await fetch(`/local3M/api/mercancia.php?action=obtener&id=${id}`);
         const json = await res.json();
         if (json.success) {
             const p = json.data;
@@ -113,7 +113,7 @@ async function guardarMercancia() {
     formData.append('action', 'guardar');
 
     try {
-        const res = await fetch('/api/mercancia.php', { method: 'POST', body: formData });
+        const res = await fetch('/local3M/api/mercancia.php', { method: 'POST', body: formData });
         const json = await res.json();
 
         if (json.success) {
@@ -140,7 +140,7 @@ function eliminarMercancia(id) {
             formData.append('action', 'eliminar');
             formData.append('id', id);
             
-            await fetch('/api/mercancia.php', { method: 'POST', body: formData });
+            await fetch('/local3M/api/mercancia.php', { method: 'POST', body: formData });
             cargarMercancia(inputBuscar.value);
             Swal.fire('Eliminado', '', 'success');
         }

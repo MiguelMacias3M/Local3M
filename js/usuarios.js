@@ -28,7 +28,7 @@ async function registrarUsuario() {
     formData.append('admin_password', adminPass);
 
     try {
-        const res = await fetch('/api/usuarios.php', { method: 'POST', body: formData });
+        const res = await fetch('/local3M/api/usuarios.php', { method: 'POST', body: formData });
         const json = await res.json();
 
         if (json.success) {
@@ -53,7 +53,7 @@ async function registrarUsuario() {
 // Cargar Lista
 async function cargarUsuarios() {
     try {
-        const res = await fetch('/api/usuarios.php?action=listar');
+        const res = await fetch('/local3M/api/usuarios.php?action=listar');
         const json = await res.json();
         
         const tbody = document.getElementById('tablaUsuariosBody');
@@ -98,7 +98,7 @@ function eliminarUsuario(id, nombre) {
             formData.append('admin_password', result.value);
 
             try {
-                const res = await fetch('/api/usuarios.php', { method: 'POST', body: formData });
+                const res = await fetch('/local3M/api/usuarios.php', { method: 'POST', body: formData });
                 const json = await res.json();
 
                 if (json.success) {

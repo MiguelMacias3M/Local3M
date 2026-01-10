@@ -3,7 +3,7 @@ include 'templates/header.php';
 ?>
 
 <!-- Estilos específicos -->
-<link rel="stylesheet" href="/css/venta.css?v=1.0">
+<link rel="stylesheet" href="/local3M/css/venta.css?v=1.0">
 
 <div class="page-title">
     <h1>Punto de Venta</h1>
@@ -70,6 +70,6 @@ include 'templates/header.php';
 
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="/js/venta.js"></script>
+<script src="/local3M/js/venta.js"></script>
 
 <?php include 'templates/footer.php'; ?>

@@ -14,7 +14,7 @@ if (isset($_GET['msg'])) {
 <!-- 
     Estilos con versión forzada 
 -->
-<link rel="stylesheet" href="/css/control.css?v=9999">
+<link rel="stylesheet" href="/local3M/css/control.css?v=9999">
 
 <!-- Título de la Página -->
 <div class="page-title">
@@ -101,7 +101,7 @@ if (isset($_GET['msg'])) {
     LA SOLUCIÓN ESTÁ AQUÍ:
     Cambiamos la versión a ?v=9999 para obligar al navegador a olvidar el archivo viejo.
 -->
-<script src="/js/control.js?v=9999"></script>
+<script src="/local3M/js/control.js?v=9999"></script>
 
 <!-- Script para mostrar mensajes (alertas PHP) -->
 <script>

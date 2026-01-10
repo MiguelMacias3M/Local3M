@@ -301,7 +301,7 @@ try {
             window.close();
             // Si no se cierra, redirige al panel de control
             setTimeout(function() {
-                window.location.href = '/control.php';
+                window.location.href = '/local3M/control.php';
             }, 300);
         }
     </script>

@@ -2,7 +2,7 @@
 
 <!-- Enlace a los estilos nuevos -->
 <link rel="stylesheet" href="css/gastos.css?v=<?php echo time(); ?>">
-<link rel="stylesheet" href="css/gastos.css">
+
 <div class="gastos-container">
     
     <!-- Encabezado -->
@@ -49,7 +49,7 @@
                     <th>Descripción</th>
                     <th class="text-center">Evidencia</th>
                     <th class="text-right">Monto</th>
-                    <th class="text-center">Acción</th>
+                    <th class="text-center">Acciones</th>
                 </tr>
             </thead>
             <tbody id="tablaBody">
@@ -59,13 +59,15 @@
     </div>
 </div>
 
-<!-- MODAL NUEVO MOVIMIENTO -->
+<!-- MODAL NUEVO/EDITAR MOVIMIENTO -->
 <div id="modalNuevo" class="custom-overlay" style="display:none;">
     <div class="custom-modal">
         <button class="custom-close" onclick="cerrarModal()">&times;</button>
         <h2 id="modalTitle">Registrar Movimiento</h2>
         
         <form id="formGasto" enctype="multipart/form-data">
+            <!-- ID OCULTO PARA EDICIÓN -->
+            <input type="hidden" name="id" id="inputId">
             <input type="hidden" name="action" value="guardar">
             
             <div class="form-group">
@@ -85,13 +87,13 @@
 
             <div class="form-group">
                 <label>Descripción detallada</label>
-                <textarea name="descripcion" class="form-input" rows="2" placeholder="Ej: Pago de recibo CFE Enero, Compra de material..." required></textarea>
+                <textarea name="descripcion" id="inputDescripcion" class="form-input" rows="2" placeholder="Ej: Pago de recibo CFE Enero, Compra de material..." required></textarea>
             </div>
 
             <div class="row-2-col">
                 <div class="form-group">
                     <label>Monto ($)</label>
-                    <input type="number" name="monto" class="form-input" step="0.01" min="0.1" required>
+                    <input type="number" name="monto" id="inputMonto" class="form-input" step="0.01" min="0.1" required>
                 </div>
                 <div class="form-group">
                     <label>Foto / Comprobante (Opcional)</label>
@@ -107,7 +109,7 @@
 
             <div class="modal-footer">
                 <button type="button" class="form-button btn-secondary" onclick="cerrarModal()">Cancelar</button>
-                <button type="submit" class="form-button btn-primary">Guardar Registro</button>
+                <button type="submit" id="btnGuardar" class="form-button btn-primary">Guardar Registro</button>
             </div>
         </form>
     </div>

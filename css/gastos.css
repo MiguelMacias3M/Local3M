@@ -59,7 +59,7 @@
     display: block;
 }
 
-/* Tabla de Gastos */
+/* Tabla de Gastos - ESTILO MODERNO */
 .table-responsive {
     overflow-x: auto;
     background: white;
@@ -153,6 +153,49 @@
     color: #fff;
     border-color: #343a40;
     transform: translateY(-1px);
+}
+
+/* --- BOTONES DE ACCIÓN (NUEVO ESTILO) --- */
+.btn-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%; /* Botones circulares */
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    margin: 0 4px;
+    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+}
+
+.btn-icon:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 5px 10px rgba(0,0,0,0.15);
+}
+
+/* Estilo para el botón Editar (Azul suave) */
+.btn-icon.btn-primary {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.btn-icon.btn-primary:hover {
+    background-color: #2196f3;
+    color: white;
+}
+
+/* Estilo para el botón Eliminar (Rojo suave) */
+.btn-icon.btn-danger {
+    background-color: #ffebee;
+    color: #c62828;
+}
+
+.btn-icon.btn-danger:hover {
+    background-color: #ef5350;
+    color: white;
 }
 
 /* --- ESTILOS DEL MODAL (VENTANA EMERGENTE) --- */
@@ -300,4 +343,4 @@
     .header-gastos button {
         width: 100%;
     }
-} 
+}

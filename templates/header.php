@@ -44,7 +44,7 @@ if (!isset($_SESSION['nombre'])) {
                 <li><a href="/local3M/productos.php"><i class="fas 	fas fa-boxes"></i> Productos</a></li>
                 <li><a href="/local3M/mercancia.php"><i class="fas fa-clipboard-list"></i> Mercancía</a></li>
                 <li><a href="/local3M/caja.php"><i class="fas fa-cash-register"></i> Caja</a></li>
-                
+                <li><a href="/local3M/gastos.php"><i class="far fa-money-bill-alt"></i> Control de gastos</a></li>
                 </ul>
         </div>
         

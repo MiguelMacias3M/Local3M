@@ -1,8 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Primero ajustamos la fecha a México
-    inicializarFecha(); 
-    
-    // 2. Cargamos categorías iniciales
+    inicializarFecha();
     actualizarCategorias(); 
     
     // Listener para vista previa de imagen en el input file
@@ -20,21 +17,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     preview.style.display = 'block';
                 }
                 reader.readAsDataURL(file);
+            } else {
+                preview.style.display = 'none';
             }
         });
     }
 });
 
-const catsGastos = ['Alimentos', 'Transporte', 'Servicios', 'Proveedores', 'Nómina', 'Mantenimiento', 'Retiro', 'Otros'];
-const catsIngresos = ['Ingreso Extra', 'Inversión', 'Devolución Proveedor', 'Otros'];
-
-// --- NUEVA FUNCIÓN: CORREGIR FECHA ---
+// --- 1. INICIALIZACIÓN DE FECHA (MÉXICO) ---
 function inicializarFecha() {
     const filtroFecha = document.getElementById('filtroFecha');
     if (!filtroFecha) return;
 
-    // Obtenemos la fecha actual forzada a la zona horaria de Ciudad de México
-    // 'en-CA' nos da el formato YYYY-MM-DD directo
+    // Forzar fecha actual de CDMX
     const fechaMexico = new Date().toLocaleDateString('en-CA', {
         timeZone: 'America/Mexico_City',
         year: 'numeric',
@@ -43,67 +38,96 @@ function inicializarFecha() {
     });
 
     filtroFecha.value = fechaMexico;
-    console.log("📅 Fecha ajustada a:", fechaMexico);
-
-    // Una vez puesta la fecha correcta, cargamos los datos
     cargarMovimientos();
 }
 
-// Función para llenar el select de categorías según si es Gasto o Ingreso
-function actualizarCategorias() {
+// Listas de categorías administrativas
+const catsGastos = ['Alimentos', 'Transporte', 'Servicios', 'Proveedores', 'Nómina', 'Mantenimiento', 'Retiro', 'Otros'];
+const catsIngresos = ['Ingreso Extra', 'Inversión', 'Devolución Proveedor', 'Otros'];
+
+function actualizarCategorias(categoriaExtra = null) {
     const tipo = document.getElementById('inputTipo').value;
     const select = document.getElementById('inputCategoria');
-    
-    const valorActual = select.value; 
+    const valorPrevio = select.value;
     
     select.innerHTML = '';
     const lista = tipo === 'GASTO' ? catsGastos : catsIngresos;
     
     lista.forEach(c => {
         const opt = document.createElement('option');
-        opt.value = c;
-        opt.textContent = c;
-        select.appendChild(opt);
+        opt.value = c; opt.textContent = c; select.appendChild(opt);
     });
 
-    if (lista.includes(valorActual)) {
-        select.value = valorActual;
+    // Si la categoría actual (al editar) no está en la lista estándar, la agregamos
+    if (categoriaExtra && !lista.includes(categoriaExtra)) {
+        const opt = document.createElement('option');
+        opt.value = categoriaExtra;
+        opt.textContent = categoriaExtra + ' (Origen Caja)';
+        select.appendChild(opt);
+        select.value = categoriaExtra;
+    } else if (lista.includes(valorPrevio)) {
+        select.value = valorPrevio;
     }
 }
 
+// --- 2. CARGAR MOVIMIENTOS (VISUALIZACIÓN INTELIGENTE) ---
 function cargarMovimientos() {
     const fecha = document.getElementById('filtroFecha').value;
     const tipo = document.getElementById('filtroTipo').value;
     const tbody = document.getElementById('tablaBody');
     
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center">Cargando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center">Cargando...</td></tr>';
 
-    fetch(`api/gastos.php?action=listar&fecha=${fecha}&tipo=${tipo}`)
+    fetch(`api/gastos.php?action=listar&fecha=${fecha}&tipo=${tipo}&_t=${Date.now()}`)
         .then(res => res.json())
         .then(data => {
             tbody.innerHTML = '';
-            if (data.success && data.data.length > 0) {
+            if (data.success && data.data && data.data.length > 0) {
                 data.data.forEach(m => {
-                    // Calcular montos reales
-                    const valIngreso = parseFloat(m.ingreso) || 0;
-                    const valEgreso = parseFloat(m.egreso) || 0;
-                    // Si hay dinero en la columna 'ingreso', es una entrada
+                    const valIngreso = parseFloat(m.ingreso)||0;
+                    const valEgreso = parseFloat(m.egreso)||0;
                     const esEntrada = valIngreso > 0;
                     
                     const monto = esEntrada ? valIngreso : valEgreso;
-                    const signo = esEntrada ? '+' : '-';
-                    const colorMonto = esEntrada ? '#28a745' : '#dc3545';
                     
-                    // Lógica para el badge (etiqueta)
-                    let claseBadge = 'badge-gasto'; 
-                    if (esEntrada) {
-                        claseBadge = 'badge-ingreso'; 
-                    }
-                    // Si es REPARACION o VENTA, también le ponemos estilo de ingreso
-                    if (m.tipo === 'VENTA') claseBadge = 'badge-primary'; // Azul (si tuvieras css para este)
-                    if (m.tipo === 'REPARACION') claseBadge = 'badge-warning'; // Naranja
+                    // --- LÓGICA DE COLORES Y SIGNOS ---
+                    // Detectar movimientos neutros (Cierres y Retiros)
+                    const tipoUpper = (m.tipo || '').toUpperCase();
+                    const esNeutro = m.es_retiro_cierre === true || tipoUpper === 'RETIRO' || tipoUpper === 'CIERRE';
 
-                    // Botón de evidencia
+                    let signo = esEntrada ? '+' : '-';
+                    let colorMonto = esEntrada ? '#28a745' : '#dc3545'; // Verde o Rojo
+                    
+                    if (esNeutro) {
+                        signo = '•'; // Signo neutro
+                        colorMonto = '#6c757d'; // Gris (No cuenta como gasto/ingreso operativo)
+                    }
+
+                    // Badge de Origen (Admin vs Caja)
+                    let origenBadge = '';
+                    if (m.origen === 'CAJA') {
+                        origenBadge = '<span style="font-size:0.75em; background:#f8f9fa; padding:2px 6px; border-radius:4px; color:#6c757d; border:1px solid #dee2e6;">Mostrador</span>';
+                    } else {
+                        origenBadge = '<span style="font-size:0.75em; background:#e3f2fd; padding:2px 6px; border-radius:4px; color:#0d47a1; border:1px solid #bbdefb;">Admin</span>';
+                    }
+
+                    // Badge de Tipo (Etiquetas de colores)
+                    let claseBadge = 'badge-gasto'; 
+                    let textoTipo = m.tipo;
+
+                    if (esEntrada) claseBadge = 'badge-ingreso';
+                    if (tipoUpper === 'VENTA') claseBadge = 'badge-primary'; 
+                    if (tipoUpper === 'REPARACION') claseBadge = 'badge-warning'; 
+                    
+                    if (tipoUpper === 'CIERRE') {
+                        claseBadge = 'badge-dark';
+                        textoTipo = 'Cierre Caja';
+                    }
+                    if (tipoUpper === 'RETIRO') {
+                        claseBadge = 'badge-secondary'; // Gris claro
+                    }
+
+                    // Botón Foto
                     let btnFoto = '<span class="text-muted small">-</span>';
                     if (m.foto) {
                         btnFoto = `<a href="uploads/${m.foto}" target="_blank" class="btn-evidencia">
@@ -111,48 +135,43 @@ function cargarMovimientos() {
                                    </a>`;
                     }
 
-                    // Formato de hora
+                    // Hora
                     let hora = '--:--';
                     try { if(m.fecha) hora = m.fecha.split(' ')[1].substring(0,5); } catch(e){}
 
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td>${hora}</td>
-                        <td><span class="badge-tipo ${claseBadge}">${m.tipo}</span></td>
+                        <td class="text-center">${origenBadge}</td>
+                        <td><span class="badge-tipo ${claseBadge}">${textoTipo}</span></td>
                         <td>${m.categoria || '-'}</td>
                         <td>${m.descripcion}</td>
                         <td class="text-center">${btnFoto}</td>
                         <td class="text-right font-weight-bold" style="color: ${colorMonto}">
-                            ${signo}${formatoDinero(monto)}
+                            ${signo} $${formatoDinero(monto)}
                         </td>
                         <td class="text-center">
-                            <button class="btn-icon btn-primary" onclick="editarMovimiento(${m.id})" title="Editar">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn-icon btn-danger" onclick="eliminarMovimiento(${m.id})" title="Eliminar">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                            <button class="btn-icon btn-primary" onclick="editarMovimiento(${m.id})" title="Editar"><i class="fas fa-edit"></i></button>
+                            <button class="btn-icon btn-danger" onclick="eliminarMovimiento(${m.id})" title="Eliminar"><i class="fas fa-trash"></i></button>
                         </td>
                     `;
                     tbody.appendChild(tr);
                 });
             } else {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center p-3">No hay movimientos registrados para esta fecha.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-muted">No hay movimientos registrados en esta fecha.</td></tr>';
             }
         })
         .catch(err => {
             console.error(err);
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Error al cargar datos.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger p-3">Error al cargar datos.</td></tr>';
         });
 }
 
-// ==========================================
-// EDICIÓN CON LLAVE MAESTRA
-// ==========================================
+// --- 3. EDICIÓN CON LLAVE MAESTRA ---
 function editarMovimiento(id) {
     Swal.fire({
         title: 'Modo Edición',
-        text: "Ingresa la Llave Maestra para editar este registro:",
+        text: 'Ingresa la Llave Maestra para editar:',
         input: 'password',
         inputAttributes: { autocapitalize: 'off', placeholder: '••••••' },
         showCancelButton: true,
@@ -165,79 +184,76 @@ function editarMovimiento(id) {
         }
     }).then((result) => {
         if (result.isConfirmed) {
-            const llave = result.value;
             const fd = new FormData();
             fd.append('action', 'obtener');
             fd.append('id', id);
-            fd.append('llave_maestra', llave);
+            fd.append('llave_maestra', result.value);
 
             fetch('api/gastos.php', { method: 'POST', body: fd })
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        abrirModalEdicion(data.data); 
+                        abrirModalEdicion(data.data);
                     } else {
-                        Swal.fire('Acceso Denegado', data.error || 'Contraseña incorrecta', 'error');
+                        Swal.fire('Acceso Denegado', data.error || 'Llave incorrecta', 'error');
                     }
                 })
-                .catch(() => Swal.fire('Error', 'Fallo de conexión con el servidor', 'error'));
+                .catch(() => Swal.fire('Error', 'Fallo de conexión', 'error'));
         }
     });
 }
 
 function abrirModalEdicion(movimiento) {
     document.getElementById('modalTitle').textContent = 'Editar Movimiento';
-    
     const btnGuardar = document.querySelector('#formGasto button[type="submit"]');
     if(btnGuardar) btnGuardar.textContent = 'Actualizar Cambios';
     
-    document.getElementById('inputId').value = movimiento.id; 
+    document.getElementById('inputId').value = movimiento.id;
     
+    // Asignar tipo (INGRESO/GASTO/VENTA...)
     const inputTipo = document.getElementById('inputTipo');
-    inputTipo.value = movimiento.tipo; 
+    // Si el tipo es especial (Venta/Reparación), lo mostramos como INGRESO para que el select funcione visualmente
+    if(movimiento.tipo !== 'GASTO' && movimiento.tipo !== 'INGRESO') {
+        inputTipo.value = (parseFloat(movimiento.ingreso) > 0) ? 'INGRESO' : 'GASTO';
+    } else {
+        inputTipo.value = movimiento.tipo;
+    }
     
-    actualizarCategorias(); 
+    // Cargar categorías
+    actualizarCategorias(movimiento.categoria);
     
-    // Pequeño timeout para asegurar que el select se llenó
-    setTimeout(() => {
-        document.getElementById('inputCategoria').value = movimiento.categoria;
-    }, 50);
+    // Timeout para asegurar que el select se llenó antes de asignar valor
+    setTimeout(() => { document.getElementById('inputCategoria').value = movimiento.categoria; }, 50);
 
     document.getElementById('inputDescripcion').value = movimiento.descripcion;
     document.getElementById('inputMonto').value = movimiento.monto_real;
 
+    // Foto
     const preview = document.getElementById('previewContainer');
     const img = document.getElementById('imgPreview');
-    
-    if (movimiento.foto_url) {
-        img.src = movimiento.foto_url;
-        preview.style.display = 'block';
-    } else {
-        preview.style.display = 'none';
-        img.src = '';
+    if (movimiento.foto_url) { 
+        img.src = movimiento.foto_url; 
+        preview.style.display = 'block'; 
+    } else { 
+        preview.style.display = 'none'; 
+        img.src = ''; 
     }
-
-    document.getElementById('inputFoto').value = '';
+    
+    document.getElementById('inputFoto').value = ''; 
     document.getElementById('modalNuevo').style.display = 'flex';
 }
 
-// ==========================================
-// ELIMINACIÓN CON LLAVE MAESTRA
-// ==========================================
+// --- 4. ELIMINACIÓN CON LLAVE MAESTRA ---
 function eliminarMovimiento(id) {
     Swal.fire({
         title: 'Eliminar Registro',
-        text: "Ingresa la Llave Maestra para confirmar el borrado:",
+        text: 'Ingresa la Llave Maestra:',
         input: 'password',
-        inputAttributes: { autocapitalize: 'off' },
         showCancelButton: true,
-        confirmButtonText: 'Eliminar Definitivamente',
+        confirmButtonText: 'Eliminar',
         confirmButtonColor: '#d33',
         showLoaderOnConfirm: true,
-        preConfirm: (llave) => {
-            if (!llave) Swal.showValidationMessage('Requerido');
-            return llave;
-        }
+        preConfirm: (llave) => { if (!llave) Swal.showValidationMessage('Requerido'); return llave; }
     }).then((result) => {
         if (result.isConfirmed) {
             const fd = new FormData();
@@ -248,9 +264,9 @@ function eliminarMovimiento(id) {
             fetch('api/gastos.php', { method: 'POST', body: fd })
                 .then(res => res.json())
                 .then(data => {
-                    if(data.success) {
-                        Swal.fire('Eliminado', 'El registro ha sido borrado.', 'success');
-                        cargarMovimientos();
+                    if(data.success) { 
+                        Swal.fire('Eliminado', 'El registro ha sido borrado.', 'success'); 
+                        cargarMovimientos(); 
                     } else {
                         Swal.fire('Error', data.error || 'Llave incorrecta', 'error');
                     }
@@ -260,29 +276,22 @@ function eliminarMovimiento(id) {
     });
 }
 
-// ==========================================
-// MANEJO DEL FORMULARIO
-// ==========================================
+// --- 5. MANEJO DEL FORMULARIO ---
 const form = document.getElementById('formGasto');
 if(form) {
     form.addEventListener('submit', (e) => {
         e.preventDefault();
         const formData = new FormData(form);
-
-        Swal.fire({
-            title: 'Guardando...',
-            text: 'Procesando cambios',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
+        
+        Swal.fire({title: 'Guardando...', didOpen: () => Swal.showLoading()});
 
         fetch('api/gastos.php', { method: 'POST', body: formData })
         .then(res => res.json())
         .then(data => {
-            if(data.success) {
-                Swal.fire('Éxito', 'Operación completada', 'success');
-                cerrarModal();
-                cargarMovimientos();
+            if(data.success) { 
+                Swal.fire('Éxito', 'Operación completada', 'success'); 
+                cerrarModal(); 
+                cargarMovimientos(); 
             } else {
                 Swal.fire('Error', data.error || 'Error al guardar', 'error');
             }
@@ -293,14 +302,12 @@ if(form) {
 
 function abrirModalNuevo() {
     form.reset();
-    document.getElementById('inputId').value = ''; 
+    document.getElementById('inputId').value = '';
     document.getElementById('modalTitle').textContent = 'Registrar Movimiento';
-    
     const btnGuardar = document.querySelector('#formGasto button[type="submit"]');
     if(btnGuardar) btnGuardar.textContent = 'Guardar Registro';
     
     document.getElementById('previewContainer').style.display = 'none';
-    
     document.getElementById('inputTipo').value = 'GASTO';
     actualizarCategorias();
     
@@ -312,5 +319,5 @@ function cerrarModal() {
 }
 
 function formatoDinero(amount) {
-    return '$' + parseFloat(amount).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+    return parseFloat(amount).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
 }

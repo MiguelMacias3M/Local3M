@@ -1,54 +1,42 @@
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("✅ CAJA.JS - MODIFICADO PARA ESTRUCTURA SQL REAL");
     cargarUsuarios();
-    inicializarFecha(); // Primero ajustamos la fecha, luego cargamos el reporte
+    inicializarFecha(); 
 });
 
-// Referencias a elementos del DOM
 const filtroFecha = document.getElementById('filtroFecha');
 const filtroUsuario = document.getElementById('filtroUsuario');
 const modal = document.getElementById('modalMovimiento');
 const form = document.getElementById('formMovimiento');
 
 // ==========================================
-// 0. INICIALIZACIÓN DE FECHA (SOLUCIÓN FINAL CLIENTE)
+// 0. INICIALIZACIÓN DE FECHA
 // ==========================================
-
-function inicializarFecha() {
-    // Si no existe el input, no hacemos nada
+async function inicializarFecha() {
     if (!filtroFecha) return;
-
-    // ESTA ES LA CLAVE: 
-    // Usamos la API internacional del navegador para pedir la fecha EXACTA en CDMX.
-    // 'en-CA' nos da el formato YYYY-MM-DD automáticamente.
-    const fechaMexico = new Date().toLocaleDateString('en-CA', {
-        timeZone: 'America/Mexico_City',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-    });
-
-    // console.log("📅 Fecha Forzada a Mexico City:", fechaMexico);
-    
-    filtroFecha.value = fechaMexico;
-    
-    // Una vez puesta la fecha correcta, cargamos el reporte
+    try {
+        const res = await fetch(`api/caja.php?action=fecha_servidor&_t=${Date.now()}`);
+        const data = await res.json();
+        if (data.success) filtroFecha.value = data.fecha;
+    } catch (e) { 
+        // Fallback matemático (UTC-6) si falla el servidor
+        const now = new Date();
+        const offsetMexico = 6 * 60 * 60 * 1000; 
+        const fechaRestada = new Date(now.getTime() - offsetMexico);
+        filtroFecha.value = fechaRestada.toISOString().split('T')[0];
+    }
     cargarReporte();
 }
 
 // ==========================================
 // 1. CARGA DE REPORTES Y DATOS
 // ==========================================
-
 async function cargarReporte() {
     const fecha = filtroFecha.value;
     const usuario = filtroUsuario.value;
-
-    // Si por alguna razón la fecha está vacía, no cargamos para evitar errores
     if (!fecha) return;
 
     try {
-        // Petición a la API para obtener totales y movimientos
-        // Agregamos un timestamp _t para evitar que el navegador guarde versiones viejas del reporte
         const res = await fetch(`api/caja.php?action=reporte_dia&fecha=${fecha}&usuario=${usuario}&_t=${Date.now()}`);
         const json = await res.json();
 
@@ -57,16 +45,13 @@ async function cargarReporte() {
             document.getElementById('valIngresos').textContent = formatoDinero(json.totales.ingreso);
             document.getElementById('valEgresos').textContent = formatoDinero(json.totales.egreso);
             document.getElementById('valNeto').textContent = formatoDinero(json.totales.neto);
-
-            // Actualizar Estado Caja
+            
+            // Actualizar Estado
             actualizarEstadoCaja(json.estado_caja);
-
             // Llenar Tabla
             llenarTabla(json.movimientos);
         }
-    } catch (e) {
-        console.error("Error cargando reporte:", e);
-    }
+    } catch (e) { console.error(e); }
 }
 
 function actualizarEstadoCaja(estado) {
@@ -74,15 +59,13 @@ function actualizarEstadoCaja(estado) {
     const lblMonto = document.getElementById('lblMontoActual');
     const lblDetalle = document.getElementById('lblDetalleCaja');
     const btn = document.getElementById('btnCorteCaja');
-
-    if (!lblEstado || !lblMonto) return; // Evitar errores si no existen los elementos
+    if (!lblEstado) return; 
 
     if (estado.estado === 'ABIERTA') {
         lblEstado.textContent = 'CAJA ABIERTA';
         lblEstado.style.color = '#28a745';
         lblMonto.textContent = formatoDinero(estado.monto_actual);
         lblDetalle.textContent = `Por: ${estado.usuario}`;
-        
         if(btn) {
             btn.innerHTML = '<i class="fas fa-lock"></i> Realizar Corte';
             btn.onclick = () => window.location.href = 'cierre_caja.php';
@@ -92,7 +75,6 @@ function actualizarEstadoCaja(estado) {
         lblEstado.style.color = '#dc3545';
         lblMonto.textContent = '$0.00';
         lblDetalle.textContent = 'Sin turno activo';
-        
         if(btn) {
             btn.innerHTML = '<i class="fas fa-key"></i> Abrir Turno';
             btn.onclick = () => window.location.href = 'cierre_caja.php';
@@ -103,7 +85,6 @@ function actualizarEstadoCaja(estado) {
 function llenarTabla(movs) {
     const tbody = document.getElementById('tablaBody');
     if (!tbody) return;
-    
     tbody.innerHTML = '';
 
     if (movs.length === 0) {
@@ -122,16 +103,13 @@ function llenarTabla(movs) {
         const claseMonto = esEntrada ? 'monto-ingreso' : 'monto-egreso';
         const signo = esEntrada ? '+' : '-';
         
-        // Formatear hora de forma segura
+        // Formatear hora
         let hora = m.fecha.split(' ')[1] || '--:--';
-        try {
-            // Reemplazar guiones por barras para compatibilidad con Safari/iOS
-            const fechaSafe = m.fecha.replace(/-/g, '/'); 
-            const fechaObj = new Date(fechaSafe);
-            hora = fechaObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        } catch (e) {
-            hora = m.fecha.split(' ')[1] || '--:--'; // Fallback simple
-        }
+        try { 
+            // Reemplazo para compatibilidad Safari
+            const d = new Date(m.fecha.replace(/-/g, '/'));
+            hora = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); 
+        } catch(e){}
 
         // --- LÓGICA DE ETIQUETAS BASADA EN TU BASE DE DATOS ---
         // Tu BD usa la columna 'tipo' para definir el origen real
@@ -162,15 +140,11 @@ function llenarTabla(movs) {
             case 'GASTO':
             case 'EGRESO':
                 etiqueta = 'Gasto';
-                if (m.categoria && m.categoria !== 'General') etiqueta = m.categoria; // Ej: "Alimentos"
+                if (m.categoria) etiqueta = m.categoria; // Ej: "Alimentos"
                 claseBadge = 'badge-danger'; // Rojo
                 break;
             case 'RETIRO':
                 etiqueta = 'Retiro';
-                claseBadge = 'badge-dark'; // Negro/Gris
-                break;
-            case 'CIERRE': 
-                etiqueta = 'Cierre de Caja';
                 claseBadge = 'badge-dark'; // Negro/Gris
                 break;
             default:
@@ -196,18 +170,12 @@ function llenarTabla(movs) {
 // ==========================================
 // 2. GESTIÓN DE MODALES
 // ==========================================
-
 function abrirModalGasto() {
     if(form) form.reset();
-    document.getElementById('modalTitle').textContent = 'Registrar Gasto (Salida)';
+    document.getElementById('modalTitle').textContent = 'Registrar Gasto';
     document.getElementById('tipoMovimiento').value = 'GASTO';
-    
-    const btnGuardar = document.querySelector('#formMovimiento button[type="submit"]');
-    if(btnGuardar) {
-        btnGuardar.className = 'form-button btn-danger';
-        btnGuardar.innerHTML = '<i class="fas fa-save"></i> Registrar Gasto';
-    }
-    
+    const btn = document.querySelector('#formMovimiento button[type="submit"]');
+    if(btn) { btn.className = 'form-button btn-danger'; btn.innerHTML = 'Registrar Gasto'; }
     if(modal) modal.style.display = 'flex';
 }
 
@@ -215,119 +183,73 @@ function abrirModalIngreso() {
     if(form) form.reset();
     document.getElementById('modalTitle').textContent = 'Registrar Ingreso Extra';
     document.getElementById('tipoMovimiento').value = 'INGRESO';
-    
-    // Preseleccionar categoría 'Ingreso Extra'
-    const selectCat = document.getElementById('categoria');
-    if(selectCat) selectCat.value = 'Ingreso Extra';
-
-    const btnGuardar = document.querySelector('#formMovimiento button[type="submit"]');
-    if(btnGuardar) {
-        btnGuardar.className = 'form-button btn-success';
-        btnGuardar.innerHTML = '<i class="fas fa-save"></i> Registrar Ingreso';
-    }
-
+    // Forzamos categoría para que el switch del JS lo detecte bonito
+    const cat = document.getElementById('categoria'); if(cat) cat.value = 'Ingreso Extra';
+    const btn = document.querySelector('#formMovimiento button[type="submit"]');
+    if(btn) { btn.className = 'form-button btn-success'; btn.innerHTML = 'Registrar Ingreso'; }
     if(modal) modal.style.display = 'flex';
 }
 
-function cerrarModal() {
-    if(modal) modal.style.display = 'none';
-}
+function cerrarModal() { if(modal) modal.style.display = 'none'; }
 
-// Asignar el evento submit al formulario para prevenir recarga
 if (form) {
-    form.addEventListener('submit', (e) => {
-        e.preventDefault(); // Evita que la página se recargue
-        guardarMovimiento();
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(form);
+        fd.append('action', 'registrar_movimiento');
+        try {
+            const res = await fetch('api/caja.php', { method:'POST', body:fd });
+            const json = await res.json();
+            if(json.success) { 
+                Swal.fire({icon:'success', title:'Guardado', timer:1000, showConfirmButton:false});
+                cerrarModal(); cargarReporte();
+            } else { Swal.fire('Error', json.error, 'error'); }
+        } catch(err) { Swal.fire('Error','Fallo conexión','error'); }
     });
-}
-
-async function guardarMovimiento() {
-    const descripcion = document.getElementById('descripcion').value.trim();
-    const monto = document.getElementById('monto').value;
-
-    if (!descripcion || !monto || parseFloat(monto) <= 0) {
-        Swal.fire('Datos incompletos', 'Por favor ingresa una descripción y un monto válido.', 'warning');
-        return;
-    }
-
-    const formData = new FormData(form);
-    formData.append('action', 'registrar_movimiento');
-
-    try {
-        const res = await fetch('api/caja.php', {
-            method: 'POST',
-            body: formData
-        });
-        const json = await res.json();
-
-        if (json.success) {
-            Swal.fire({ icon: 'success', title: 'Registrado', timer: 1000, showConfirmButton: false });
-            cerrarModal();
-            cargarReporte(); 
-        } else {
-            Swal.fire('Error', json.error || 'Error desconocido', 'error');
-        }
-    } catch (e) {
-        console.error(e);
-        Swal.fire('Error', 'Fallo de conexión', 'error');
-    }
 }
 
 // ==========================================
 // 3. UTILIDADES
 // ==========================================
-
 async function cargarUsuarios() {
-    try {
-        const res = await fetch('api/caja.php?action=usuarios');
-        const json = await res.json();
-        if (json.success) {
-            const select = document.getElementById('filtroUsuario');
-            if(select) {
-                // Limpiar opciones previas excepto la primera si es "Todos"
-                // select.innerHTML = '<option value="Todos">Todos</option>'; 
-                json.data.forEach(u => {
-                    const opt = document.createElement('option');
-                    opt.value = u;
-                    opt.textContent = u;
-                    select.appendChild(opt);
-                });
-            }
+    try{
+        const r = await fetch(`api/caja.php?action=usuarios&_t=${Date.now()}`); 
+        const d = await r.json();
+        if(d.success && document.getElementById('filtroUsuario')) {
+            const sel = document.getElementById('filtroUsuario');
+            // Limpiamos excepto la opción "Todos"
+            // sel.innerHTML = '<option value="Todos">Todos</option>'; 
+            d.data.forEach(u=>{
+                const o = document.createElement('option'); o.value=u; o.textContent=u;
+                sel.appendChild(o);
+            });
         }
-    } catch (e) {}
+    }catch(e){}
 }
 
-function formatoDinero(amount) {
-    return '$' + parseFloat(amount).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+function formatoDinero(a) { 
+    return '$' + parseFloat(a).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'); 
 }
 
-// Exportar CSV Simple
-const btnExportar = document.getElementById('btnExportar');
-if(btnExportar) {
-    btnExportar.addEventListener('click', () => {
-        let csv = [];
-        // Asegúrate de que tu tabla tenga el ID correcto, si es 'tablaCaja' o la tabla que contiene 'tablaBody'
-        // Si la tabla tiene id="tablaCaja", esto funciona:
-        const rows = document.querySelectorAll("table tr"); 
-        
-        for (let i = 0; i < rows.length; i++) {
-            const row = [], cols = rows[i].querySelectorAll("td, th");
-            // Ocultar columnas que no queramos si es necesario
-            for (let j = 0; j < cols.length; j++) 
-                row.push('"' + cols[j].innerText + '"');
-            csv.push(row.join(","));        
-        }
+function gestionarCaja() { window.location.href = 'cierre_caja.php'; }
 
-        const csvFile = new Blob([csv.join("\n")], {type: "text/csv"});
-        const downloadLink = document.createElement("a");
-        downloadLink.download = `Reporte_Caja_${filtroFecha.value}.csv`;
-        downloadLink.href = window.URL.createObjectURL(csvFile);
-        downloadLink.style.display = "none";
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-    });
-}
+const btnExp = document.getElementById('btnExportar');
+if(btnExp) btnExp.addEventListener('click', ()=>{ 
+    let csv = [];
+    const rows = document.querySelectorAll("#tablaCaja tr"); 
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = [], cols = rows[i].querySelectorAll("td, th");
+        for (let j = 0; j < cols.length; j++) 
+            row.push('"' + cols[j].innerText + '"');
+        csv.push(row.join(","));        
+    }
 
-function gestionarCaja() {
-    window.location.href = 'cierre_caja.php';
-}
+    const csvFile = new Blob([csv.join("\n")], {type: "text/csv"});
+    const downloadLink = document.createElement("a");
+    downloadLink.download = `Reporte_Caja_${filtroFecha.value}.csv`;
+    downloadLink.href = window.URL.createObjectURL(csvFile);
+    downloadLink.style.display = "none";
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+});

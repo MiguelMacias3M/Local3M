@@ -23,20 +23,39 @@ try {
         if ($caja) {
             $fechaApertura = $caja['fecha_apertura'];
             
-            // Calculamos totales desde movimientos
-            $sqlMovs = "SELECT 
-                            COALESCE(SUM(ingreso), 0) as ingresos, 
-                            COALESCE(SUM(egreso), 0) as egresos 
-                        FROM caja_movimientos 
-                        WHERE fecha >= :fecha";
+            // Obtenemos los movimientos desglosados
+            $sqlMovs = "SELECT tipo, categoria, ingreso, egreso FROM caja_movimientos WHERE fecha >= :fecha";
             $stmtMovs = $conn->prepare($sqlMovs);
             $stmtMovs->execute([':fecha' => $fechaApertura]);
-            $movs = $stmtMovs->fetch(PDO::FETCH_ASSOC);
+            $movimientos = $stmtMovs->fetchAll(PDO::FETCH_ASSOC);
 
+            $ingresos = 0;
+            $gastosReales = 0;
+            $retirosCaja = 0;
+
+            foreach ($movimientos as $m) {
+                $ingresos += (float)$m['ingreso'];
+                $valEgreso = (float)$m['egreso'];
+
+                if ($valEgreso > 0) {
+                    // Detectar si es Retiro
+                    $esRetiro = ($m['tipo'] === 'RETIRO') || 
+                                (stripos($m['categoria'], 'Retiro') !== false) || 
+                                (stripos($m['categoria'], 'Cierre') !== false);
+                    
+                    if ($esRetiro) {
+                        $retirosCaja += $valEgreso;
+                    } else {
+                        $gastosReales += $valEgreso;
+                    }
+                }
+            }
+
+            // Calculamos saldo teórico
+            // Saldo = Inicial + Ingresos - Gastos - Retiros
+            // NOTA: Si tus gastos NO salen de la caja física, elimina $gastosReales de esta resta.
             $saldo_inicial = (float)$caja['saldo_inicial'];
-            $ingresos = (float)$movs['ingresos'];
-            $egresos = (float)$movs['egresos'];
-            $saldo_teorico = $saldo_inicial + $ingresos - $egresos;
+            $saldo_teorico = $saldo_inicial + $ingresos - $gastosReales - $retirosCaja;
 
             echo json_encode([
                 'success' => true,
@@ -47,7 +66,7 @@ try {
                     'usuario_apertura' => $caja['usuario_apertura'],
                     'saldo_inicial' => $saldo_inicial,
                     'ingresos' => $ingresos,
-                    'egresos' => $egresos,
+                    'egresos' => $gastosReales + $retirosCaja, // Total salidas de dinero
                     'saldo_teorico' => $saldo_teorico
                 ]
             ]);
@@ -65,7 +84,7 @@ try {
         exit();
     }
 
-    // --- 2. ABRIR CAJA ---
+    // --- 2. ABRIR CAJA (Igual) ---
     if ($action === 'abrir') {
         $saldo_inicial = (float)$_POST['saldo_inicial'];
         $usuario = $_SESSION['nombre'];
@@ -84,7 +103,7 @@ try {
         exit();
     }
 
-    // --- 3. CERRAR CAJA ---
+    // --- 3. CERRAR CAJA (Mejorado) ---
     if ($action === 'cerrar') {
         $id = $_POST['id_cierre'];
         $real = (float)$_POST['saldo_real'];
@@ -100,15 +119,26 @@ try {
 
         if (!$caja) throw new Exception("No se encontró la caja abierta");
 
-        $stmtMovs = $conn->prepare("SELECT COALESCE(SUM(ingreso), 0) as ing, COALESCE(SUM(egreso), 0) as egr FROM caja_movimientos WHERE fecha >= ?");
+        // Calcular totales actuales
+        $stmtMovs = $conn->prepare("SELECT tipo, categoria, ingreso, egreso FROM caja_movimientos WHERE fecha >= ?");
         $stmtMovs->execute([$caja['fecha_apertura']]);
-        $movs = $stmtMovs->fetch(PDO::FETCH_ASSOC);
+        $movs = $stmtMovs->fetchAll(PDO::FETCH_ASSOC);
 
-        $teorico = (float)$caja['saldo_inicial'] + $movs['ing'] - $movs['egr'];
+        $ingTotal = 0;
+        $egrTotal = 0; // Suma de gastos y retiros previos
+
+        foreach($movs as $m) {
+            $ingTotal += (float)$m['ingreso'];
+            $egrTotal += (float)$m['egreso'];
+        }
+
+        $teorico = (float)$caja['saldo_inicial'] + $ingTotal - $egrTotal;
         $diferencia = $real - $teorico;
+        
+        // El retiro de ganancia es lo que sobra después de dejar el fondo
         $retiro = $real - $fondo;
 
-        // REGISTRAR RETIRO COMO TIPO 'RETIRO' Y CATEGORÍA 'CIERRE'
+        // REGISTRAR RETIRO DE GANANCIA
         if ($retiro > 0) {
             $sqlRet = "INSERT INTO caja_movimientos 
                        (id_transaccion, tipo, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, fecha, categoria) 
@@ -121,6 +151,9 @@ try {
                 $retiro,
                 $usuario
             ]);
+            
+            // Ajustamos el egreso total del sistema para guardarlo en el cierre
+            $egrTotal += $retiro;
         }
 
         $sqlUpdate = "UPDATE caja_cierres SET 
@@ -140,8 +173,8 @@ try {
         $stmtUpd = $conn->prepare($sqlUpdate);
         $stmtUpd->execute([
             $usuario, 
-            $movs['ing'], 
-            $movs['egr'], 
+            $ingTotal, 
+            $egrTotal, 
             $teorico, 
             $real, 
             $diferencia, 

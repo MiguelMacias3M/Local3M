@@ -350,3 +350,59 @@ Responsividad (Móviles)
     }
 }
 
+/* --- BOTÓN HAMBURGUESA --- */
+.menu-toggle {
+    display: none; /* REQUISITO 2: En Laptop NO se ve el botón */
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 1.8rem;
+    cursor: pointer;
+    margin-left: 1rem;
+}
+
+/* --- VISTA CELULAR (Pantallas menores a 768px) --- */
+@media (max-width: 768px) {
+    
+    /* Ajustamos el contenedor para permitir que el menú baje */
+    .navbar-left {
+        width: 100%;
+        display: flex;
+        justify-content: space-between; /* Separa logo y botón a los extremos */
+        align-items: center;
+        flex-wrap: wrap; /* Permite que el menú caiga abajo */
+    }
+
+    /* Mostramos el botón SOLO en celular */
+    .menu-toggle {
+        display: block; 
+    }
+
+    /* REQUISITO 1: El menú inicia OCULTO (retraído) */
+    .navbar-menu {
+        display: none; 
+        width: 100%;
+        flex-direction: column; /* Lista vertical */
+        background-color: var(--secondary-color);
+        margin-top: 1rem;
+        padding: 0;
+        border-radius: 5px;
+    }
+
+    /* Cuando presionas el botón, JS agrega esta clase para MOSTRARLO */
+    .navbar-menu.active {
+        display: flex; 
+    }
+
+    /* Estilo de los enlaces en celular */
+    .navbar-menu li {
+        margin: 0;
+        width: 100%;
+        border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .navbar-menu li a {
+        display: block;
+        padding: 1rem;
+    }
+}

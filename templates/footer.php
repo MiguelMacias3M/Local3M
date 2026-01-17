@@ -1,24 +1,22 @@
-</div> <!-- Cierra el .container de header.php -->
+</div> <script>
+    // Buscamos el botón y el menú por sus ID
+    const toggleButton = document.getElementById('menu-toggle');
+    const menu = document.getElementById('navbar-menu');
 
-    <script>
-    // SOLUCIÓN ANTI-CACHÉ (BOTÓN "ATRÁS")
-    //
-    // Tu análisis es correcto. Esto detecta si el navegador cargó la página 
-    // desde su caché "rápida" (bfcache) al presionar "atrás".
-    //
-    // event.persisted será 'true' si la página viene del caché.
-    //
+    // Si existen, agregamos el evento clic
+    if (toggleButton && menu) {
+        toggleButton.addEventListener('click', () => {
+            // Esto quita o pone la clase 'active' que definimos en el CSS
+            menu.classList.toggle('active');
+        });
+    }
+
+    // Tu script anti-caché original
     window.addEventListener('pageshow', function(event) {
         if (event.persisted) {
-            // Si la página vino del caché (botón "atrás"), 
-            // forzamos una recarga completa desde el servidor.
-            //
-            // El servidor (header.php) verá que la sesión ya no
-            // existe y nos redirigirá al index.
             window.location.reload();
         }
     });
-    </script>
-
+</script>
 </body>
 </html>

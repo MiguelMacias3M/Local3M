@@ -9,7 +9,7 @@ header('Expires: 0');
 
 // 3. Verificamos sesión
 if (!isset($_SESSION['nombre'])) {
-    header('Location: /local3M/index.php'); 
+    header('Location: /local3M/login.php'); 
     exit(); 
 }
 ?>
@@ -51,5 +51,5 @@ if (!isset($_SESSION['nombre'])) {
             <a href="/local3M/logout.php" class="logout-button"> Cerrar Sesión</a>
         </div>
     </nav>
-    
+
     <div class="container">

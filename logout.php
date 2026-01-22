@@ -9,8 +9,8 @@ $_SESSION = array();
 // 3. Destruimos la sesión
 session_destroy();
 
-// 4. Redirigimos al usuario a la página de login (index.php)
-header('Location: index.php');
+// 4. Redirigimos al usuario a la página de login (login.php)
+header('Location: login.php');
 exit();
 ?>
 

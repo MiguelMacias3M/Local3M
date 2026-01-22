@@ -1,10 +1,10 @@
 <?php
 /*
  * API para procesar la edición y entrega de reparaciones
- * ACTUALIZADO: INCLUYE REGISTRO EN HISTORIAL
+ * VERSIÓN FINAL: SOPORTE PARA FOTOS/EVIDENCIAS E HISTORIAL
  */
 
-// Desactivar visualización de errores para no romper JSON
+// 1. Configuración de errores
 ini_set('display_errors', 0);
 error_reporting(0);
 
@@ -15,27 +15,56 @@ if (!isset($_SESSION['nombre'])) {
     exit();
 }
 
-include '../config/conexion.php'; // Ruta correcta a tu conexión
+include '../config/conexion.php'; 
 
-// --- FUNCIÓN HELPER: REGISTRAR HISTORIAL ---
-function registrarHistorial($conn, $id_reparacion, $estado, $comentario, $usuario) {
+// --- HELPER 1: Subir Evidencia (Foto) ---
+function subirEvidencia() {
+    // Verificamos si se envió un archivo llamado 'evidencia' sin errores
+    if (isset($_FILES['evidencia']) && $_FILES['evidencia']['error'] === UPLOAD_ERR_OK) {
+        
+        // Definir carpeta de destino (crearla si no existe)
+        $directorio = "../uploads/evidencias/";
+        if (!is_dir($directorio)) {
+            mkdir($directorio, 0777, true);
+        }
+
+        // Generar nombre único para evitar sobrescribir
+        $ext = pathinfo($_FILES['evidencia']['name'], PATHINFO_EXTENSION);
+        $nombre_archivo = "evidencia_" . time() . "_" . uniqid() . "." . $ext;
+        $ruta_final = $directorio . $nombre_archivo;
+
+        // Mover el archivo
+        if (move_uploaded_file($_FILES['evidencia']['tmp_name'], $ruta_final)) {
+            // Retornamos la ruta pública para guardar en BD
+            // Ajusta "/local3M/uploads..." si tu carpeta base es distinta
+            return "/local3M/uploads/evidencias/" . $nombre_archivo; 
+        }
+    }
+    return null; // Si no hay foto o falló
+}
+// ----------------------------------------
+
+// --- HELPER 2: Registrar en Historial ---
+function registrarHistorial($conn, $id_reparacion, $estado, $comentario, $usuario, $url_evidencia = null) {
     try {
-        $stmt = $conn->prepare("INSERT INTO historial_reparaciones (id_reparacion, estado_nuevo, comentario, usuario_responsable, fecha_cambio) VALUES (?, ?, ?, ?, NOW())");
-        $stmt->execute([$id_reparacion, $estado, $comentario, $usuario]);
+        $sql = "INSERT INTO historial_reparaciones (id_reparacion, estado_nuevo, comentario, usuario_responsable, url_evidencia, fecha_cambio) VALUES (?, ?, ?, ?, ?, NOW())";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$id_reparacion, $estado, $comentario, $usuario, $url_evidencia]);
     } catch (Exception $e) {
-        // Silenciamos error del historial para no detener el proceso principal
-        // pero podrías loguearlo si quisieras.
+        // Ignoramos error de historial para no bloquear el proceso principal
     }
 }
-// -------------------------------------------
+// ----------------------------------------
 
-// Leer datos JSON
-$raw = file_get_contents('php://input');
-$data = json_decode($raw, true);
-
-// Si viene por $_POST normal (FormData), lo usamos
-if (!$data && !empty($_POST)) {
+// 2. Procesar Datos (Soporta JSON y FormData)
+$data = [];
+if (!empty($_POST)) {
+    // Si viene por FormData (con o sin archivos)
     $data = $_POST;
+} else {
+    // Si viene por JSON raw (sin archivos)
+    $input = json_decode(file_get_contents('php://input'), true);
+    if ($input) $data = $input;
 }
 
 $action = $data['action'] ?? null;
@@ -46,131 +75,109 @@ if (!$id || !$action) {
     exit();
 }
 
-// --- Preparar SQL para movimientos de caja ---
+// Preparar SQL de Caja
 $sql_caja = "INSERT INTO caja_movimientos (id_transaccion, tipo, ref_id, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, cliente, fecha) VALUES (?, 'REPARACION', ?, ?, 1, ?, ?, 0, ?, ?, NOW())";
 $stmt_caja = $conn->prepare($sql_caja);
 
 try {
     $conn->beginTransaction();
 
-    // 1. Obtener datos actuales de la reparación
+    // Obtener datos actuales
     $stmt = $conn->prepare("SELECT * FROM reparaciones WHERE id = :id");
     $stmt->execute([':id' => $id]);
     $reparacion = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$reparacion) {
-        throw new Exception("Reparación no encontrada.");
-    }
+    if (!$reparacion) throw new Exception("Reparación no encontrada.");
 
-    // --- ACCIÓN: ENTREGAR ---
+    // ===========================
+    // ACCIÓN: ENTREGAR
+    // ===========================
     if ($action === 'entregar') {
         $monto_total = (float)$reparacion['monto'];
         $adelanto_actual = (float)$reparacion['adelanto'];
         $pago_restante = $monto_total - $adelanto_actual;
 
-        // Si hay deuda, registrar el pago en caja
         if ($pago_restante > 0) {
             $stmt_caja->execute([
-                $reparacion['id_transaccion'],
-                $reparacion['id'],
+                $reparacion['id_transaccion'], $reparacion['id'],
                 "Pago Final: " . $reparacion['tipo_reparacion'] . " " . $reparacion['modelo'],
-                $pago_restante,
-                $pago_restante,
-                $_SESSION['nombre'],
-                $reparacion['nombre_cliente']
+                $pago_restante, $pago_restante,
+                $_SESSION['nombre'], $reparacion['nombre_cliente']
             ]);
         }
 
-        // Actualizar reparación
-        $stmtUpdate = $conn->prepare("UPDATE reparaciones SET adelanto = monto, deuda = 0, estado = 'Entregado', fecha_entrega = NOW() WHERE id = :id");
-        $stmtUpdate->execute([':id' => $id]);
+        $conn->prepare("UPDATE reparaciones SET adelanto=monto, deuda=0, estado='Entregado', fecha_entrega=NOW() WHERE id=:id")->execute([':id' => $id]);
 
-        // --- NUEVO: REGISTRAR EN HISTORIAL ---
-        registrarHistorial($conn, $id, 'Entregado', 'Equipo entregado al cliente (Proceso finalizado)', $_SESSION['nombre']);
-        // -------------------------------------
+        registrarHistorial($conn, $id, 'Entregado', 'Equipo entregado (Finalizado)', $_SESSION['nombre']);
 
         $conn->commit();
-
-        // Generar URL del ticket
         $ticketUrl = 'generar_ticket_id.php?id_transaccion=' . urlencode($reparacion['id_transaccion']);
         echo json_encode(['success' => true, 'ticketUrl' => $ticketUrl]);
         exit();
     }
 
-    // --- ACCIÓN: GUARDAR CAMBIOS ---
+    // ===========================
+    // ACCIÓN: GUARDAR CAMBIOS (CON FOTO)
+    // ===========================
     if ($action === 'guardar') {
-        // Recoger datos del formulario
-        $nombre_cliente = $data['nombre_cliente'];
-        $telefono       = $data['telefono'];
-        $tipo_rep       = $data['tipo_reparacion'];
-        $marca          = $data['marca_celular'];
-        $modelo         = $data['modelo'];
-        $monto_form     = (float)$data['monto'];
-        $adelanto_form  = (float)$data['adelanto'];
-        $info_extra     = $data['info_extra'];
-        $estado_form    = $data['estado'];
+        // 1. Intentar subir la foto
+        $url_foto_nueva = subirEvidencia();
 
-        // Calcular nuevo pago (si aumentaron el adelanto)
-        $adelanto_actual_db = (float)$reparacion['adelanto'];
-        $nuevo_pago = $adelanto_form - $adelanto_actual_db;
+        // 2. Recoger datos
+        $nombre = $data['nombre_cliente'];
+        $tel    = $data['telefono'];
+        $tipo   = $data['tipo_reparacion'];
+        $marca  = $data['marca_celular'];
+        $modelo = $data['modelo'];
+        $monto  = (float)$data['monto'];
+        $adelanto = (float)$data['adelanto'];
+        $info   = $data['info_extra'];
+        $estado = $data['estado'];
 
+        // 3. Cálculos de dinero
+        $adelanto_previo = (float)$reparacion['adelanto'];
+        $nuevo_pago = $adelanto - $adelanto_previo;
+        
         if ($nuevo_pago > 0) {
             $stmt_caja->execute([
-                $reparacion['id_transaccion'],
-                $reparacion['id'],
-                "Abono Extra: " . $tipo_rep . " " . $modelo,
-                $nuevo_pago,
-                $nuevo_pago,
-                $_SESSION['nombre'],
-                $nombre_cliente
+                $reparacion['id_transaccion'], $reparacion['id'],
+                "Abono Extra: " . $tipo . " " . $modelo,
+                $nuevo_pago, $nuevo_pago,
+                $_SESSION['nombre'], $nombre
             ]);
         }
+        $deuda = max(0, $monto - $adelanto);
 
-        // Calcular deuda
-        $deuda = max(0, $monto_form - $adelanto_form);
-
-        // Lógica de fecha de entrega
+        // 4. Actualizar BD
         $sql_fecha = "";
-        if ($estado_form === 'Entregado' && $reparacion['estado'] !== 'Entregado') {
+        if ($estado === 'Entregado' && $reparacion['estado'] !== 'Entregado') {
             $sql_fecha = ", fecha_entrega = NOW()";
         }
 
-        $sql_update = "UPDATE reparaciones SET 
-                        nombre_cliente = :nombre, telefono = :tel, 
-                        tipo_reparacion = :tipo, marca_celular = :marca, modelo = :modelo,
-                        monto = :monto, adelanto = :adelanto, deuda = :deuda,
-                        info_extra = :info, estado = :estado
-                        $sql_fecha
-                       WHERE id = :id";
+        $sql_up = "UPDATE reparaciones SET 
+                    nombre_cliente=:n, telefono=:t, tipo_reparacion=:tr, 
+                    marca_celular=:ma, modelo=:mo, monto=:m, adelanto=:a, 
+                    deuda=:d, info_extra=:i, estado=:e $sql_fecha 
+                   WHERE id=:id";
         
-        $stmtUpdate = $conn->prepare($sql_update);
-        $stmtUpdate->execute([
-            ':nombre' => $nombre_cliente,
-            ':tel' => $telefono,
-            ':tipo' => $tipo_rep,
-            ':marca' => $marca,
-            ':modelo' => $modelo,
-            ':monto' => $monto_form,
-            ':adelanto' => $adelanto_form,
-            ':deuda' => $deuda,
-            ':info' => $info_extra,
-            ':estado' => $estado_form,
-            ':id' => $id
+        $conn->prepare($sql_up)->execute([
+            ':n'=>$nombre, ':t'=>$tel, ':tr'=>$tipo, ':ma'=>$marca, ':mo'=>$modelo,
+            ':m'=>$monto, ':a'=>$adelanto, ':d'=>$deuda, ':i'=>$info, ':e'=>$estado, ':id'=>$id
         ]);
 
-        // --- NUEVO: REGISTRAR EN HISTORIAL ---
-        $comentario_historial = "Actualización de información";
-        // Si cambió el estado, lo detallamos
-        if ($reparacion['estado'] !== $estado_form) {
-            $comentario_historial = "Cambio de estado: " . $reparacion['estado'] . " -> " . $estado_form;
-        } 
-        // Si hubo abono, lo detallamos
-        elseif ($nuevo_pago > 0) {
-            $comentario_historial = "Se registró un abono de $" . number_format($nuevo_pago, 2);
+        // 5. Historial Inteligente
+        $comentario = "Actualización de datos";
+        if ($reparacion['estado'] !== $estado) {
+            $comentario = "Cambio estado: " . $reparacion['estado'] . " -> " . $estado;
+        } elseif ($nuevo_pago > 0) {
+            $comentario = "Se abonaron $" . $nuevo_pago;
         }
 
-        registrarHistorial($conn, $id, $estado_form, $comentario_historial, $_SESSION['nombre']);
-        // -------------------------------------
+        if ($url_foto_nueva) {
+            $comentario .= " (Se adjuntó evidencia)";
+        }
+
+        registrarHistorial($conn, $id, $estado, $comentario, $_SESSION['nombre'], $url_foto_nueva);
 
         $conn->commit();
         echo json_encode(['success' => true]);

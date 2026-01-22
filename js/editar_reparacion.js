@@ -1,158 +1,176 @@
-// Inicializar código de barras al cargar
-document.addEventListener('DOMContentLoaded', () => {
-    if (typeof JsBarcode !== 'undefined' && CODIGO_BARRAS) {
+/*
+ * Lógica para Editar Reparación
+ * VERSIÓN: Con soporte para subir FOTOS (FormData)
+ */
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Generar código de barras
+    if (typeof CODIGO_BARRAS !== 'undefined' && document.getElementById("barcode-svg")) {
         JsBarcode("#barcode-svg", CODIGO_BARRAS, {
-            format: "code128",
+            format: "CODE128",
+            lineColor: "#000",
             width: 2,
-            height: 60,
+            height: 50,
             displayValue: false
         });
     }
 });
 
-// Calcular deuda en tiempo real
+// --- Función para previsualizar la foto antes de subir ---
+function previsualizarFoto() {
+    const input = document.getElementById('evidencia_input');
+    const preview = document.getElementById('img-preview');
+    const container = document.getElementById('preview-container');
+
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            container.style.display = 'block';
+        }
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        container.style.display = 'none';
+    }
+}
+
+// --- Calcular Deuda ---
 function calcularDeuda() {
-    const monto = parseInt(document.getElementById('monto').value) || 0;
-    const adelanto = parseInt(document.getElementById('adelanto').value) || 0;
-    const deuda = Math.max(0, monto - adelanto);
+    let monto = parseFloat(document.getElementById('monto').value) || 0;
+    let adelanto = parseFloat(document.getElementById('adelanto').value) || 0;
+    let deuda = monto - adelanto;
+    if (deuda < 0) deuda = 0;
     document.getElementById('deuda').value = deuda;
 }
 
-// Agregar Abono (Lógica local antes de guardar)
+// --- Agregar Abono Visual ---
 function agregarAbono() {
-    const inputAbono = document.getElementById('nuevo_abono_monto');
-    const inputAdelanto = document.getElementById('adelanto');
-    const inputMonto = document.getElementById('monto');
-
-    const abono = parseInt(inputAbono.value) || 0;
-    const adelantoActual = parseInt(inputAdelanto.value) || 0;
-    const montoTotal = parseInt(inputMonto.value) || 0;
-
-    if (abono <= 0) {
-        Swal.fire('Error', 'Ingresa un monto válido mayor a 0', 'warning');
+    let montoAbono = parseFloat(document.getElementById('nuevo_abono_monto').value);
+    if (!montoAbono || montoAbono <= 0) {
+        Swal.fire('Error', 'Ingrese un monto válido', 'warning');
         return;
     }
 
-    if ((adelantoActual + abono) > montoTotal) {
-        Swal.fire('Error', 'El abono supera la deuda pendiente.', 'error');
+    let adelantoInput = document.getElementById('adelanto');
+    let nuevoAdelanto = parseFloat(adelantoInput.value) + montoAbono;
+    
+    // Validar que no pague más de la cuenta
+    let montoTotal = parseFloat(document.getElementById('monto').value);
+    if (nuevoAdelanto > montoTotal) {
+        Swal.fire('Cuidado', 'El abono supera la deuda total', 'warning');
         return;
     }
 
-    // Actualizar campos visualmente
-    inputAdelanto.value = adelantoActual + abono;
-    inputAbono.value = ''; // Limpiar campo
+    adelantoInput.value = nuevoAdelanto;
+    document.getElementById('nuevo_abono_monto').value = ''; // Limpiar
     calcularDeuda();
-
+    
     Swal.fire({
-        icon: 'success',
-        title: 'Abono Agregado',
-        text: `Se sumaron $${abono} al adelanto. Presiona "Guardar Cambios" para registrarlo en caja.`,
+        title: 'Abono agregado temporalmente',
+        text: 'Para confirmar y registrar en caja, presiona "Guardar Cambios".',
+        icon: 'info',
         timer: 3000
     });
 }
 
-// Guardar Cambios
-async function guardarCambios() {
-    const result = await Swal.fire({
-        title: '¿Guardar cambios?',
-        text: 'Se actualizará la información y se registrarán los abonos en caja.',
+// --- GUARDAR CAMBIOS (CON FOTO) ---
+function guardarCambios() {
+    // 1. Usamos FormData en lugar de JSON simple
+    let formData = new FormData();
+    
+    formData.append('action', 'guardar');
+    formData.append('id', REPARACION_ID);
+    
+    // Agregar campos de texto
+    formData.append('nombre_cliente', document.getElementById('nombre_cliente').value);
+    formData.append('telefono', document.getElementById('telefono').value);
+    formData.append('tipo_reparacion', document.getElementById('tipo_reparacion').value);
+    formData.append('marca_celular', document.getElementById('marca_celular').value);
+    formData.append('modelo', document.getElementById('modelo').value);
+    formData.append('monto', document.getElementById('monto').value);
+    formData.append('adelanto', document.getElementById('adelanto').value);
+    formData.append('info_extra', document.getElementsByName('info_extra')[0].value);
+    formData.append('estado', document.getElementById('selectEstado').value);
+
+    // 2. Agregar el archivo (si existe)
+    const fileInput = document.getElementById('evidencia_input');
+    if(fileInput.files.length > 0) {
+        formData.append('evidencia', fileInput.files[0]);
+    }
+
+    Swal.fire({
+        title: 'Guardando...',
+        text: 'Subiendo datos y evidencia, por favor espere.',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading() }
+    });
+
+    // 3. Enviar sin headers JSON (fetch detecta multipart automáticamente)
+    fetch('api/editar_reparacion.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire('Guardado', 'Cambios registrados correctamente', 'success')
+            .then(() => {
+                location.reload(); // Recargar para ver la foto en historial
+            });
+        } else {
+            Swal.fire('Error', data.message || 'Error al guardar', 'error');
+        }
+    })
+    .catch(error => {
+        console.error(error);
+        Swal.fire('Error', 'Fallo en la conexión', 'error');
+    });
+}
+
+// --- Entregar Reparación ---
+function entregarReparacion() {
+    // Para entregar, no necesitamos foto obligatoria, usamos JSON simple
+    // o reutilizamos FormData. Usaremos JSON simple aquí por simplicidad
+    // a menos que quieras subir foto de entrega también.
+    
+    Swal.fire({
+        title: '¿Entregar equipo?',
+        text: "Se marcará como entregado y se liquidará la deuda.",
         icon: 'question',
         showCancelButton: true,
-        confirmButtonText: 'Sí, guardar',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#0056b3'
-    });
-
-    if (!result.isConfirmed) return;
-
-    enviarDatos('guardar');
-}
-
-// Entregar Reparación
-async function entregarReparacion() {
-    const deuda = parseInt(document.getElementById('deuda').value) || 0;
-    
-    let mensaje = 'Se marcará como entregado.';
-    if (deuda > 0) {
-        mensaje += ` Se registrará el cobro final de $${deuda} en caja.`;
-    }
-
-    const result = await Swal.fire({
-        title: '¿Entregar Equipo?',
-        text: mensaje,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, entregar',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#198754'
-    });
-
-    if (!result.isConfirmed) return;
-
-    enviarDatos('entregar');
-}
-
-// Función genérica para enviar a la API
-async function enviarDatos(accion) {
-    const form = document.getElementById('formEditar');
-    const formData = new FormData(form);
-    
-    // Convertir FormData a objeto plano
-    const data = Object.fromEntries(formData.entries());
-    data.action = accion;
-
-    try {
-        const res = await fetch('/local3M/api/editar_reparacion.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-
-        const json = await res.json();
-
-        if (json.success) {
-            if (accion === 'entregar') {
-                Swal.fire({
-                    title: '¡Entregado!',
-                    text: 'El equipo ha sido entregado correctamente.',
-                    icon: 'success',
-                    showCancelButton: true,
-                    confirmButtonText: 'Imprimir Ticket',
-                    cancelButtonText: 'Cerrar'
-                }).then((r) => {
-                    if (r.isConfirmed) window.open(json.ticketUrl, '_blank');
-                    location.reload();
-                });
-            } else {
-                Swal.fire('Guardado', 'Los cambios se han guardado correctamente.', 'success')
-                    .then(() => location.reload());
-            }
-        } else {
-            Swal.fire('Error', json.message || 'Ocurrió un error desconocido.', 'error');
+        confirmButtonColor: '#28a745',
+        confirmButtonText: 'Sí, entregar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch('api/editar_reparacion.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'entregar',
+                    id: REPARACION_ID
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: '¡Entregado!',
+                        text: 'Equipo entregado con éxito.',
+                        icon: 'success'
+                    }).then(() => {
+                        // Abrir ticket y volver
+                        window.open(data.ticketUrl, '_blank');
+                        window.location.href = 'control.php';
+                    });
+                } else {
+                    Swal.fire('Error', data.message, 'error');
+                }
+            });
         }
-    } catch (error) {
-        console.error(error);
-        Swal.fire('Error', 'Error de conexión con el servidor.', 'error');
-    }
+    });
 }
 
-// Imprimir Ticket
+// --- Imprimir Ticket ---
 function imprimirTicket() {
-    if (TICKET_URL) {
-        window.open(TICKET_URL, '_blank');
-    } else {
-        Swal.fire('Aviso', 'No se pudo generar la URL del ticket.', 'info');
-    }
+    window.open(TICKET_URL, '_blank');
 }
-
-// Botones de Código de Barras
-document.getElementById('btnCopiar')?.addEventListener('click', () => {
-    navigator.clipboard.writeText(CODIGO_BARRAS);
-    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Copiado', timer: 1500, showConfirmButton: false });
-});
-
-document.getElementById('btnImprimirCodigo')?.addEventListener('click', () => {
-    const w = window.open('', '_blank', 'width=400,height=300');
-    w.document.write(`<html><body style="text-align:center; margin-top:50px;">${document.getElementById('barcode-svg').outerHTML}<br><strong>${CODIGO_BARRAS}</strong><script>window.print();</script></body></html>`);
-    w.document.close();
-});

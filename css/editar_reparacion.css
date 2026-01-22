@@ -285,3 +285,12 @@
         width: 100%; 
     }
 }
+/* =========================================
+   CORRECCIÓN COLOR HISTORIAL
+   ========================================= */
+.history-section .status {
+    color: #333 !important;       /* Letra oscura (Gris casi negro) */
+    background-color: #e9ecef;    /* Fondo gris muy claro */
+    border: 1px solid #dcdcdc;    /* Un borde sutil */
+    font-weight: 600;
+}

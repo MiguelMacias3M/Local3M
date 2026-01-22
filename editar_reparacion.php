@@ -85,11 +85,13 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
                 </div>
 
                 <div class="form-section">
-                    <h3><i class="fas fa-info-circle"></i> Estado y Evidencia</h3>
+                    <h3><i class="fas fa-info-circle"></i> Estado y Ubicación</h3>
+                    
                     <div class="form-group">
                         <label>Info Extra</label>
                         <input type="text" class="form-input" name="info_extra" value="<?= htmlspecialchars($reparacion['info_extra']) ?>">
                     </div>
+
                     <div class="form-group">
                         <label>Estado</label>
                         <select class="form-input" name="estado" id="selectEstado">
@@ -103,6 +105,13 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
                         </select>
                     </div>
 
+                    <div class="form-group">
+                        <label><i class="fas fa-map-marker-alt"></i> Ubicación en Taller</label>
+                        <input type="text" class="form-input" id="ubicacion" 
+                               value="<?= htmlspecialchars($reparacion['ubicacion'] ?? '') ?>" 
+                               placeholder="Ej: Estante A-1, Caja 3...">
+                    </div>
+
                     <div class="form-group" style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
                         <label style="color: var(--primary-color); cursor:pointer;">
                             <i class="fas fa-camera"></i> <strong>Adjuntar Evidencia (Foto)</strong>
@@ -111,10 +120,9 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
                         
                         <div id="preview-container" style="display:none; margin-top:10px; text-align:center;">
                             <img id="img-preview" src="" style="max-height: 150px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
-                            <p style="font-size:0.8rem; color:green; margin:5px 0;">Foto lista para guardar</p>
                         </div>
                     </div>
-                    </div>
+                </div>
 
                 <div class="action-buttons-container">
                     <button type="button" class="form-button btn-primary" onclick="guardarCambios()"><i class="fas fa-save"></i> Guardar</button>
@@ -143,7 +151,7 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
                 <tr>
                     <th>Fecha</th>
                     <th>Estado</th>
-                    <th>Comentario / Evidencia</th>
+                    <th>Comentario / Ubicación</th>
                     <th>Usuario</th>
                 </tr>
             </thead>
@@ -161,7 +169,6 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
                         echo "<td>$fecha</td>";
                         echo "<td><span class='status'>{$m['estado_nuevo']}</span></td>";
                         echo "<td>{$m['comentario']}";
-                        // MOSTRAR ENLACE SI HAY FOTO
                         if (!empty($m['url_evidencia'])) {
                             echo "<br><a href='{$m['url_evidencia']}' target='_blank' style='color:#007bff; font-weight:bold; text-decoration:none;'>
                                     <i class='fas fa-image'></i> Ver Evidencia

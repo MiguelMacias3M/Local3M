@@ -1,10 +1,9 @@
 /*
  * Lógica para Editar Reparación
- * VERSIÓN: Con soporte para subir FOTOS (FormData)
+ * Versión Final: Ubicación + Fotos
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Generar código de barras
     if (typeof CODIGO_BARRAS !== 'undefined' && document.getElementById("barcode-svg")) {
         JsBarcode("#barcode-svg", CODIGO_BARRAS, {
             format: "CODE128",
@@ -16,7 +15,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// --- Función para previsualizar la foto antes de subir ---
 function previsualizarFoto() {
     const input = document.getElementById('evidencia_input');
     const preview = document.getElementById('img-preview');
@@ -34,7 +32,6 @@ function previsualizarFoto() {
     }
 }
 
-// --- Calcular Deuda ---
 function calcularDeuda() {
     let monto = parseFloat(document.getElementById('monto').value) || 0;
     let adelanto = parseFloat(document.getElementById('adelanto').value) || 0;
@@ -43,7 +40,6 @@ function calcularDeuda() {
     document.getElementById('deuda').value = deuda;
 }
 
-// --- Agregar Abono Visual ---
 function agregarAbono() {
     let montoAbono = parseFloat(document.getElementById('nuevo_abono_monto').value);
     if (!montoAbono || montoAbono <= 0) {
@@ -54,7 +50,6 @@ function agregarAbono() {
     let adelantoInput = document.getElementById('adelanto');
     let nuevoAdelanto = parseFloat(adelantoInput.value) + montoAbono;
     
-    // Validar que no pague más de la cuenta
     let montoTotal = parseFloat(document.getElementById('monto').value);
     if (nuevoAdelanto > montoTotal) {
         Swal.fire('Cuidado', 'El abono supera la deuda total', 'warning');
@@ -62,26 +57,23 @@ function agregarAbono() {
     }
 
     adelantoInput.value = nuevoAdelanto;
-    document.getElementById('nuevo_abono_monto').value = ''; // Limpiar
+    document.getElementById('nuevo_abono_monto').value = '';
     calcularDeuda();
     
     Swal.fire({
         title: 'Abono agregado temporalmente',
-        text: 'Para confirmar y registrar en caja, presiona "Guardar Cambios".',
+        text: 'Presiona "Guardar" para confirmar el abono y registrarlo en caja.',
         icon: 'info',
         timer: 3000
     });
 }
 
-// --- GUARDAR CAMBIOS (CON FOTO) ---
 function guardarCambios() {
-    // 1. Usamos FormData en lugar de JSON simple
     let formData = new FormData();
-    
     formData.append('action', 'guardar');
     formData.append('id', REPARACION_ID);
     
-    // Agregar campos de texto
+    // Campos de Texto
     formData.append('nombre_cliente', document.getElementById('nombre_cliente').value);
     formData.append('telefono', document.getElementById('telefono').value);
     formData.append('tipo_reparacion', document.getElementById('tipo_reparacion').value);
@@ -91,8 +83,12 @@ function guardarCambios() {
     formData.append('adelanto', document.getElementById('adelanto').value);
     formData.append('info_extra', document.getElementsByName('info_extra')[0].value);
     formData.append('estado', document.getElementById('selectEstado').value);
+    
+    // --- CAMPO NUEVO: UBICACIÓN ---
+    let ubicacion = document.getElementById('ubicacion').value;
+    formData.append('ubicacion', ubicacion); 
 
-    // 2. Agregar el archivo (si existe)
+    // Archivo
     const fileInput = document.getElementById('evidencia_input');
     if(fileInput.files.length > 0) {
         formData.append('evidencia', fileInput.files[0]);
@@ -100,12 +96,9 @@ function guardarCambios() {
 
     Swal.fire({
         title: 'Guardando...',
-        text: 'Subiendo datos y evidencia, por favor espere.',
-        allowOutsideClick: false,
         didOpen: () => { Swal.showLoading() }
     });
 
-    // 3. Enviar sin headers JSON (fetch detecta multipart automáticamente)
     fetch('api/editar_reparacion.php', {
         method: 'POST',
         body: formData
@@ -115,24 +108,18 @@ function guardarCambios() {
         if (data.success) {
             Swal.fire('Guardado', 'Cambios registrados correctamente', 'success')
             .then(() => {
-                location.reload(); // Recargar para ver la foto en historial
+                location.reload();
             });
         } else {
             Swal.fire('Error', data.message || 'Error al guardar', 'error');
         }
     })
     .catch(error => {
-        console.error(error);
-        Swal.fire('Error', 'Fallo en la conexión', 'error');
+        Swal.fire('Error', 'Fallo de conexión', 'error');
     });
 }
 
-// --- Entregar Reparación ---
 function entregarReparacion() {
-    // Para entregar, no necesitamos foto obligatoria, usamos JSON simple
-    // o reutilizamos FormData. Usaremos JSON simple aquí por simplicidad
-    // a menos que quieras subir foto de entrega también.
-    
     Swal.fire({
         title: '¿Entregar equipo?',
         text: "Se marcará como entregado y se liquidará la deuda.",
@@ -142,23 +129,18 @@ function entregarReparacion() {
         confirmButtonText: 'Sí, entregar'
     }).then((result) => {
         if (result.isConfirmed) {
+            let formData = new FormData();
+            formData.append('action', 'entregar');
+            formData.append('id', REPARACION_ID);
+
             fetch('api/editar_reparacion.php', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'entregar',
-                    id: REPARACION_ID
-                })
+                body: formData
             })
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    Swal.fire({
-                        title: '¡Entregado!',
-                        text: 'Equipo entregado con éxito.',
-                        icon: 'success'
-                    }).then(() => {
-                        // Abrir ticket y volver
+                    Swal.fire('¡Entregado!', 'Equipo entregado.', 'success').then(() => {
                         window.open(data.ticketUrl, '_blank');
                         window.location.href = 'control.php';
                     });
@@ -170,7 +152,6 @@ function entregarReparacion() {
     });
 }
 
-// --- Imprimir Ticket ---
 function imprimirTicket() {
     window.open(TICKET_URL, '_blank');
 }

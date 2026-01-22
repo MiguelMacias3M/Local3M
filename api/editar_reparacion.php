@@ -1,6 +1,7 @@
 <?php
 /*
  * API para procesar la edición y entrega de reparaciones
+ * ACTUALIZADO: INCLUYE REGISTRO EN HISTORIAL
  */
 
 // Desactivar visualización de errores para no romper JSON
@@ -15,6 +16,18 @@ if (!isset($_SESSION['nombre'])) {
 }
 
 include '../config/conexion.php'; // Ruta correcta a tu conexión
+
+// --- FUNCIÓN HELPER: REGISTRAR HISTORIAL ---
+function registrarHistorial($conn, $id_reparacion, $estado, $comentario, $usuario) {
+    try {
+        $stmt = $conn->prepare("INSERT INTO historial_reparaciones (id_reparacion, estado_nuevo, comentario, usuario_responsable, fecha_cambio) VALUES (?, ?, ?, ?, NOW())");
+        $stmt->execute([$id_reparacion, $estado, $comentario, $usuario]);
+    } catch (Exception $e) {
+        // Silenciamos error del historial para no detener el proceso principal
+        // pero podrías loguearlo si quisieras.
+    }
+}
+// -------------------------------------------
 
 // Leer datos JSON
 $raw = file_get_contents('php://input');
@@ -71,6 +84,10 @@ try {
         // Actualizar reparación
         $stmtUpdate = $conn->prepare("UPDATE reparaciones SET adelanto = monto, deuda = 0, estado = 'Entregado', fecha_entrega = NOW() WHERE id = :id");
         $stmtUpdate->execute([':id' => $id]);
+
+        // --- NUEVO: REGISTRAR EN HISTORIAL ---
+        registrarHistorial($conn, $id, 'Entregado', 'Equipo entregado al cliente (Proceso finalizado)', $_SESSION['nombre']);
+        // -------------------------------------
 
         $conn->commit();
 
@@ -140,6 +157,20 @@ try {
             ':estado' => $estado_form,
             ':id' => $id
         ]);
+
+        // --- NUEVO: REGISTRAR EN HISTORIAL ---
+        $comentario_historial = "Actualización de información";
+        // Si cambió el estado, lo detallamos
+        if ($reparacion['estado'] !== $estado_form) {
+            $comentario_historial = "Cambio de estado: " . $reparacion['estado'] . " -> " . $estado_form;
+        } 
+        // Si hubo abono, lo detallamos
+        elseif ($nuevo_pago > 0) {
+            $comentario_historial = "Se registró un abono de $" . number_format($nuevo_pago, 2);
+        }
+
+        registrarHistorial($conn, $id, $estado_form, $comentario_historial, $_SESSION['nombre']);
+        // -------------------------------------
 
         $conn->commit();
         echo json_encode(['success' => true]);

@@ -11,7 +11,7 @@ if (!isset($_GET['id']) || !ctype_digit($_GET['id'])) {
 }
 $id = (int)$_GET['id'];
 
-// 3. Cargar datos
+// 3. Cargar datos de la reparación
 $stmt = $conn->prepare("SELECT * FROM reparaciones WHERE id = :id");
 $stmt->execute([':id' => $id]);
 $reparacion = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -27,7 +27,6 @@ $idTrans = $reparacion['id_transaccion'];
 $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($idTrans);
 ?>
 
-<!-- Estilos específicos -->
 <link rel="stylesheet" href="/local3M/css/editar_reparacion.css?v=1.0">
 
 <div class="page-title">
@@ -37,7 +36,6 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($idTrans);
 
 <div class="content-box">
     <div class="edit-grid">
-        <!-- Columna Izquierda: Formulario -->
         <div class="edit-form-col">
             <form id="formEditar" onsubmit="return false;">
                 <input type="hidden" name="id" value="<?= $id ?>">
@@ -51,7 +49,6 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($idTrans);
                     </div>
                     <div class="form-group">
                         <label>Teléfono (10 dígitos) <span class="text-danger">*</span></label>
-                        <!-- CAMBIO: Validación HTML5 para solo números y longitud 10 -->
                         <input type="tel" class="form-input" id="telefono" name="telefono" 
                                value="<?= htmlspecialchars($reparacion['telefono']) ?>" 
                                maxlength="10" minlength="10" pattern="[0-9]{10}" 
@@ -86,7 +83,6 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($idTrans);
                     <div class="row-3-col">
                         <div class="form-group">
                             <label>Monto Total <span class="text-danger">*</span></label>
-                            <!-- CAMBIO: Solo enteros (int) -->
                             <input type="number" class="form-input" id="monto" name="monto" 
                                    value="<?= (int)$reparacion['monto'] ?>" min="0" oninput="calcularDeuda()" required>
                         </div>
@@ -102,7 +98,6 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($idTrans);
                         </div>
                     </div>
                     
-                    <!-- Agregar Abono -->
                     <div class="abono-box">
                         <input type="number" class="form-input" id="nuevo_abono_monto" placeholder="Monto a abonar..." min="1">
                         <button type="button" class="form-button btn-info" onclick="agregarAbono()">
@@ -131,7 +126,6 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($idTrans);
                     </div>
                 </div>
 
-                <!-- Botones de Acción -->
                 <div class="action-buttons-container">
                     <button type="button" class="form-button btn-primary" onclick="guardarCambios()">
                         <i class="fas fa-save"></i> Guardar Cambios
@@ -149,7 +143,6 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($idTrans);
             </form>
         </div>
 
-        <!-- Columna Derecha: Código de Barras -->
         <div class="edit-sidebar">
             <div class="barcode-card">
                 <h4>Código de Barras</h4>
@@ -163,17 +156,54 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($idTrans);
                 </div>
             </div>
         </div>
-    </div>
-</div>
+    </div> <div class="history-section" style="margin-top: 3rem; border-top: 1px solid #eee; padding-top: 1.5rem;">
+        <h3 style="margin-bottom: 1rem; color: var(--primary-color); border-bottom: 2px solid #eee; padding-bottom: 0.5rem;">
+            <i class="fas fa-history"></i> Historial de Movimientos
+        </h3>
+        
+        <div style="overflow-x: auto;">
+            <table class="repair-table" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: #f8f9fa;">
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Fecha y Hora</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Estado</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Comentario</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Responsable</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    // Consultar historial
+                    $sql_h = "SELECT * FROM historial_reparaciones WHERE id_reparacion = :id ORDER BY fecha_cambio DESC";
+                    $stmt_h = $conn->prepare($sql_h);
+                    $stmt_h->execute([':id' => $id]);
+                    $movimientos = $stmt_h->fetchAll(PDO::FETCH_ASSOC);
 
-<!-- Variables para JS -->
-<script>
+                    if (count($movimientos) > 0) {
+                        foreach ($movimientos as $mov) {
+                            // Formatear fecha (Ej: 21/01/2026 04:30 PM)
+                            $fecha = date("d/m/Y h:i A", strtotime($mov['fecha_cambio']));
+                            echo "<tr style='border-bottom: 1px solid #eee;'>";
+                            echo "<td style='padding: 12px;'><strong>{$fecha}</strong></td>";
+                            echo "<td style='padding: 12px;'><span class='status' style='background-color: #e2e6ea; color: #333; padding: 4px 10px; border-radius: 4px;'>" . htmlspecialchars($mov['estado_nuevo']) . "</span></td>";
+                            echo "<td style='padding: 12px; color: #555;'>" . htmlspecialchars($mov['comentario']) . "</td>";
+                            echo "<td style='padding: 12px;'><i class='fas fa-user-circle' style='color: #888;'></i> " . htmlspecialchars($mov['usuario_responsable']) . "</td>";
+                            echo "</tr>";
+                        }
+                    } else {
+                        echo "<tr><td colspan='4' style='padding: 20px; text-align:center; color:#999; font-style: italic;'>No hay movimientos registrados para esta reparación.</td></tr>";
+                    }
+                    ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    </div> <script>
     const REPARACION_ID = <?= $id ?>;
     const TICKET_URL = "<?= $ticketUrl ?>";
     const CODIGO_BARRAS = "<?= $reparacion['codigo_barras'] ?>";
 </script>
 
-<!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <script src="/local3M/js/editar_reparacion.js"></script>

@@ -83,6 +83,8 @@ function guardarCambios() {
     formData.append('adelanto', document.getElementById('adelanto').value);
     formData.append('info_extra', document.getElementsByName('info_extra')[0].value);
     formData.append('estado', document.getElementById('selectEstado').value);
+    // ... dentro del FormData ...
+    formData.append('fecha_estimada', document.getElementById('fecha_estimada').value);     
     
     // --- CAMPO NUEVO: UBICACIÓN ---
     let ubicacion = document.getElementById('ubicacion').value;

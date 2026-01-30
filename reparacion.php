@@ -1,18 +1,16 @@
 <?php
-// 1. Incluimos el header (seguridad, menú, etc.)
+// 1. Incluimos el header
 include 'templates/header.php';
-include 'config/conexion.php'; // Incluimos la conexión a la BD
+include 'config/conexion.php';
 
-// 2. Generar un id_transaccion único para agrupar las reparaciones
-// Lo pasaremos a JavaScript
+// 2. Generar id_transaccion único
 $id_transaccion = uniqid('trans_');
 
-// 3. Pasamos el nombre de usuario a JavaScript
+// 3. Usuario sesión
 $usuario_sesion = $_SESSION['nombre'] ?? 'Sistema';
-
 ?>
 
-<link rel="stylesheet" href="/local3M/css/reparacion.css">
+<link rel="stylesheet" href="/local3M/css/reparacion.css?v=<?php echo time(); ?>">
 
 <div class="page-title">
     <h1>Nueva Orden de Reparación</h1>
@@ -30,9 +28,9 @@ $usuario_sesion = $_SESSION['nombre'] ?? 'Sistema';
             <input id="nombre_cliente" class="form-input" type="text" name="nombre_cliente" required>
             
             <label for="telefono">Teléfono (10 dígitos):</label>
-            <input id="telefono" class="form-input" placeholder="Ej: 5512345678" type="tel" name="telefono" maxlength="10" required>
+            <input id="telefono" class="form-input" placeholder="Ej: 4491234567" type="tel" name="telefono" maxlength="10" required>
             
-            <label for="info_extra">Información Extra (Contraseña, Patrón, Detalles):</label>
+            <label for="info_extra">Información Extra (Contraseña, Patrón):</label>
             <textarea id="info_extra" class="form-textarea" name="info_extra" rows="2" placeholder="Ej: Contraseña '1234', patrón 'L'"></textarea>
 
             <hr class="form-divider">
@@ -40,13 +38,19 @@ $usuario_sesion = $_SESSION['nombre'] ?? 'Sistema';
             <h2><i class="fas fa-mobile-alt"></i> Datos del Equipo</h2>
 
             <label for="tipo_reparacion">Tipo de Reparación:</label>
-            <input id="tipo_reparacion" class="form-input" placeholder="Ej: Cambio de pantalla, Mantenimiento" type="text" name="tipo_reparacion" required>
+            <input id="tipo_reparacion" class="form-input" placeholder="Ej: Cambio de pantalla" type="text" name="tipo_reparacion" required>
 
             <label for="marca_celular">Marca:</label>
-            <input id="marca_celular" class="form-input" placeholder="Ej: Samsung, iPhone, Dell" type="text" name="marca_celular" required>
+            <input id="marca_celular" class="form-input" placeholder="Ej: Samsung, Apple" type="text" name="marca_celular" required>
 
             <label for="modelo">Modelo:</label>
-            <input id="modelo" class="form-input" placeholder="Ej: Galaxy A51, 11 Pro Max, Vostro 3400" type="text" name="modelo" required>
+            <input id="modelo" class="form-input" placeholder="Ej: A51, iPhone 11" type="text" name="modelo" required>
+
+            <label for="fecha_estimada"><i class="far fa-clock"></i> Fecha Promesa de Entrega:</label>
+            <input type="datetime-local" class="form-input" id="fecha_estimada">
+            <small style="display:block; color:#666; margin-top:-10px; margin-bottom:15px; font-size: 0.9em;">
+                <i class="fas fa-info-circle"></i> Si lo dejas vacío, quedará como "Pendiente".
+            </small>
 
             <div class="form-row">
                 <div class="form-col">
@@ -62,7 +66,7 @@ $usuario_sesion = $_SESSION['nombre'] ?? 'Sistema';
             <label for="deuda">Deuda Pendiente ($):</label>
             <input class="form-input" id="deuda" type="number" name="deuda" value="0" readonly>
             
-            <button type-="button" class="form-button btn-add" onclick="agregarAlCarrito()">
+            <button type="button" class="form-button btn-add" onclick="agregarAlCarrito()">
                 <i class="fas fa-cart-plus"></i> Agregar al Carrito
             </button>
 
@@ -86,15 +90,16 @@ $usuario_sesion = $_SESSION['nombre'] ?? 'Sistema';
         </button>
     </div>
 
-</div> <script>
+</div> 
+
+<script>
     const ID_TRANSACCION = "<?php echo $id_transaccion; ?>";
     const USUARIO_SESION = "<?php echo htmlspecialchars($usuario_sesion); ?>";
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="/local3M/js/reparacion.js"></script>
+<script src="/local3M/js/reparacion.js?v=<?php echo time(); ?>"></script>
 
 <?php
-// 3. Incluimos el footer (cierre de HTML, script anti-caché, etc.)
 include 'templates/footer.php';
 ?>

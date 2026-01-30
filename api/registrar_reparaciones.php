@@ -1,14 +1,16 @@
 <?php
-// api/registrar_reparaciones.php
+/*
+ * API: REGISTRAR REPARACIONES (VERSIÓN COMPLETA Y FINAL)
+ * Incluye: Reparación, Caja, Historial, Ubicación y Fecha Estimada.
+ */
 
-// 1. Configuración para evitar errores visibles en el JSON
+// 1. Configuración de errores (Silencioso para JSON)
 ini_set('display_errors', 0);
 error_reporting(0);
+header('Content-Type: application/json; charset=utf-8');
 
 session_start();
 include '../config/conexion.php';
-
-header('Content-Type: application/json');
 
 // 2. Validar Método
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -16,8 +18,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-// 3. Leer los datos enviados desde JavaScript
-$data = json_decode(file_get_contents('php://input'), true);
+// 3. Leer y Decodificar JSON
+$input = file_get_contents('php://input');
+$data = json_decode($input, true);
+
 if (!$data || empty($data['carrito'])) {
     echo json_encode(['success' => false, 'error' => 'No hay reparaciones en el carrito.']); 
     exit;
@@ -29,9 +33,9 @@ $usuario        = $data['usuario'] ?? 'Sistema';
 $nombreCliente  = $data['nombreCliente'] ?? '';
 $telefono       = $data['telefono'] ?? '';
 $info_extra     = $data['infoExtra'] ?? 'Ninguna';
-$estado         = 'En espera'; // Estado inicial por defecto
+$estado         = 'En espera'; // Estado inicial
 $carrito        = $data['carrito'];
-$fechaHora      = date('Y-m-d H:i:s'); // Fecha del servidor
+$fechaHora      = date('Y-m-d H:i:s'); // Fecha servidor
 
 // 5. Validar datos obligatorios
 if (empty($nombreCliente) || empty($telefono) || empty($usuario)) {
@@ -39,55 +43,71 @@ if (empty($nombreCliente) || empty($telefono) || empty($usuario)) {
     exit;
 }
 
-// Función auxiliar para código de barras
+// Función auxiliar para generar código de barras único
 function generarCodigoReparacion(): string {
     $fecha = date('ymd');
-    $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    $len = 5;
+    $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Sin I, O, 0, 1 para evitar confusión
     $rand = '';
-    for ($i = 0; $i < $len; $i++) {
+    for ($i = 0; $i < 5; $i++) {
         $rand .= $alphabet[random_int(0, strlen($alphabet) - 1)];
     }
     return "REP{$fecha}{$rand}";
 }
 
 try {
+    // Iniciar Transacción (Todo o nada)
     $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $conn->beginTransaction();
 
-    // A. SQL para insertar la REPARACIÓN
+    // ---------------------------------------------------------
+    // A. PREPARAR SENTENCIAS SQL (Se preparan UNA vez, se usan MUCHAS)
+    // ---------------------------------------------------------
+
+    // 1. SQL Reparaciones (Incluye 'ubicacion' y 'fecha_estimada')
+    // Nota: 'ubicacion' se fija por defecto en 'Recepción'
     $sql_rep = "INSERT INTO reparaciones (
-            id_transaccion, usuario, nombre_cliente, telefono, 
-            tipo_reparacion, marca_celular, modelo, 
-            monto, adelanto, deuda, 
-            fecha_hora, info_extra, estado, codigo_barras
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        id_transaccion, usuario, nombre_cliente, telefono, 
+        tipo_reparacion, marca_celular, modelo, 
+        monto, adelanto, deuda, 
+        fecha_hora, info_extra, estado, 
+        codigo_barras, ubicacion, fecha_estimada 
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Recepción', ?)";
+    
     $stmt_rep = $conn->prepare($sql_rep);
 
-    // B. SQL para insertar el ADELANTO en CAJA
+    // 2. SQL Caja (Movimiento de dinero)
     $sql_caja = "INSERT INTO caja_movimientos (
-            id_transaccion, tipo, ref_id, descripcion, 
-            cantidad, monto_unitario, ingreso, egreso, 
-            usuario, cliente, fecha
-        ) VALUES (?, 'REPARACION', ?, ?, 1, ?, ?, 0, ?, ?, NOW())";
+        id_transaccion, tipo, ref_id, descripcion, 
+        cantidad, monto_unitario, ingreso, egreso, 
+        usuario, cliente, fecha
+    ) VALUES (?, 'REPARACION', ?, ?, 1, ?, ?, 0, ?, ?, NOW())";
+    
     $stmt_caja = $conn->prepare($sql_caja);
 
-    // C. SQL para insertar el HISTORIAL (¡NUEVO!)
+    // 3. SQL Historial (Primer evento: Ingreso)
     $sql_hist = "INSERT INTO historial_reparaciones (
-            id_reparacion, estado_nuevo, comentario, usuario_responsable, fecha_cambio
-        ) VALUES (?, ?, ?, ?, ?)";
+        id_reparacion, estado_nuevo, comentario, usuario_responsable, fecha_cambio
+    ) VALUES (?, 'Ingreso', 'Recepción del equipo', ?, NOW())";
+    
     $stmt_hist = $conn->prepare($sql_hist);
 
 
-    // 6. Iterar sobre el carrito
+    // ---------------------------------------------------------
+    // B. PROCESAR EL CARRITO
+    // ---------------------------------------------------------
     foreach ($carrito as $r) {
         $maxIntentos = 5;
         $exito = false;
         
+        // Bucle para intentar generar código único si choca
         for ($i = 0; $i < $maxIntentos; $i++) {
             $codigo_barras = generarCodigoReparacion();
+            
+            // Validar fecha estimada (puede venir null o vacía)
+            $fecha_estimada = !empty($r['fechaEstimada']) ? $r['fechaEstimada'] : null;
+
             try {
-                // --- PASO 1: Insertar Reparación ---
+                // --- 1. Insertar Reparación ---
                 $stmt_rep->execute([
                     $id_transaccion,
                     $usuario,
@@ -101,63 +121,60 @@ try {
                     $r['deuda'],
                     $fechaHora,
                     $info_extra,
-                    $estado,
-                    $codigo_barras
+                    $estado,        // "En espera"
+                    $codigo_barras,
+                    $fecha_estimada // Nueva columna
                 ]);
 
-                // Obtenemos el ID de la reparación recién creada
+                // Obtener ID generado
                 $id_reparacion_insertada = $conn->lastInsertId();
 
-
-                // --- PASO 2: Insertar en Historial (INGRESO) ---
+                // --- 2. Insertar Historial ---
                 $stmt_hist->execute([
                     $id_reparacion_insertada,
-                    'Ingreso',              // Estado
-                    'Recepción del equipo', // Comentario inicial
-                    $usuario,               // Responsable
-                    $fechaHora              // Fecha exacta
+                    $usuario
                 ]);
 
-
-                // --- PASO 3: Insertar en Caja (si hay dinero) ---
+                // --- 3. Insertar en Caja (Solo si hay adelanto) ---
                 $adelanto = (float)$r['adelanto'];
                 if ($adelanto > 0) {
+                    $descripcion_caja = "Adelanto: " . $r['tipoReparacion'] . " (" . $r['modelo'] . ")";
                     $stmt_caja->execute([
                         $id_transaccion,
-                        $id_reparacion_insertada, // ref_id
-                        "Adelanto Reparación: " . $r['tipoReparacion'] . " " . $r['modelo'],
-                        $adelanto, // monto unitario
-                        $adelanto, // ingreso
+                        $id_reparacion_insertada,
+                        $descripcion_caja,
+                        $adelanto, // Monto unitario
+                        $adelanto, // Ingreso total
                         $usuario,
                         $nombreCliente
                     ]);
                 }
 
                 $exito = true;
-                break; // Todo salió bien, salimos del reintento de código
+                break; // Éxito, salir del bucle de intentos
 
             } catch (PDOException $e) {
-                // Si el error es por código duplicado (1062), reintentamos
-                if ($e->getCode() === '23000' && strpos($e->getMessage(), '1062') !== false) {
+                // Si el error es código duplicado (Error 1062), reintentar
+                if ($e->getCode() == '23000' && strpos($e->getMessage(), '1062') !== false) {
                     continue; 
                 } else {
-                    throw $e; // Si es otro error, lo lanzamos
+                    throw $e; // Otro error, lanzar excepción
                 }
             }
         }
 
         if (!$exito) {
-            throw new PDOException("No se pudo generar un codigo único después de varios intentos.");
+            throw new Exception("Error al generar código único para el equipo.");
         }
     }
 
-    // 7. Confirmar todo
+    // 6. Confirmar Transacción
     $conn->commit();
     echo json_encode(['success' => true, 'id_transaccion' => $id_transaccion]);
 
-} catch (PDOException $e) {
-    // 8. Revertir si algo falló
+} catch (Exception $e) {
+    // 7. Revertir cambios si algo falló
     if ($conn->inTransaction()) $conn->rollBack();
-    echo json_encode(['success' => false, 'error' => 'Error al registrar: ' . $e->getMessage()]);
+    echo json_encode(['success' => false, 'error' => 'Error en servidor: ' . $e->getMessage()]);
 }
 ?>

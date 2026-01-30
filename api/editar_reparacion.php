@@ -1,7 +1,7 @@
 <?php
 /*
  * API EDITAR REPARACIÓN
- * Versión Final: Incluye Fotos, Historial y Ubicación
+ * Versión Final: Fotos + Historial + Ubicación + FECHA ENTREGA
  */
 ini_set('display_errors', 0);
 error_reporting(0);
@@ -15,20 +15,17 @@ if (!isset($_SESSION['nombre'])) {
 
 include '../config/conexion.php';
 
-// --- HELPER 1: Subir Evidencia (Foto) ---
+// --- HELPER 1: Subir Evidencia ---
 function subirEvidencia() {
     if (isset($_FILES['evidencia']) && $_FILES['evidencia']['error'] === UPLOAD_ERR_OK) {
         $directorio = "../uploads/evidencias/";
-        if (!is_dir($directorio)) {
-            mkdir($directorio, 0777, true);
-        }
+        if (!is_dir($directorio)) mkdir($directorio, 0777, true);
 
         $ext = pathinfo($_FILES['evidencia']['name'], PATHINFO_EXTENSION);
         $nombre_archivo = "evidencia_" . time() . "_" . uniqid() . "." . $ext;
         $ruta_final = $directorio . $nombre_archivo;
 
         if (move_uploaded_file($_FILES['evidencia']['tmp_name'], $ruta_final)) {
-            // Ajusta la ruta si tu carpeta base es diferente
             return "/local3M/uploads/evidencias/" . $nombre_archivo; 
         }
     }
@@ -44,7 +41,6 @@ function registrarHistorial($conn, $id_reparacion, $estado, $comentario, $usuari
     } catch (Exception $e) { }
 }
 
-// Procesar Datos (FormData siempre)
 $data = $_POST;
 $action = $data['action'] ?? null;
 $id = $data['id'] ?? null;
@@ -54,7 +50,6 @@ if (!$id || !$action) {
     exit();
 }
 
-// Preparar SQL Caja (para abonos o pagos finales)
 $sql_caja = "INSERT INTO caja_movimientos (id_transaccion, tipo, ref_id, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, cliente, fecha) VALUES (?, 'REPARACION', ?, ?, 1, ?, ?, 0, ?, ?, NOW())";
 $stmt_caja = $conn->prepare($sql_caja);
 
@@ -82,7 +77,6 @@ try {
             ]);
         }
 
-        // Al entregar, limpiamos la ubicación (opcional, o la dejamos como 'Entregado')
         $conn->prepare("UPDATE reparaciones SET adelanto=monto, deuda=0, estado='Entregado', fecha_entrega=NOW() WHERE id=:id")->execute([':id' => $id]);
         
         registrarHistorial($conn, $id, 'Entregado', 'Equipo entregado al cliente', $_SESSION['nombre']);
@@ -95,16 +89,16 @@ try {
 
     // --- ACCIÓN: GUARDAR CAMBIOS ---
     if ($action === 'guardar') {
-        // 1. Subir foto si hay
         $url_foto = subirEvidencia();
 
-        // 2. Datos del formulario
-        $ubicacion_nueva = $data['ubicacion']; // <--- NUEVO
+        // Datos nuevos
+        $ubicacion_nueva = $data['ubicacion'];
+        $fecha_estimada_nueva = !empty($data['fecha_estimada']) ? $data['fecha_estimada'] : null; // <--- NUEVO
         $estado_nuevo = $data['estado'];
         $monto = (float)$data['monto'];
         $adelanto = (float)$data['adelanto'];
         
-        // 3. Cálculos Caja
+        // Caja
         $adelanto_previo = (float)$reparacion['adelanto'];
         $nuevo_pago = $adelanto - $adelanto_previo;
         
@@ -118,44 +112,47 @@ try {
         }
         $deuda = max(0, $monto - $adelanto);
 
-        // 4. Update SQL (Con Ubicación)
-        $sql_fecha = "";
+        // Update SQL
+        $sql_fecha_ent = "";
         if ($estado_nuevo === 'Entregado' && $reparacion['estado'] !== 'Entregado') {
-            $sql_fecha = ", fecha_entrega = NOW()";
+            $sql_fecha_ent = ", fecha_entrega = NOW()";
         }
 
         $sql_up = "UPDATE reparaciones SET 
                     nombre_cliente=:n, telefono=:t, tipo_reparacion=:tr, 
                     marca_celular=:ma, modelo=:mo, monto=:m, adelanto=:a, 
-                    deuda=:d, info_extra=:i, estado=:e, ubicacion=:u 
-                    $sql_fecha 
+                    deuda=:d, info_extra=:i, estado=:e, ubicacion=:u, 
+                    fecha_estimada=:fe 
+                    $sql_fecha_ent 
                    WHERE id=:id";
         
         $conn->prepare($sql_up)->execute([
             ':n'=>$data['nombre_cliente'], ':t'=>$data['telefono'], ':tr'=>$data['tipo_reparacion'],
             ':ma'=>$data['marca_celular'], ':mo'=>$data['modelo'], ':m'=>$monto, 
             ':a'=>$adelanto, ':d'=>$deuda, ':i'=>$data['info_extra'], 
-            ':e'=>$estado_nuevo, ':u'=>$ubicacion_nueva, ':id'=>$id
+            ':e'=>$estado_nuevo, ':u'=>$ubicacion_nueva, 
+            ':fe'=>$fecha_estimada_nueva, // <--- Guardamos fecha
+            ':id'=>$id
         ]);
 
-        // 5. Historial Inteligente
+        // Historial Inteligente
         $comentarios = [];
         
         if ($reparacion['estado'] !== $estado_nuevo) {
             $comentarios[] = "Estado: " . $reparacion['estado'] . " -> " . $estado_nuevo;
         }
-        // Detectar cambio de ubicación
-        $ubicacion_anterior = $reparacion['ubicacion'] ?? 'Sin asignar';
-        if ($ubicacion_anterior !== $ubicacion_nueva) {
-            $comentarios[] = "Ubicación: " . $ubicacion_anterior . " -> " . $ubicacion_nueva;
+        if (($reparacion['ubicacion']??'') !== $ubicacion_nueva) {
+            $comentarios[] = "Ubicación: " . ($reparacion['ubicacion']??'N/A') . " -> " . $ubicacion_nueva;
         }
-        
-        if ($nuevo_pago > 0) {
-            $comentarios[] = "Abono de $" . number_format($nuevo_pago, 2);
+        // Detectar reprogramación
+        $fe_ant = $reparacion['fecha_estimada'] ? date('Y-m-d H:i', strtotime($reparacion['fecha_estimada'])) : '';
+        $fe_nue = $fecha_estimada_nueva ? date('Y-m-d H:i', strtotime($fecha_estimada_nueva)) : '';
+        if ($fe_ant !== $fe_nue) {
+            $comentarios[] = "Fecha entrega reprogramada";
         }
-        if ($url_foto) {
-            $comentarios[] = "Evidencia adjuntada";
-        }
+
+        if ($nuevo_pago > 0) $comentarios[] = "Abono de $" . number_format($nuevo_pago, 2);
+        if ($url_foto) $comentarios[] = "Evidencia adjuntada";
         
         $texto_historial = empty($comentarios) ? "Actualización de datos" : implode(". ", $comentarios);
 

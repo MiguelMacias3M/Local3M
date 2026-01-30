@@ -85,7 +85,7 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
                 </div>
 
                 <div class="form-section">
-                    <h3><i class="fas fa-info-circle"></i> Estado y Ubicación</h3>
+                    <h3><i class="fas fa-info-circle"></i> Estado y Detalles</h3>
                     
                     <div class="form-group">
                         <label>Info Extra</label>
@@ -105,21 +105,34 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
                         </select>
                     </div>
 
-                    <div class="form-group">
-                        <label><i class="fas fa-map-marker-alt"></i> Ubicación en Taller</label>
-                        <input type="text" class="form-input" id="ubicacion" 
-                               value="<?= htmlspecialchars($reparacion['ubicacion'] ?? '') ?>" 
-                               placeholder="Ej: Estante A-1, Caja 3...">
+                    <div class="row-2-col">
+                        <div class="form-group">
+                            <label><i class="fas fa-map-marker-alt"></i> Ubicación</label>
+                            <input type="text" class="form-input" id="ubicacion" 
+                                   value="<?= htmlspecialchars($reparacion['ubicacion'] ?? '') ?>" 
+                                   placeholder="Ej: A-1">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label><i class="far fa-clock"></i> Entrega Estimada</label>
+                            <?php 
+                                $fechaVal = '';
+                                if (!empty($reparacion['fecha_estimada'])) {
+                                    $fechaVal = date('Y-m-d\TH:i', strtotime($reparacion['fecha_estimada']));
+                                }
+                            ?>
+                            <input type="datetime-local" class="form-input" id="fecha_estimada" 
+                                   value="<?= $fechaVal ?>">
+                        </div>
                     </div>
 
                     <div class="form-group" style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
                         <label style="color: var(--primary-color); cursor:pointer;">
-                            <i class="fas fa-camera"></i> <strong>Adjuntar Evidencia (Foto)</strong>
+                            <i class="fas fa-camera"></i> <strong>Adjuntar Evidencia</strong>
                         </label>
                         <input type="file" id="evidencia_input" accept="image/*" class="form-input" onchange="previsualizarFoto()">
-                        
                         <div id="preview-container" style="display:none; margin-top:10px; text-align:center;">
-                            <img id="img-preview" src="" style="max-height: 150px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                            <img id="img-preview" src="" style="max-height: 150px; border-radius: 8px;">
                         </div>
                     </div>
                 </div>
@@ -151,7 +164,7 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
                 <tr>
                     <th>Fecha</th>
                     <th>Estado</th>
-                    <th>Comentario / Ubicación</th>
+                    <th>Comentario</th>
                     <th>Usuario</th>
                 </tr>
             </thead>

@@ -42,7 +42,18 @@ function agregarAlCarrito() {
     const monto = parseInt(document.getElementById('monto').value) || 0;
     const adelanto = parseInt(document.getElementById('adelanto').value) || 0;
     const deuda = Math.max(monto - adelanto, 0);
+        // Dentro de tu función de agregar al carrito:
+    const fechaEstimada = document.getElementById('fecha_estimada').value;
 
+    // Al crear el objeto del producto/reparación:
+    const item = {
+        // ... tus otros campos (marca, modelo, etc.) ...
+        fechaEstimada: fechaEstimada, // <--- NUEVO
+        // ...
+    };
+
+// Y muy importante: Limpiar el campo después de agregar
+document.getElementById('fecha_estimada').value = '';
     const reparacion = { tipoReparacion, marcaCelular, modelo, monto, adelanto, deuda };
     carrito.push(reparacion);
     

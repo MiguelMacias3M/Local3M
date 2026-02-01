@@ -58,6 +58,19 @@
                 <button type="button" class="form-button btn-secondary" onclick="cerrarModal()">Cancelar</button>
                 <button type="submit" class="form-button btn-primary">Guardar</button>
             </div>
+            <div class="form-group" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">
+                <label style="color: #c53030; font-weight: bold;">
+                    <i class="fas fa-shield-alt"></i> Contraseña Maestra (Requerida)
+                </label>
+                <input type="password" id="master_key_form" class="form-input" 
+                       placeholder="Ingresa tu clave de autorización" 
+                       style="border: 1px solid #fc8181; background-color: #fff5f5;">
+            </div>
+
+            <div style="text-align: right; margin-top: 20px;">
+                <button type="button" class="form-button btn-secondary" onclick="cerrarModal()">Cancelar</button>
+                <button type="submit" class="form-button btn-primary">Guardar</button>
+            </div>
         </form>
     </div>
 </div>

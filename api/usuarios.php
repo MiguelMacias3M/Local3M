@@ -1,97 +1,63 @@
 <?php
-session_start();
-header('Content-Type: application/json; charset=utf-8');
+/* API USUARIOS (Sin Fecha de Creación) */
 ini_set('display_errors', 0);
 error_reporting(0);
+header('Content-Type: application/json');
 
-// 1. Seguridad de sesión
-if (!isset($_SESSION['nombre'])) {
-    echo json_encode(['success' => false, 'error' => 'No autorizado']);
-    exit();
-}
-
-// 2. Incluir configuración
-// ALERTA DE SEGURIDAD: La variable $MASTER_PASSWORD ahora viene de este archivo
-// y NO está escrita aquí para que no sea visible en GitHub.
+session_start();
 include '../config/conexion.php';
 
-// Verificación de seguridad por si olvidaste poner la clave en conexion.php
-if (!isset($MASTER_PASSWORD)) {
-    echo json_encode(['success' => false, 'error' => 'Error de configuración: Clave Maestra no definida en el servidor.']);
-    exit();
-}
-
-$action = $_GET['action'] ?? ($_POST['action'] ?? null);
+$action = $_REQUEST['action'] ?? '';
 
 try {
-    
-    // --- REGISTRAR NUEVO USUARIO ---
-    if ($action === 'registrar') {
-        $nuevo_usuario = trim($_POST['nuevo_usuario']);
-        $nueva_pass = $_POST['nueva_password'];
-        $confirm_pass = $_POST['confirm_password'];
-        $admin_pass = $_POST['admin_password'];
-
-        if (empty($nuevo_usuario) || empty($nueva_pass)) {
-            echo json_encode(['success' => false, 'error' => 'Todos los campos son obligatorios']);
-            exit();
-        }
-
-        if ($nueva_pass !== $confirm_pass) {
-            echo json_encode(['success' => false, 'error' => 'Las contraseñas no coinciden']);
-            exit();
-        }
-
-        // VERIFICAR CLAVE MAESTRA
-        if ($admin_pass !== $MASTER_PASSWORD) {
-            sleep(1); // Pausa anti-fuerza bruta
-            echo json_encode(['success' => false, 'error' => 'Contraseña Maestra incorrecta. No tienes permiso.']);
-            exit();
-        }
-
-        // Verificar si existe
-        $stmtCheck = $conn->prepare("SELECT id FROM usuarios WHERE nombre = :nombre");
-        $stmtCheck->execute([':nombre' => $nuevo_usuario]);
-        if ($stmtCheck->rowCount() > 0) {
-            echo json_encode(['success' => false, 'error' => 'El usuario ya existe']);
-            exit();
-        }
-
-        // Encriptar e insertar
-        $hash = password_hash($nueva_pass, PASSWORD_DEFAULT);
-        $sql = "INSERT INTO usuarios (nombre, password) VALUES (:nombre, :pass)";
-        $stmt = $conn->prepare($sql);
-        $stmt->execute([':nombre' => $nuevo_usuario, ':pass' => $hash]);
-
-        echo json_encode(['success' => true]);
-        exit();
-    }
-
-    // --- LISTAR USUARIOS ---
+    // 1. LISTAR (Quitamos fecha_creacion de la consulta)
     if ($action === 'listar') {
-        $stmt = $conn->query("SELECT id, nombre FROM usuarios ORDER BY id ASC");
-        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        echo json_encode(['success' => true, 'data' => $users]);
-        exit();
+        $stmt = $conn->query("SELECT id, nombre, rol FROM usuarios ORDER BY id ASC");
+        echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+        exit;
     }
 
-    // --- ELIMINAR USUARIO ---
+    // 2. GUARDAR / EDITAR
+    if ($action === 'guardar') {
+        $id = $_POST['id'] ?? '';
+        $nombre = $_POST['nombre'];
+        $rol = $_POST['rol'];
+        $password = $_POST['password'];
+
+        if (empty($nombre) || empty($rol)) throw new Exception("Nombre y Rol obligatorios");
+
+        if (empty($id)) {
+            // NUEVO
+            if (empty($password)) throw new Exception("Contraseña obligatoria");
+            $passHash = password_hash($password, PASSWORD_DEFAULT);
+            // Insertamos SIN fecha
+            $sql = "INSERT INTO usuarios (nombre, password, rol) VALUES (?, ?, ?)";
+            $conn->prepare($sql)->execute([$nombre, $passHash, $rol]);
+        } else {
+            // EDITAR
+            if (!empty($password)) {
+                $passHash = password_hash($password, PASSWORD_DEFAULT);
+                $sql = "UPDATE usuarios SET nombre=?, rol=?, password=? WHERE id=?";
+                $conn->prepare($sql)->execute([$nombre, $rol, $passHash, $id]);
+            } else {
+                $sql = "UPDATE usuarios SET nombre=?, rol=? WHERE id=?";
+                $conn->prepare($sql)->execute([$nombre, $rol, $id]);
+            }
+        }
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
+    // 3. ELIMINAR
     if ($action === 'eliminar') {
         $id = $_POST['id'];
-        $admin_pass = $_POST['admin_password'];
-
-        if ($admin_pass !== $MASTER_PASSWORD) {
-            echo json_encode(['success' => false, 'error' => 'Contraseña Maestra incorrecta']);
-            exit();
-        }
-
-        $stmt = $conn->prepare("DELETE FROM usuarios WHERE id = :id");
-        $stmt->execute([':id' => $id]);
+        if ($id == 1) throw new Exception("No puedes eliminar al Admin principal."); 
+        $conn->prepare("DELETE FROM usuarios WHERE id=?")->execute([$id]);
         echo json_encode(['success' => true]);
-        exit();
+        exit;
     }
 
 } catch (Exception $e) {
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 ?>

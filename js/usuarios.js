@@ -1,115 +1,101 @@
-document.addEventListener('DOMContentLoaded', () => {
-    cargarUsuarios();
+document.addEventListener('DOMContentLoaded', cargarUsuarios);
+
+function togglePassword() {
+    const input = document.getElementById('password');
+    const icon = document.querySelector('.toggle-pass');
+    if (input.type === "password") {
+        input.type = "text";
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = "password";
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+
+function cargarUsuarios() {
+    fetch('api/usuarios.php?action=listar')
+    .then(r => r.json())
+    .then(data => {
+        const tbody = document.getElementById('tablaUsuarios');
+        tbody.innerHTML = '';
+        if(data.success && data.data.length > 0) {
+            data.data.forEach(u => {
+                // Generamos la fila SIN la fecha
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${u.id}</td>
+                        <td><strong>${u.nombre}</strong></td>
+                        <td><span class="status status-ready">${u.rol}</span></td>
+                        <td>
+                            <button class="btn-small" style="background:#007bff" onclick="editarUsuario('${u.id}', '${u.nombre}', '${u.rol}')"><i class="fas fa-edit"></i></button>
+                            <button class="btn-small" style="background:#dc3545" onclick="eliminarUsuario(${u.id})"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="4" align="center">No hay usuarios.</td></tr>';
+        }
+    });
+}
+
+function abrirModal() {
+    document.getElementById('modalUsuario').style.display = 'block';
+    document.getElementById('formUsuario').reset();
+    document.getElementById('userId').value = '';
+    document.getElementById('modalTitulo').innerText = 'Nuevo Usuario';
+}
+
+function cerrarModal() {
+    document.getElementById('modalUsuario').style.display = 'none';
+}
+
+function editarUsuario(id, nombre, rol) {
+    document.getElementById('modalUsuario').style.display = 'block';
+    document.getElementById('userId').value = id;
+    document.getElementById('nombre').value = nombre;
+    document.getElementById('rol').value = rol;
+    document.getElementById('password').value = ''; 
+    document.getElementById('password').placeholder = '(Sin cambios)';
+    document.getElementById('modalTitulo').innerText = 'Editar Usuario';
+}
+
+document.getElementById('formUsuario').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append('action', 'guardar');
+    formData.append('id', document.getElementById('userId').value);
+    formData.append('nombre', document.getElementById('nombre').value);
+    formData.append('rol', document.getElementById('rol').value);
+    formData.append('password', document.getElementById('password').value);
+    
+    fetch('api/usuarios.php', { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(data => {
+        if(data.success) {
+            Swal.fire('Guardado', 'Usuario actualizado', 'success');
+            cerrarModal();
+            cargarUsuarios();
+        } else { Swal.fire('Error', data.message, 'error'); }
+    });
 });
 
-// Registrar Usuario
-async function registrarUsuario() {
-    const usuario = document.getElementById('nuevo_usuario').value.trim();
-    const pass1 = document.getElementById('nueva_password').value;
-    const pass2 = document.getElementById('confirm_password').value;
-    const adminPass = document.getElementById('admin_password').value;
-
-    // Validaciones Frontend
-    if (!usuario || !pass1 || !pass2 || !adminPass) {
-        Swal.fire('Campos vacíos', 'Por favor completa todos los campos.', 'warning');
-        return;
-    }
-
-    if (pass1 !== pass2) {
-        Swal.fire('Error', 'Las contraseñas no coinciden.', 'error');
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('action', 'registrar');
-    formData.append('nuevo_usuario', usuario);
-    formData.append('nueva_password', pass1);
-    formData.append('confirm_password', pass2);
-    formData.append('admin_password', adminPass);
-
-    try {
-        const res = await fetch('/local3M/api/usuarios.php', { method: 'POST', body: formData });
-        const json = await res.json();
-
-        if (json.success) {
-            Swal.fire({
-                icon: 'success',
-                title: '¡Usuario Creado!',
-                text: `El usuario ${usuario} ha sido registrado.`,
-                timer: 2000,
-                showConfirmButton: false
-            });
-            // Limpiar formulario
-            document.getElementById('formRegistro').reset();
-            cargarUsuarios();
-        } else {
-            Swal.fire('Error', json.error, 'error');
-        }
-    } catch (e) {
-        Swal.fire('Error', 'Fallo de conexión', 'error');
-    }
-}
-
-// Cargar Lista
-async function cargarUsuarios() {
-    try {
-        const res = await fetch('/local3M/api/usuarios.php?action=listar');
-        const json = await res.json();
-        
-        const tbody = document.getElementById('tablaUsuariosBody');
-        tbody.innerHTML = '';
-
-        if (json.success && json.data.length > 0) {
-            json.data.forEach(u => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${u.id}</td>
-                    <td><strong>${u.nombre}</strong></td>
-                    <td class="text-right">
-                        <button class="btn-delete" onclick="eliminarUsuario(${u.id}, '${u.nombre}')">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        } else {
-            tbody.innerHTML = '<tr><td colspan="3" class="text-center">No hay usuarios.</td></tr>';
-        }
-    } catch (e) {}
-}
-
-// Eliminar Usuario (También pide clave maestra)
-function eliminarUsuario(id, nombre) {
+function eliminarUsuario(id) {
     Swal.fire({
-        title: `¿Eliminar a ${nombre}?`,
-        text: 'Ingresa la clave maestra para confirmar:',
-        input: 'password',
-        inputPlaceholder: 'Clave Admin',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        confirmButtonText: 'Eliminar'
-    }).then(async (result) => {
+        title: '¿Eliminar?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Sí, eliminar'
+    }).then((result) => {
         if (result.isConfirmed) {
             const formData = new FormData();
             formData.append('action', 'eliminar');
             formData.append('id', id);
-            formData.append('admin_password', result.value);
-
-            try {
-                const res = await fetch('/local3M/api/usuarios.php', { method: 'POST', body: formData });
-                const json = await res.json();
-
-                if (json.success) {
-                    Swal.fire('Eliminado', 'El usuario ha sido eliminado.', 'success');
-                    cargarUsuarios();
-                } else {
-                    Swal.fire('Error', json.error, 'error');
-                }
-            } catch (e) {
-                Swal.fire('Error', 'Fallo de conexión', 'error');
-            }
+            fetch('api/usuarios.php', { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(d => {
+                if(d.success) { cargarUsuarios(); Swal.fire('Eliminado', '', 'success'); }
+                else { Swal.fire('Error', d.message, 'error'); }
+            });
         }
     });
 }

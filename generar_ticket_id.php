@@ -45,6 +45,24 @@ try {
         $fecha_format = $dateObj->format('d/m/Y h:i A');
     } catch (Exception $e) {}
 
+    // 3. Lógica para Fecha Estimada General (Header)
+    // Buscamos la fecha más lejana de todas las reparaciones para mostrar cuándo estará lista la orden completa.
+    $fecha_maxima_ts = null;
+    foreach ($items as $item) {
+        if (!empty($item['fecha_estimada'])) {
+            $ts = strtotime($item['fecha_estimada']);
+            if (!$fecha_maxima_ts || $ts > $fecha_maxima_ts) {
+                $fecha_maxima_ts = $ts;
+            }
+        }
+    }
+    
+    $texto_entrega = "";
+    if ($fecha_maxima_ts) {
+        // Formato ejemplo: 10/02/2026 05:30 PM
+        $texto_entrega = date('d/m/Y h:i A', $fecha_maxima_ts);
+    }
+
 } catch (PDOException $e) {
     die("Error: " . $e->getMessage());
 }
@@ -58,7 +76,6 @@ try {
     <style>
         @page {
             margin: 0; 
-            /* Ancho ajustado a 54.5mm para evitar cortes en impresoras de 58mm */
             size: 54.5mm auto; 
         }
 
@@ -152,14 +169,12 @@ try {
 </head>
 <body>
 
-    <!-- Botones de control (Solo pantalla) -->
     <div class="no-print">
         <button onclick="window.print()" class="btn btn-print">Imprimir 🖨️</button>
         <button onclick="cerrarTicket()" class="btn btn-close">Cerrar ✕</button>
     </div>
 
     <div class="ticket">
-        <!-- Encabezado -->
         <div class="center">
             <div class="logo">3M</div>
             <span class="subtitle">TECHNOLOGY</span><br>
@@ -168,7 +183,6 @@ try {
 
         <div class="divider"></div>
 
-        <!-- Info General -->
         <table class="info-table">
             <tr>
                 <td class="bold">Folio:</td>
@@ -182,18 +196,24 @@ try {
                 <td>Atendió:</td>
                 <td class="right"><?php echo htmlspecialchars(substr($usuario, 0, 15)); ?></td>
             </tr>
+            
+            <?php if (!empty($texto_entrega)): ?>
+            <tr>
+                <td class="bold">Entrega estimada:</td>
+                <td class="right bold"><?php echo $texto_entrega; ?></td>
+            </tr>
+            <?php endif; ?>
+
         </table>
 
         <div class="divider"></div>
 
-        <!-- Cliente -->
         <div class="bold" style="font-size:13px;">CLIENTE:</div>
         <div style="font-size:13px; margin-bottom:2px;"><?php echo htmlspecialchars($cliente); ?></div>
         <div>Tel: <?php echo htmlspecialchars($telefono); ?></div>
 
         <div class="divider"></div>
 
-        <!-- Productos -->
         <?php 
         $total_monto = 0;
         $total_adelanto = 0;
@@ -235,7 +255,6 @@ try {
 
         <div class="divider"></div>
 
-        <!-- Totales Finales -->
         <?php if (count($items) > 1): 
             $total_final = $total_monto - $total_adelanto;
         ?>
@@ -256,7 +275,6 @@ try {
             <div class="divider"></div>
         <?php endif; ?>
 
-        <!-- Políticas -->
         <div class="footer-text">
             <strong>CONDICIONES DE SERVICIO</strong><br>
             1. Garantía válida solo con este ticket.<br>
@@ -266,7 +284,6 @@ try {
             <strong>¡Gracias por su confianza!</strong>
         </div>
 
-        <!-- Código de Barras -->
         <div class="center" style="margin-top:15px; overflow:hidden; width:100%;">
             <svg id="barcode" style="max-width: 100%; height: auto;"></svg>
         </div>
@@ -282,14 +299,13 @@ try {
         <div class="center" style="margin-top:5px;">--- 3M TECHNOLOGY ---</div>
     </div>
 
-    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script>
         try {
             JsBarcode("#barcode", "<?php echo $codigo_barras; ?>", {
                 format: "CODE128",
-                width: 1.2,      // Ancho 1.2 para que sea visible y compacto
-                height: 60,      // Alto 60 para que sea fácil de leer
+                width: 1.2,
+                height: 60,
                 displayValue: false, 
                 margin: 0,
                 flat: true 
@@ -297,9 +313,7 @@ try {
         } catch (e) {}
 
         function cerrarTicket() {
-            // Intenta cerrar la ventana
             window.close();
-            // Si no se cierra, redirige al panel de control
             setTimeout(function() {
                 window.location.href = '/local3M/control.php';
             }, 300);

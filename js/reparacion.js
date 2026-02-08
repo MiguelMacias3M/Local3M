@@ -36,29 +36,36 @@ function validarCampos(esParaCarrito) {
 function agregarAlCarrito() {
     if (!validarCampos(true)) return;
 
+    // ... (código existente donde obtienes las variables) ...
     const tipoReparacion = document.getElementById('tipo_reparacion').value;
     const marcaCelular = document.getElementById('marca_celular').value;
     const modelo = document.getElementById('modelo').value;
     const monto = parseInt(document.getElementById('monto').value) || 0;
     const adelanto = parseInt(document.getElementById('adelanto').value) || 0;
     const deuda = Math.max(monto - adelanto, 0);
-        // Dentro de tu función de agregar al carrito:
+    
+    // 1. Obtener la fecha (Esto ya lo tenías)
     const fechaEstimada = document.getElementById('fecha_estimada').value;
 
-    // Al crear el objeto del producto/reparación:
-    const item = {
-        // ... tus otros campos (marca, modelo, etc.) ...
-        fechaEstimada: fechaEstimada, // <--- NUEVO
-        // ...
+    // 2. ERROR ACTUAL: Estás creando 'const item' pero luego usas 'const reparacion' sin la fecha.
+    // CORRECCIÓN: Agrega 'fechaEstimada' al objeto 'reparacion'.
+    const reparacion = { 
+        tipoReparacion, 
+        marcaCelular, 
+        modelo, 
+        monto, 
+        adelanto, 
+        deuda,
+        fechaEstimada: fechaEstimada // <--- AGREGA ESTA LÍNEA
     };
 
-// Y muy importante: Limpiar el campo después de agregar
-document.getElementById('fecha_estimada').value = '';
-    const reparacion = { tipoReparacion, marcaCelular, modelo, monto, adelanto, deuda };
     carrito.push(reparacion);
     
     mostrarCarrito();
     limpiarCamposEquipo();
+    
+    // 3. Limpiar el campo de fecha también
+    document.getElementById('fecha_estimada').value = '';
 }
 
 function mostrarCarrito() {

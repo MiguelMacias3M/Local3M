@@ -1,7 +1,7 @@
 <?php
 /*
  * API EDITAR REPARACIÓN
- * Versión Final: Fotos + Historial + Ubicación + FECHA ENTREGA
+ * Versión Final: Fotos + Historial + Ubicación + FECHA ENTREGA + LIBERAR ESPACIO
  */
 ini_set('display_errors', 0);
 error_reporting(0);
@@ -62,7 +62,7 @@ try {
 
     if (!$reparacion) throw new Exception("Reparación no encontrada.");
 
-    // --- ACCIÓN: ENTREGAR ---
+    // --- ACCIÓN: ENTREGAR (Botón Verde) ---
     if ($action === 'entregar') {
         $monto_total = (float)$reparacion['monto'];
         $adelanto_actual = (float)$reparacion['adelanto'];
@@ -77,9 +77,10 @@ try {
             ]);
         }
 
-        $conn->prepare("UPDATE reparaciones SET adelanto=monto, deuda=0, estado='Entregado', fecha_entrega=NOW() WHERE id=:id")->execute([':id' => $id]);
+        // AQUÍ AGREGAMOS 'ubicacion = NULL' PARA LIBERAR EL LUGAR
+        $conn->prepare("UPDATE reparaciones SET adelanto=monto, deuda=0, estado='Entregado', fecha_entrega=NOW(), ubicacion=NULL WHERE id=:id")->execute([':id' => $id]);
         
-        registrarHistorial($conn, $id, 'Entregado', 'Equipo entregado al cliente', $_SESSION['nombre']);
+        registrarHistorial($conn, $id, 'Entregado', 'Equipo entregado y lugar liberado', $_SESSION['nombre']);
 
         $conn->commit();
         $ticketUrl = 'generar_ticket_id.php?id_transaccion=' . urlencode($reparacion['id_transaccion']);
@@ -87,14 +88,20 @@ try {
         exit();
     }
 
-    // --- ACCIÓN: GUARDAR CAMBIOS ---
+    // --- ACCIÓN: GUARDAR CAMBIOS (Botón Azul) ---
     if ($action === 'guardar') {
         $url_foto = subirEvidencia();
 
         // Datos nuevos
-        $ubicacion_nueva = $data['ubicacion'];
-        $fecha_estimada_nueva = !empty($data['fecha_estimada']) ? $data['fecha_estimada'] : null; // <--- NUEVO
         $estado_nuevo = $data['estado'];
+        
+        // LÓGICA DE UBICACIÓN: Si se entrega, se borra la ubicación. Si no, se actualiza.
+        $ubicacion_nueva = $data['ubicacion'];
+        if ($estado_nuevo === 'Entregado') {
+            $ubicacion_nueva = null; // Liberar si se marca como entregado
+        }
+
+        $fecha_estimada_nueva = !empty($data['fecha_estimada']) ? $data['fecha_estimada'] : null;
         $monto = (float)$data['monto'];
         $adelanto = (float)$data['adelanto'];
         
@@ -130,8 +137,9 @@ try {
             ':n'=>$data['nombre_cliente'], ':t'=>$data['telefono'], ':tr'=>$data['tipo_reparacion'],
             ':ma'=>$data['marca_celular'], ':mo'=>$data['modelo'], ':m'=>$monto, 
             ':a'=>$adelanto, ':d'=>$deuda, ':i'=>$data['info_extra'], 
-            ':e'=>$estado_nuevo, ':u'=>$ubicacion_nueva, 
-            ':fe'=>$fecha_estimada_nueva, // <--- Guardamos fecha
+            ':e'=>$estado_nuevo, 
+            ':u'=>$ubicacion_nueva, // Aquí pasamos el NULL o la ubicación
+            ':fe'=>$fecha_estimada_nueva,
             ':id'=>$id
         ]);
 
@@ -141,9 +149,11 @@ try {
         if ($reparacion['estado'] !== $estado_nuevo) {
             $comentarios[] = "Estado: " . $reparacion['estado'] . " -> " . $estado_nuevo;
         }
-        if (($reparacion['ubicacion']??'') !== $ubicacion_nueva) {
+        // Solo registramos cambio de ubicación si NO se entregó (porque al entregar siempre se borra)
+        if ($estado_nuevo !== 'Entregado' && ($reparacion['ubicacion']??'') !== $ubicacion_nueva) {
             $comentarios[] = "Ubicación: " . ($reparacion['ubicacion']??'N/A') . " -> " . $ubicacion_nueva;
         }
+        
         // Detectar reprogramación
         $fe_ant = $reparacion['fecha_estimada'] ? date('Y-m-d H:i', strtotime($reparacion['fecha_estimada'])) : '';
         $fe_nue = $fecha_estimada_nueva ? date('Y-m-d H:i', strtotime($fecha_estimada_nueva)) : '';

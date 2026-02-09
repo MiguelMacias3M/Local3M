@@ -1,6 +1,6 @@
 /*
  * Lógica para Editar Reparación
- * Versión Final: Ubicación + Fotos
+ * Versión Final: Ubicación (Mapa Caja) + Fotos + Pagos
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -14,6 +14,105 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// --- FUNCIONES MAPA CAJA ---
+
+function abrirMapaCaja() {
+    // Usamos bootstrap para abrir el modal si está disponible, o CSS manual
+    const modalEl = document.getElementById('modalMapaCaja');
+    
+    // Intentar abrir con Bootstrap
+    try {
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+    } catch(e) {
+        // Fallback manual si no hay bootstrap JS cargado
+        modalEl.style.display = 'block';
+        modalEl.classList.add('show');
+    }
+
+    dibujarCaja();
+}
+
+function cerrarModalMapa() {
+    const modalEl = document.getElementById('modalMapaCaja');
+    
+    try {
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        modal.hide();
+    } catch(e) {
+        modalEl.style.display = 'none';
+        modalEl.classList.remove('show');
+    }
+}
+
+function dibujarCaja() {
+    const grid = document.getElementById('grid-caja');
+    grid.innerHTML = '<div class="col-12 text-center"><i class="fas fa-spinner fa-spin"></i> Cargando caja...</div>';
+
+    fetch('api/obtener_lugares.php')
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) {
+                grid.innerHTML = 'Error al cargar datos.';
+                return;
+            }
+
+            grid.innerHTML = ''; // Limpiar
+            const ocupados = data.data; // Array {id, ubicacion}
+            
+            const filas = ['A', 'B', 'C', 'D'];
+            const columnas = 12;
+
+            filas.forEach(fila => {
+                for (let col = 1; col <= columnas; col++) {
+                    const coord = `${fila}${col}`; 
+                    
+                    // Crear celda
+                    const celda = document.createElement('div');
+                    celda.className = 'lugar-box';
+                    celda.textContent = coord;
+
+                    // Buscar si está ocupado
+                    const ocupacion = ocupados.find(o => o.ubicacion === coord);
+
+                    if (ocupacion) {
+                        // Si es MI equipo actual
+                        if (typeof REPARACION_ID !== 'undefined' && ocupacion.id == REPARACION_ID) {
+                             celda.classList.add('seleccionado');
+                        } else {
+                            // Si es otro equipo
+                            celda.classList.add('ocupado');
+                            celda.title = `Ocupado (Orden #${ocupacion.id})`;
+                        }
+                    } else {
+                        // Libre
+                        celda.onclick = () => seleccionarLugar(coord);
+                    }
+
+                    grid.appendChild(celda);
+                }
+            });
+        });
+}
+
+function seleccionarLugar(coordenada) {
+    document.getElementById('ubicacion').value = coordenada;
+    cerrarModalMapa();
+    
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 2000
+    });
+    Toast.fire({
+        icon: 'success',
+        title: `Asignado a ${coordenada}`
+    });
+}
+
+// --- FUNCIONES ORIGINALES ---
 
 function previsualizarFoto() {
     const input = document.getElementById('evidencia_input');
@@ -73,7 +172,6 @@ function guardarCambios() {
     formData.append('action', 'guardar');
     formData.append('id', REPARACION_ID);
     
-    // Campos de Texto
     formData.append('nombre_cliente', document.getElementById('nombre_cliente').value);
     formData.append('telefono', document.getElementById('telefono').value);
     formData.append('tipo_reparacion', document.getElementById('tipo_reparacion').value);
@@ -83,14 +181,9 @@ function guardarCambios() {
     formData.append('adelanto', document.getElementById('adelanto').value);
     formData.append('info_extra', document.getElementsByName('info_extra')[0].value);
     formData.append('estado', document.getElementById('selectEstado').value);
-    // ... dentro del FormData ...
     formData.append('fecha_estimada', document.getElementById('fecha_estimada').value);     
-    
-    // --- CAMPO NUEVO: UBICACIÓN ---
-    let ubicacion = document.getElementById('ubicacion').value;
-    formData.append('ubicacion', ubicacion); 
+    formData.append('ubicacion', document.getElementById('ubicacion').value); 
 
-    // Archivo
     const fileInput = document.getElementById('evidencia_input');
     if(fileInput.files.length > 0) {
         formData.append('evidencia', fileInput.files[0]);

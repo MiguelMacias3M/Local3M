@@ -294,3 +294,50 @@
     border: 1px solid #dcdcdc;    /* Un borde sutil */
     font-weight: 600;
 }
+/* ... tus estilos anteriores ... */
+
+/* ESTILOS MAPA CAJA */
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr); /* 12 Columnas */
+    gap: 8px;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 10px;
+}
+
+.lugar-box {
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    background-color: #d4edda;
+    color: #155724;
+    transition: all 0.2s;
+}
+
+.lugar-box:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    z-index: 2;
+}
+
+.lugar-box.ocupado {
+    background-color: #f8d7da;
+    color: #721c24;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.lugar-box.seleccionado {
+    background-color: #0d6efd;
+    color: white;
+    border: 2px solid #002a80;
+    transform: scale(1.15);
+    z-index: 3;
+}

@@ -30,7 +30,7 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
     <div class="edit-grid">
         <div class="edit-form-col">
             <form id="formEditar" onsubmit="return false;">
-                <input type="hidden" name="id" value="<?= $id ?>">
+                <input type="hidden" name="id" id="id_reparacion_hidden" value="<?= $id ?>">
                 
                 <div class="form-section">
                     <h3><i class="fas fa-user"></i> Cliente</h3>
@@ -108,9 +108,14 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
                     <div class="row-2-col">
                         <div class="form-group">
                             <label><i class="fas fa-map-marker-alt"></i> Ubicación</label>
-                            <input type="text" class="form-input" id="ubicacion" 
-                                   value="<?= htmlspecialchars($reparacion['ubicacion'] ?? '') ?>" 
-                                   placeholder="Ej: A-1">
+                            <div style="display: flex; gap: 5px;">
+                                <input type="text" class="form-input" id="ubicacion" 
+                                       value="<?= htmlspecialchars($reparacion['ubicacion'] ?? '') ?>" 
+                                       placeholder="Ej: A1" readonly style="background-color: #f9f9f9; cursor: pointer;" onclick="abrirMapaCaja()">
+                                <button type="button" class="btn btn-outline-primary" onclick="abrirMapaCaja()" style="border: 1px solid #0d6efd; background: transparent; color: #0d6efd; border-radius: 5px; padding: 0 10px;">
+                                    <i class="fas fa-th"></i>
+                                </button>
+                            </div>
                         </div>
                         
                         <div class="form-group">
@@ -200,6 +205,28 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
     </div>
 </div>
 
+<div class="modal fade" id="modalMapaCaja" tabindex="-1" aria-hidden="true" style="display:none; background: rgba(0,0,0,0.5); position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1050;">
+    <div class="modal-dialog modal-lg" style="margin: 5% auto; max-width: 800px;">
+        <div class="modal-content" style="background: #fff; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
+            <div class="modal-header bg-dark text-white" style="padding: 15px; border-bottom: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; background: #343a40; color: white; border-radius: 10px 10px 0 0;">
+                <h5 class="modal-title" style="margin: 0;">📦 Caja de Equipos (48 Lugares)</h5>
+                <button type="button" class="btn-close btn-close-white" onclick="cerrarModalMapa()" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            <div class="modal-body text-center" style="padding: 20px;">
+                
+                <div class="d-flex justify-content-center gap-3 mb-4" style="margin-bottom: 15px;">
+                    <span class="badge" style="background: #d4edda; color: #155724; padding: 5px 10px; border-radius: 4px; margin-right:5px;">Disponible</span>
+                    <span class="badge" style="background: #f8d7da; color: #721c24; padding: 5px 10px; border-radius: 4px; margin-right:5px;">Ocupado</span>
+                    <span class="badge" style="background: #0d6efd; color: white; padding: 5px 10px; border-radius: 4px;">Seleccionado</span>
+                </div>
+
+                <div id="grid-caja" class="grid-container"></div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     const REPARACION_ID = <?= $id ?>;
     const TICKET_URL = "<?= $ticketUrl ?>";
@@ -207,5 +234,6 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
 </script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script> 
 <script src="/local3M/js/editar_reparacion.js?v=<?php echo time(); ?>"></script>
 <?php include 'templates/footer.php'; ?>

@@ -1,0 +1,167 @@
+/* =========================================
+   ESTILOS ENCARGOS: VERSIÓN MODERNA & ELEGANTE
+   ========================================= */
+
+/* --- Contenedor Principal --- */
+.card {
+    border: none;
+    border-radius: 20px;
+    background-color: #ffffff;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.05); /* Sombra muy suave y difusa */
+}
+
+/* Cabecera */
+.card-header {
+    background-color: #fff;
+    border-bottom: 1px solid #f0f0f0;
+    padding: 1.5rem 2rem;
+    border-radius: 20px 20px 0 0 !important;
+}
+
+/* ... resto del código ... */
+
+/* Cabecera con Título Colorido */
+.card-header h4 {
+    /* Fondo degradado aplicado al texto */
+    background: linear-gradient(45deg, #0d6efd, #0dcaf0); 
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    
+    font-weight: 900; /* Letra bien gruesa */
+    font-size: 1.8rem; /* Un poco más grande */
+    letter-spacing: -0.5px;
+    margin: 0;
+    text-transform: uppercase; /* Opcional: Mayúsculas */
+}
+
+/* Ajuste al contador para que combine */
+#contador-pendientes {
+    background: linear-gradient(45deg, #0d6efd, #0a58ca);
+    color: #fff;
+    font-weight: 700;
+    padding: 0.5em 1.2em;
+    border-radius: 30px;
+    box-shadow: 0 4px 10px rgba(13, 110, 253, 0.3);
+    font-size: 0.9rem;
+}
+
+/* ... resto del código ... */
+/* --- Área de Input (Escribir) --- */
+.card-body {
+    padding: 2rem;
+    background-color: #fafbfc; /* Fondo gris muy tenue para el cuerpo */
+    border-radius: 0 0 20px 20px;
+}
+
+.input-group {
+    background: #fff;
+    padding: 5px;
+    border-radius: 50px; /* Forma de píldora */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e1e4e8;
+    margin-bottom: 2rem !important;
+}
+
+#nuevo-encargo {
+    border: none;
+    background: transparent;
+    padding: 1rem 1.5rem;
+    font-size: 1.1rem;
+    color: #495057;
+}
+
+#nuevo-encargo:focus {
+    box-shadow: none;
+    outline: none;
+}
+
+.btn-success {
+    border-radius: 50px; /* Botón redondo */
+    padding: 0.8rem 2rem;
+    font-weight: 600;
+    font-size: 1rem;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%); /* Degradado verde elegante */
+    border: none;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); /* Sombra de color verde (glow) */
+    transition: all 0.3s ease;
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+}
+
+.btn-success:active {
+    transform: translateY(0);
+}
+
+/* --- Lista de Tareas --- */
+.list-group {
+    gap: 10px; /* Espacio entre elementos */
+}
+
+.list-group-item {
+    border: 1px solid #eff2f5;
+    border-radius: 12px !important;
+    background-color: #fff;
+    margin-bottom: 0; /* Usamos gap en el padre */
+    padding: 1rem 1.2rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+    transition: all 0.2s ease;
+}
+
+.list-group-item:hover {
+    border-color: #b3d7ff;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(59, 130, 246, 0.1);
+}
+
+/* Iconos y Texto */
+.fa-circle {
+    color: #e2e8f0;
+    font-size: 1.3rem;
+    transition: color 0.3s;
+}
+
+.list-group-item:hover .fa-circle {
+    color: #3b82f6; /* Azul al pasar el mouse */
+}
+
+.list-group-item span {
+    font-size: 1.05rem;
+    color: #344767;
+    font-weight: 500;
+}
+
+.text-muted small {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.8rem;
+    color: #a0aec0 !important;
+}
+
+/* Estados Completados */
+.list-group-item-success {
+    background-color: #f8fafc !important; /* Gris muy claro, casi blanco */
+    border-color: #e2e8f0;
+    opacity: 0.8;
+}
+
+.list-group-item-success .fa-check-circle {
+    color: #10b981; /* Verde esmeralda */
+    font-size: 1.3rem;
+}
+
+.text-decoration-line-through {
+    color: #cbd5e1 !important; /* Texto gris muy claro */
+}
+
+/* Título de secciones */
+h5.text-muted {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+    color: #94a3b8 !important;
+    margin-left: 10px;
+}

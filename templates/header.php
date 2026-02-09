@@ -43,6 +43,8 @@ if (!isset($_SESSION['nombre'])) {
                 <li><a href="/local3M/mercancia.php"><i class="fas fa-clipboard-list"></i> Mercancía</a></li>
                 <li><a href="/local3M/caja.php"><i class="fas fa-cash-register"></i> Caja</a></li>
                 <li><a href="/local3M/gastos.php"><i class="far fa-money-bill-alt"></i> Gastos</a></li>
+                <li><a href="/local3M/usuarios.php"><i class="fas fa-users-cog"></i> Usuarios</a></li>
+                <li><a href="/local3M/encargos.php"><i class="fas fa-clipboard-list"></i> Encargos</a></li>
             </ul>
         </div>
         

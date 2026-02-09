@@ -9,7 +9,7 @@ let cargando = false;
 let finDeLista = false;
 let datos = [];
 let busqueda = '';
-let currentBarcode = ''; // Variable para guardar el código actual
+let currentBarcode = ''; 
 
 // Elementos del DOM
 const tbody = document.getElementById('tablaReparacionesBody');
@@ -39,7 +39,6 @@ async function cargarPagina() {
     globalLoader.style.display = 'block';
 
     try {
-        // Usamos ruta absoluta para la API para evitar errores de carpetas
         const url = new URL('/local3M/api/get_reparaciones.php', window.location.origin);
         url.searchParams.set('offset', offset);
         url.searchParams.set('limit', LIMIT);
@@ -115,7 +114,6 @@ function renderEstado(estadoRaw){
     const text = (estadoRaw || '').toString().trim();
     if (!text) return `<span class="status status-unknown">--</span>`;
     
-    // Normalizar texto para comparar (minusculas, sin acentos)
     const normalized = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ');
 
     let cls = 'status-unknown';
@@ -129,7 +127,7 @@ function renderEstado(estadoRaw){
     return `<span class="status ${cls}">${text}</span>`;
 }
 
-// ========= Acciones de la tabla (Event Delegation) =========
+// ========= Acciones de la tabla =========
 tbody.addEventListener('click', (e) => {
     const btn = e.target.closest('button, a');
     if (!btn) return;
@@ -156,14 +154,12 @@ tbody.addEventListener('click', (e) => {
     }
 });
 
-// Función de Eliminar con Contraseña (Seguridad)
 function confirmarEliminar(id) {
     Swal.fire({
         title: 'Confirmar Eliminación',
         text: "Esta acción no se puede deshacer. Ingresa la contraseña de administrador:",
         input: 'password',
         inputPlaceholder: 'Contraseña',
-        inputAttributes: { autocapitalize: 'off', autocorrect: 'off' },
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
@@ -172,7 +168,6 @@ function confirmarEliminar(id) {
         cancelButtonText: 'Cancelar',
         showLoaderOnConfirm: true,
         preConfirm: (password) => {
-            // Petición POST a la API
             return fetch('/local3M/api/eliminar_reparacion.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -195,14 +190,12 @@ function confirmarEliminar(id) {
         if (result.isConfirmed) {
             Swal.fire('¡Eliminado!', 'La reparación ha sido eliminada correctamente.', 'success')
                 .then(() => {
-                    // Recargar tabla limpiamente (sin recargar página)
                     offset = 0; datos = []; tbody.innerHTML = ''; cargarPagina();
                 });
         }
     });
 }
 
-// Resto de utilidades de búsqueda...
 inputBuscar.addEventListener('input', () => {
     const txt = inputBuscar.value.trim().toLowerCase();
     if (!txt) {
@@ -244,33 +237,75 @@ function ejecutarBusquedaServidor(){
 btnMas.addEventListener('click', cargarPagina);
 
 function formatoFechaMx(iso){
-    if(!iso) return '-';
+    if(!iso) return '<span style="color:#999">No registrada</span>';
     const s = String(iso).replace(' ','T');
     const d = new Date(s);
     if(isNaN(d)) return iso;
     return d.toLocaleString('es-MX',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 }
 
-// Mostrar Detalles (Incluye Fecha de Entrega)
+// ========= AQUÍ ESTÁ LA FUNCIÓN CORREGIDA (CON FECHA DE INGRESO) =========
 function mostrarDetalles(row){
+    // Preparamos la ubicación
+    const ubicacionHtml = row.ubicacion 
+        ? `<span style="background:#0d6efd; color:white; padding:2px 6px; border-radius:4px;">${esc(row.ubicacion)}</span>` 
+        : '<span style="color:#999">Sin asignar</span>';
+
     const detalles = `
-        <strong>Atendió:</strong> ${esc(row.usuario)}<br>
-        <strong>Cliente:</strong> ${esc(row.nombre_cliente)}<br>
-        <strong>Teléfono:</strong> ${esc(row.telefono)}<br>
-        <strong>Fecha de ingreso:</strong> ${formatoFechaMx(row.fecha_hora)}<br>
-        <strong style="color: #000000ff;">Fecha de entrega:</strong> ${formatoFechaMx(row.fecha_entrega)}<br> 
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size: 14px;">
+            <div style="grid-column: span 2; background:#e9ecef; padding:5px 10px; border-radius:5px; margin-bottom:5px;">
+                <strong>📅 Fecha de Ingreso:</strong> ${formatoFechaMx(row.fecha_hora)}
+            </div>
+
+            <div>
+                <strong>Cliente:</strong><br>${esc(row.nombre_cliente)}
+            </div>
+            <div>
+                <strong>Teléfono:</strong><br>${esc(row.telefono)}
+            </div>
+            <div>
+                <strong>Atendió:</strong><br>${esc(row.usuario)}
+            </div>
+            <div>
+                <strong>Estado:</strong><br>${renderEstado(esc(row.estado))}
+            </div>
+        </div>
         
-        <hr style="border-color: #eee; margin: 10px 0;">
-        <strong>Tipo de Reparación:</strong> ${esc(row.tipo_reparacion)}<br>
-        <strong>Marca:</strong> ${esc(row.marca_celular)}<br>
-        <strong>Modelo:</strong> ${esc(row.modelo)}<br>
-        <strong>Código barras:</strong> ${esc(row.codigo_barras)}<br>
-        <hr style="border-color: #eee; margin: 10px 0;">
-        <strong>Monto:</strong> $${esc(row.monto)}<br>
-        <strong>Adelanto:</strong> $${esc(row.adelanto)}<br>
-        <strong>Deuda:</strong> $${esc(row.deuda)}<br>
-        <strong>Info Extra:</strong> ${esc(row.info_extra)}<br>
-        <strong>Estado:</strong> ${esc(row.estado)}`;
+        <hr style="border-color: #eee; margin: 15px 0;">
+
+        <div style="font-size: 14px;">
+            <strong>Equipo:</strong> ${esc(row.tipo_reparacion)} ${esc(row.marca_celular)} ${esc(row.modelo)}<br>
+            <strong>Código barras:</strong> ${esc(row.codigo_barras)}<br>
+            <strong>Info Extra:</strong> ${esc(row.info_extra)}
+        </div>
+
+        <div style="background:#f8f9fa; padding:10px; border-radius:8px; margin-top:15px; border:1px solid #e9ecef;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <strong>📍 Ubicación en Caja:</strong>
+                ${ubicacionHtml}
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <strong>🚀 Entrega Estimada:</strong>
+                <span>${formatoFechaMx(row.fecha_estimada)}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+                <strong>🏁 Fecha Entrega Real:</strong>
+                <span>${row.fecha_entrega ? formatoFechaMx(row.fecha_entrega) : '-'}</span>
+            </div>
+        </div>
+
+        <hr style="border-color: #eee; margin: 15px 0;">
+
+        <div style="display:flex; justify-content:space-between; font-size:15px;">
+            <span>Monto Total:</span> <strong>$${esc(row.monto)}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:15px; color:#28a745;">
+            <span>Abonado:</span> <strong>$${esc(row.adelanto)}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:16px; color:#dc3545; margin-top:5px; border-top:1px dashed #ccc; padding-top:5px;">
+            <span>Resta:</span> <strong>$${esc(row.deuda)}</strong>
+        </div>
+    `;
     
     detallesContenido.innerHTML = detalles;
     modalDetalles.style.display = "flex";
@@ -291,7 +326,6 @@ async function mostrarCodigo(id) {
     barcodeWrap.style.display = 'none';
     barcodeError.style.display = 'none';
     
-    // Deshabilitar botones mientras carga
     if(btnPrintBarcode) btnPrintBarcode.disabled = true;
     if(btnCopyBarcode) btnCopyBarcode.disabled = true;
 
@@ -301,7 +335,6 @@ async function mostrarCodigo(id) {
     openBarcodeModal();
 
     try {
-        // Petición a la API para obtener o generar el código
         const res = await fetch(`/local3M/api/get_codigo_reparacion.php?id=${encodeURIComponent(id)}`, { headers: { 'Accept': 'application/json' } });
         const data = await res.json();
         if (!res.ok || !data.success) throw new Error(data.error || 'No se pudo obtener el código.');
@@ -309,7 +342,7 @@ async function mostrarCodigo(id) {
         const code = data.codigo_barras;
         if (!code) throw new Error('Esta reparación no tiene código de barras.');
 
-        currentBarcode = code; // Guardar para usar en los botones
+        currentBarcode = code;
 
         JsBarcode("#barcode-svg", code, { 
             format:"code128", 
@@ -323,7 +356,6 @@ async function mostrarCodigo(id) {
         barcodeSpinner.style.display = 'none';
         barcodeWrap.style.display = 'block';
         
-        // Habilitar botones
         if(btnPrintBarcode) btnPrintBarcode.disabled = false;
         if(btnCopyBarcode) btnCopyBarcode.disabled = false;
 
@@ -334,7 +366,6 @@ async function mostrarCodigo(id) {
     }
 }
 
-// Listeners para los botones del modal de código de barras
 if(btnCopyBarcode){
     btnCopyBarcode.addEventListener('click', () => {
         if(currentBarcode){
@@ -357,5 +388,4 @@ if(btnPrintBarcode){
     });
 }
 
-// Primera carga
 cargarPagina();

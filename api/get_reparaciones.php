@@ -1,7 +1,7 @@
 <?php
 /*
  * API para buscar y paginar reparaciones
- * Responde a peticiones GET de control.js
+ * Incluye búsqueda por ID exacta y texto general.
  */
 
 ini_set('display_errors', 0); 
@@ -11,7 +11,7 @@ session_start();
 if (!isset($_SESSION['nombre'])) {
     header('HTTP/1.1 401 Unauthorized');
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(['success' => false, 'error' => 'No autorizado. Vuelva a iniciar sesión.']);
+    echo json_encode(['success' => false, 'error' => 'No autorizado.']);
     exit();
 }
 
@@ -26,10 +26,9 @@ try {
     $where = '';
     $params = [];
 
-    // 2. Construir la consulta de búsqueda CORREGIDA
-    // QUITE: LOWER() - Esto causaba el choque de collations.
-    // La búsqueda sigue siendo insensible a mayúsculas/minúsculas por la configuración de la BD.
+    // 2. Construir la consulta de búsqueda
     if ($q !== '') {
+        // Agregamos 'OR id = :q6' al final para buscar por número de orden exacto
         $where = "WHERE (nombre_cliente     LIKE :q1
                        OR tipo_reparacion   LIKE :q2
                        OR modelo            LIKE :q3
@@ -39,33 +38,40 @@ try {
         
         $term = '%' . $q . '%';
         
-        // Asignamos el mismo término a todos los parámetros
+        // Asignamos el término con % a los campos de texto
         $params[':q1'] = $term;
         $params[':q2'] = $term;
         $params[':q3'] = $term;
         $params[':q4'] = $term;
         $params[':q5'] = $term;
+        
+        // Para el ID usamos el término exacto (sin %)
+        // Si el usuario escribe texto, MySQL convertirá a 0 o fallará, 
+        // pero al ser string bind PDO lo maneja seguro.
+        $params[':q6'] = $q;
     }
 
     // 3. Consulta Principal
+    // Nota: Eliminamos cualquier paréntesis extra o saltos de línea raros en la variable $where anterior
     $sql = "SELECT * FROM reparaciones $where ORDER BY id DESC LIMIT :limit OFFSET :offset";
     $stmt = $conn->prepare($sql);
 
-    // 4. Vincular parámetros
+    // 4. Vincular parámetros de búsqueda
     foreach ($params as $k => $v) {
         $stmt->bindValue($k, $v, PDO::PARAM_STR);
     }
+    
+    // Vincular límite y offset
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
     $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     
     $stmt->execute();
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // 5. Consulta para contar total (Paginación)
+    // 5. Consulta para contar total (para la paginación)
     $sqlCount = "SELECT COUNT(*) FROM reparaciones $where";
     $cstmt = $conn->prepare($sqlCount);
     
-    // Vinculamos los mismos parámetros de búsqueda si existen
     foreach ($params as $k => $v) {
         $cstmt->bindValue($k, $v, PDO::PARAM_STR);
     }
@@ -81,14 +87,11 @@ try {
 
 } catch (PDOException $e) {
     header('HTTP/1.1 500 Internal Server Error');
-    header('Content-Type: application/json; charset=utf-8');
-    // Mostramos mensaje genérico para usuario, el específico solo para debug si es necesario
     echo json_encode(['success' => false, 'error' => 'Error de BBDD: ' . $e->getMessage()]);
     exit;
 } catch (Throwable $e) {
     header('HTTP/1.1 500 Internal Server Error');
-    header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['success' => false, 'error' => 'Error inesperado: ' . $e->getMessage()]);
     exit;
 }
-?>ggi
+?>

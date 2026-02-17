@@ -34,7 +34,7 @@ try {
                        OR tipo_reparacion   LIKE :q2
                        OR modelo            LIKE :q3
                        OR codigo_barras     LIKE :q4
-                       OR telefono          LIKE :q5)
+                       OR telefono          LIKE :q5
                        OR id                = :q6)";
         
         $term = '%' . $q . '%';

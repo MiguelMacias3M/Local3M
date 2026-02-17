@@ -77,16 +77,35 @@ function dibujarCaja() {
                     const ocupacion = ocupados.find(o => o.ubicacion === coord);
 
                     if (ocupacion) {
-                        // Si es MI equipo actual
+                        // CASO 1: Es el equipo que estoy editando AHORITA
                         if (typeof REPARACION_ID !== 'undefined' && ocupacion.id == REPARACION_ID) {
                              celda.classList.add('seleccionado');
+                             // Si le doy click al mío, no hace nada o confirma
                         } else {
-                            // Si es otro equipo
+                            // CASO 2: Es OTRO equipo (El que se les olvidó entregar)
                             celda.classList.add('ocupado');
-                            celda.title = `Ocupado (Orden #${ocupacion.id})`;
+                            celda.title = `Ocupado por Orden #${ocupacion.id}`;
+                            
+                            // --- AQUÍ ESTÁ LA MAGIA ---
+                            // Al hacer click, preguntamos si quieren ir a ver esa reparación
+                            celda.onclick = () => {
+                                Swal.fire({
+                                    title: `Lugar ${coord} Ocupado`,
+                                    text: `Este lugar lo tiene la orden #${ocupacion.id}. ¿Quieres ver esa reparación?`,
+                                    icon: 'question',
+                                    showCancelButton: true,
+                                    confirmButtonText: 'Sí, ir a verla',
+                                    cancelButtonText: 'Cancelar'
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        // Abrimos en una pestaña nueva para no perder lo que hacías
+                                        window.open(`editar_reparacion.php?id=${ocupacion.id}`, '_blank');
+                                    }
+                                });
+                            };
                         }
                     } else {
-                        // Libre
+                        // CASO 3: Lugar Libre
                         celda.onclick = () => seleccionarLugar(coord);
                     }
 

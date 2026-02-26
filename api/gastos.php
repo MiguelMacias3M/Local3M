@@ -95,7 +95,8 @@ try {
     }
 
     // ==========================================
-    // 3. GUARDAR (MANTIENE LA LÓGICA DE GUARDAR COMO 'GASTOS' SI ES NUEVO)
+// ==========================================
+    // 3. GUARDAR (CON FECHA PERSONALIZADA)
     // ==========================================
     if ($action === 'guardar') {
         $id = $_POST['id'] ?? '';
@@ -104,6 +105,11 @@ try {
         $descripcion = trim($_POST['descripcion']);
         $monto = (float)$_POST['monto'];
         
+        // --- NUEVO: Recibimos la fecha del formulario o ponemos la actual ---
+        $fecha_input = $_POST['fecha_movimiento'] ?? date('Y-m-d H:i:s');
+        $fecha_guardar = date('Y-m-d H:i:s', strtotime($fecha_input));
+        // --------------------------------------------------------------------
+
         if (empty($descripcion) || $monto <= 0) throw new Exception("Datos incompletos");
 
         $nombreFoto = null;
@@ -124,6 +130,7 @@ try {
         $egreso = ($tipo === 'INGRESO') ? 0 : $monto;
 
         if (!empty($id)) {
+            // --- MODO: EDITAR ---
             if ($nombreFoto) {
                 $stmtOld = $conn->prepare("SELECT foto FROM caja_movimientos WHERE id = ?");
                 $stmtOld->execute([$id]);
@@ -133,8 +140,9 @@ try {
                 }
             }
 
-            $sql = "UPDATE caja_movimientos SET tipo=?, descripcion=?, monto_unitario=?, ingreso=?, egreso=?, categoria=?";
-            $params = [$tipo, $descripcion, $monto, $ingreso, $egreso, $categoria];
+            // Agregamos "fecha=?" a la actualización
+            $sql = "UPDATE caja_movimientos SET tipo=?, descripcion=?, monto_unitario=?, ingreso=?, egreso=?, categoria=?, fecha=? ";
+            $params = [$tipo, $descripcion, $monto, $ingreso, $egreso, $categoria, $fecha_guardar];
 
             if ($nombreFoto) {
                 $sql .= ", foto=?";
@@ -147,16 +155,17 @@ try {
             $conn->prepare($sql)->execute($params);
 
         } else {
+            // --- MODO: NUEVO ---
             $idTx = substr($tipo, 0, 3) . date('ymdHi') . rand(10,99);
             $usuario = $_SESSION['nombre'];
-            $fecha = date('Y-m-d H:i:s');
 
+            // Usamos $fecha_guardar elegida por el usuario
             $sql = "INSERT INTO caja_movimientos 
                     (id_transaccion, tipo, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, fecha, categoria, foto, origen) 
                     VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, 'GASTOS')";
             
             $stmt = $conn->prepare($sql);
-            $stmt->execute([$idTx, $tipo, $descripcion, $monto, $ingreso, $egreso, $usuario, $fecha, $categoria, $nombreFoto]);
+            $stmt->execute([$idTx, $tipo, $descripcion, $monto, $ingreso, $egreso, $usuario, $fecha_guardar, $categoria, $nombreFoto]);
         }
 
         echo json_encode(['success' => true]);

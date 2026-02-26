@@ -65,6 +65,7 @@
         <button class="custom-close" onclick="cerrarModal()">&times;</button>
         <h2 id="modalTitle">Registrar Movimiento</h2>
         
+        
         <form id="formGasto" enctype="multipart/form-data">
             <!-- ID OCULTO PARA EDICIÓN -->
             <input type="hidden" name="id" id="inputId">
@@ -84,7 +85,10 @@
                     <!-- Se llena dinámicamente con JS -->
                 </select>
             </div>
-
+            <div class="form-group">
+                <label>Fecha y Hora (Opcional - Puedes cambiarla) <span class="text-danger">*</span></label>
+                <input type="datetime-local" class="form-input" name="fecha_movimiento" id="inputFechaMovimiento" required>
+            </div>
             <div class="form-group">
                 <label>Descripción detallada</label>
                 <textarea name="descripcion" id="inputDescripcion" class="form-input" rows="2" placeholder="Ej: Pago de recibo CFE Enero, Compra de material..." required></textarea>

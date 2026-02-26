@@ -219,6 +219,14 @@ function abrirModalEdicion(movimiento) {
     document.getElementById('inputDescripcion').value = movimiento.descripcion;
     document.getElementById('inputMonto').value = movimiento.monto_real;
 
+    // --- NUEVO: Cargar la fecha exacta que tiene el registro en la BD ---
+    const inputFecha = document.getElementById('inputFechaMovimiento');
+    if (inputFecha && movimiento.fecha) {
+        // Formateamos de "YYYY-MM-DD HH:MM:SS" a "YYYY-MM-DDTHH:MM" para el input
+        inputFecha.value = movimiento.fecha.replace(' ', 'T').slice(0, 16);
+    }
+    // --------------------------------------------------------
+
     const preview = document.getElementById('previewContainer');
     const img = document.getElementById('imgPreview');
     if (movimiento.foto_url) { img.src = movimiento.foto_url; preview.style.display = 'block'; }
@@ -285,6 +293,16 @@ function abrirModalNuevo() {
     
     document.getElementById('inputTipo').value = 'GASTO';
     actualizarCategorias();
+    
+    // --- NUEVO: Poner la fecha y hora actual por defecto ---
+    const inputFecha = document.getElementById('inputFechaMovimiento');
+    if (inputFecha) {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        inputFecha.value = now.toISOString().slice(0, 16);
+    }
+    // --------------------------------------------------------
+
     document.getElementById('modalNuevo').style.display = 'flex';
 }
 

@@ -201,4 +201,87 @@ try {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
+// ==========================================
+    // EXPORTAR REPORTE MENSUAL A EXCEL (CSV)
+    // ==========================================
+    if ($action === 'exportar_mes') {
+        $mes = (int)($_GET['mes'] ?? date('m'));
+        $anio = (int)($_GET['anio'] ?? date('Y'));
+
+        // Consultamos TODO lo de ese mes (Caja y Gastos)
+        $sql = "SELECT fecha, tipo, categoria, descripcion, ingreso, egreso, origen, usuario 
+                FROM caja_movimientos 
+                WHERE MONTH(fecha) = :mes AND YEAR(fecha) = :anio 
+                ORDER BY fecha ASC";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([':mes' => $mes, ':anio' => $anio]);
+        $movs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $nombresMeses = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+        $nombreMes = $nombresMeses[$mes];
+
+        // Forzamos la descarga del archivo como CSV para Excel
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename=Reporte_3M_' . $nombreMes . '_' . $anio . '.csv');
+        $output = fopen('php://output', 'w');
+        
+        // Esta línea asegura que Excel lea bien los acentos (UTF-8 BOM)
+        fputs($output, $bom =(chr(0xEF) . chr(0xBB) . chr(0xBF)));
+        
+        // Cabeceras de la tabla
+        fputcsv($output, ['Fecha', 'Hora', 'Origen', 'Tipo', 'Categoría', 'Descripción', 'Usuario', 'Ingreso', 'Egreso/Salida']);
+
+        $totIngreso = 0;
+        $totEgreso = 0;
+        $totRetiros = 0; // NUEVO: Variable para separar los retiros
+
+        foreach ($movs as $m) {
+            $fechaObj = strtotime($m['fecha']);
+            $f = date('d/m/Y', $fechaObj);
+            $h = date('h:i A', $fechaObj);
+            $origen = $m['origen'] ?? 'CAJA';
+            $ing = (float)$m['ingreso'];
+            $egr = (float)$m['egreso'];
+            $tipo = strtoupper($m['tipo'] ?? '');
+            $cat = $m['categoria'] ?? '';
+            $desc = $m['descripcion'] ?? '';
+            
+            $totIngreso += $ing;
+
+            // Verificamos si la salida de dinero es un retiro personal/cierre de caja
+            $esRetiro = ($tipo === 'RETIRO' || $tipo === 'CIERRE') || 
+                        (stripos($cat, 'Retiro') !== false) || 
+                        (stripos($cat, 'Cierre') !== false) ||
+                        (stripos($desc, 'Retiro') !== false);
+
+            if ($esRetiro && $egr > 0) {
+                // Si es retiro, lo sumamos aparte
+                $totRetiros += $egr;
+            } else {
+                // Si es un gasto de negocio (mercancía, luz, etc.), se suma a Egresos
+                $totEgreso += $egr;
+            }
+
+            // Formatear montos con signo de pesos para cada fila
+            $strIng = $ing > 0 ? '$' . number_format($ing, 2) : '-';
+            $strEgr = $egr > 0 ? '$' . number_format($egr, 2) : '-';
+
+            fputcsv($output, [
+                $f, $h, $origen, $m['tipo'], $m['categoria'], $m['descripcion'], $m['usuario'], $strIng, $strEgr
+            ]);
+        }
+
+        // Dejar una fila en blanco antes de los totales
+        fputcsv($output, []);
+        
+        // Imprimir Totales Finales organizados
+        fputcsv($output, ['RESUMEN FINANCIERO DEL MES', '', '', '', '', '', '', '', '']);
+        fputcsv($output, ['Total de Ingresos Brutos:', '$' . number_format($totIngreso, 2), '', '', '', '', '', '', '']);
+        fputcsv($output, ['Gastos Operativos (Reales):', '$' . number_format($totEgreso, 2), '', '', '', '', '', '', '']);
+        fputcsv($output, ['Retiros de Ganancia/Caja:', '$' . number_format($totRetiros, 2), '', '', '', '', '', '', '']);
+        fputcsv($output, ['UTILIDAD NETA (Ganancia Limpia):', '$' . number_format($totIngreso - $totEgreso, 2), '', '', '', '', '', '', '']);
+
+        fclose($output);
+        exit();
+    }
 ?>

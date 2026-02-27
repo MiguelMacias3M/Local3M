@@ -11,9 +11,19 @@
             <h1>Ingresos y Gastos</h1>
             <p class="text-muted">Administración detallada con evidencia.</p>
         </div>
-        <button class="form-button btn-primary" onclick="abrirModalNuevo()">
-            <i class="fas fa-plus-circle"></i> Nuevo Movimiento
-        </button>
+        <div class="table-actions" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            
+            <div style="display: flex; align-items: center; gap: 5px; background: #f8f9fa; padding: 5px; border-radius: 8px; border: 1px solid #ddd;">
+                <input type="month" id="mesExportar" class="form-input" style="padding: 4px 8px; margin: 0; min-height: auto;" value="<?php echo date('Y-m'); ?>">
+                <button class="form-button" style="background-color: #217346; color: white; padding: 5px 10px; margin: 0;" onclick="exportarMesExcel()" title="Descargar Excel del mes seleccionado">
+                    <i class="fas fa-file-excel"></i> Descargar Mes
+                </button>
+            </div>
+
+            <button class="form-button btn-danger btn-sm" style="background-color: #1482ff; color: white; padding: 5px 10px; margin: 0;" onclick="abrirModalNuevo()">
+                <i class="fas fa-minus-circle" ></i> Registrar Movimiento
+            </button>
+        </div>
     </div>
 
     <!-- Barra de Filtros -->

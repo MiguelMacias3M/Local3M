@@ -308,3 +308,21 @@ function abrirModalNuevo() {
 
 function cerrarModal() { document.getElementById('modalNuevo').style.display = 'none'; }
 function formatoDinero(amount) { return parseFloat(amount).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'); }
+// ==========================================
+// EXPORTAR EXCEL MENSUAL
+// ==========================================
+function exportarMesExcel() {
+    const mesInput = document.getElementById('mesExportar').value;
+    if (!mesInput) {
+        Swal.fire('Atención', 'Selecciona un mes primero', 'warning');
+        return;
+    }
+
+    // El input devuelve formato "YYYY-MM" (Ej. 2026-02)
+    const partes = mesInput.split('-');
+    const anio = partes[0];
+    const mes = partes[1];
+
+    // Redirigir al archivo PHP que forzará la descarga del CSV
+    window.location.href = `api/gastos.php?action=exportar_mes&mes=${mes}&anio=${anio}`;
+}

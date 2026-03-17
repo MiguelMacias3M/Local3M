@@ -23,8 +23,6 @@ try {
     if ($action === 'buscar') {
         $q = $_GET['q'] ?? '';
         
-        // CORRECCIÓN: Usamos :q1 y :q2 para evitar el error "Invalid parameter number"
-        // Algunos servidores exigen un nombre único por cada "?" o placeholder.
         $sql = "SELECT * FROM productos WHERE 
                 (LOWER(nombre_producto) LIKE :q1 OR CAST(codigo_barras AS CHAR) LIKE :q2) 
                 AND cantidad_piezas > 0 
@@ -32,8 +30,6 @@ try {
         
         $stmt = $conn->prepare($sql);
         $term = '%' . strtolower($q) . '%';
-        
-        // Enviamos el mismo término dos veces con nombres diferentes
         $stmt->execute([':q1' => $term, ':q2' => $term]);
         
         $productos = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -41,13 +37,13 @@ try {
         exit();
     }
 
-    // --- 2. OBTENER CARRITO ---
+    // --- 2. OBTENER CARRITO (Sistema Viejo) ---
     if ($action === 'get_carrito') {
         echo json_encode(['success' => true, 'carrito' => array_values($_SESSION['carrito_venta'])]);
         exit();
     }
 
-    // --- 3. AGREGAR AL CARRITO ---
+    // --- 3. AGREGAR AL CARRITO (Sistema Viejo) ---
     if ($action === 'agregar') {
         $id = $_POST['id'] ?? null;
         $cantidad = (int)($_POST['cantidad'] ?? 1);
@@ -63,7 +59,6 @@ try {
             exit();
         }
 
-        // Buscar si ya existe en el carrito
         $indexEncontrado = -1;
         foreach ($_SESSION['carrito_venta'] as $key => $item) {
             if ($item['id'] == $id) {
@@ -73,16 +68,13 @@ try {
         }
 
         if ($indexEncontrado >= 0) {
-            // Ya existe: Sumar cantidad
             $nuevaCantidad = $_SESSION['carrito_venta'][$indexEncontrado]['cantidad'] + $cantidad;
-            
             if ($nuevaCantidad > $prod['cantidad_piezas']) {
-                echo json_encode(['success' => false, 'error' => 'Stock insuficiente (Max: ' . $prod['cantidad_piezas'] . ')']);
+                echo json_encode(['success' => false, 'error' => 'Stock insuficiente']);
                 exit();
             }
             $_SESSION['carrito_venta'][$indexEncontrado]['cantidad'] = $nuevaCantidad;
         } else {
-            // Nuevo item
             if ($cantidad > $prod['cantidad_piezas']) {
                 echo json_encode(['success' => false, 'error' => 'Stock insuficiente']);
                 exit();
@@ -95,12 +87,11 @@ try {
                 'cantidad' => $cantidad
             ];
         }
-
         echo json_encode(['success' => true]);
         exit();
     }
 
-    // --- 4. ELIMINAR DEL CARRITO ---
+    // --- 4. ELIMINAR DEL CARRITO (Sistema Viejo) ---
     if ($action === 'eliminar') {
         $index = $_POST['index'] ?? null;
         if (isset($_SESSION['carrito_venta'][$index])) {
@@ -110,14 +101,14 @@ try {
         exit();
     }
 
-    // --- 5. LIMPIAR CARRITO ---
+    // --- 5. LIMPIAR CARRITO (Sistema Viejo) ---
     if ($action === 'limpiar') {
         $_SESSION['carrito_venta'] = [];
         echo json_encode(['success' => true]);
         exit();
     }
 
-    // --- 6. FINALIZAR VENTA ---
+    // --- 6. FINALIZAR VENTA (Sistema Viejo) ---
     if ($action === 'finalizar') {
         if (empty($_SESSION['carrito_venta'])) {
             echo json_encode(['success' => false, 'error' => 'El carrito está vacío']);
@@ -125,7 +116,6 @@ try {
         }
 
         $conn->beginTransaction();
-        
         $idTx = 'VEN' . date('ymd') . '-' . strtoupper(bin2hex(random_bytes(2)));
         $usuario = $_SESSION['nombre'];
         $totalVenta = 0;
@@ -137,27 +127,20 @@ try {
         $stmtUpdate = $conn->prepare($sqlUpdate);
 
         foreach ($_SESSION['carrito_venta'] as $item) {
-            // Descontar Stock
             $stmtUpdate->execute([$item['cantidad'], $item['id'], $item['cantidad']]);
             if ($stmtUpdate->rowCount() === 0) {
                 throw new Exception("Stock insuficiente para: " . $item['nombre']);
             }
-
-            // Registrar Venta
             $stmtVenta->execute([$item['id'], $item['cantidad'], $idTx, $usuario]);
-
             $totalVenta += ($item['precio'] * $item['cantidad']);
         }
 
-        // Registrar en Caja
-        // AQUI ESTÁ LA CATEGORÍA 'Venta' QUE PEDISTE
         $sqlCaja = "INSERT INTO caja_movimientos 
                     (id_transaccion, tipo, ref_id, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, cliente, fecha, categoria) 
                     VALUES (?, 'INGRESO', 0, 'Venta de Productos', 1, ?, ?, 0, ?, 'Público General', NOW(), 'Venta')";
         
         $stmtCaja = $conn->prepare($sqlCaja);
         $stmtCaja->execute([$idTx, $totalVenta, $totalVenta, $usuario]);
-
         $conn->commit();
         
         $_SESSION['carrito_venta'] = [];
@@ -165,13 +148,11 @@ try {
         exit();
     }
 
-} catch (Exception $e) {
-    if ($conn->inTransaction()) $conn->rollBack();
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
-}
-// --- NUEVO: 7. FINALIZAR VENTA DESDE EL CARRITO GLOBAL (JSON) ---
+    // =========================================================================
+    // --- 7. FINALIZAR VENTA DESDE EL CARRITO GLOBAL (NUEVO SISTEMA FLOTANTE) ---
+    // =========================================================================
     if ($action === 'finalizar_global') {
-        // Leer el JSON que manda JavaScript
+        // Leemos el JSON entrante
         $input = json_decode(file_get_contents('php://input'), true);
         $carrito = $input['carrito'] ?? [];
         $pagaCon = $input['paga_con'] ?? 0;
@@ -187,6 +168,7 @@ try {
         $usuario = $_SESSION['nombre'];
         $totalVenta = 0;
 
+        // Sentencias preparadas
         $sqlVenta = "INSERT INTO ventas (id_producto, cantidad, id_transaccion, usuario, fecha) VALUES (?, ?, ?, ?, NOW())";
         $stmtVenta = $conn->prepare($sqlVenta);
 
@@ -194,23 +176,21 @@ try {
         $stmtUpdate = $conn->prepare($sqlUpdate);
 
         foreach ($carrito as $item) {
-            // Por ahora solo procesamos los que son tipo 'producto'
             if ($item['tipo'] === 'producto') {
-                // Descontar Stock
+                // 1. Descontar Stock
                 $stmtUpdate->execute([$item['cantidad'], $item['id'], $item['cantidad']]);
                 if ($stmtUpdate->rowCount() === 0) {
                     throw new Exception("Stock insuficiente para: " . $item['nombre']);
                 }
 
-                // Registrar Venta
+                // 2. Registrar Venta
                 $stmtVenta->execute([$item['id'], $item['cantidad'], $idTx, $usuario]);
-
                 $totalVenta += ($item['precio'] * $item['cantidad']);
             }
-            // Más adelante agregaremos aquí la lógica para cuando el tipo sea 'reparacion'
+            // Aquí en el futuro entrará el "else if ($item['tipo'] === 'reparacion')"
         }
 
-        // Registrar en Caja
+        // 3. Registrar Ingreso Global en Caja
         $sqlCaja = "INSERT INTO caja_movimientos 
                     (id_transaccion, tipo, ref_id, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, cliente, fecha, categoria) 
                     VALUES (?, 'INGRESO', 0, 'Venta (Punto de Venta Global)', 1, ?, ?, 0, ?, 'Público General', NOW(), 'Venta')";
@@ -220,7 +200,7 @@ try {
 
         $conn->commit();
         
-        // Devolvemos el éxito y la URL del ticket
+        // Devolver respuesta exitosa al JS
         echo json_encode([
             'success' => true, 
             'id_transaccion' => $idTx, 
@@ -228,4 +208,13 @@ try {
         ]);
         exit();
     }
+
+} catch (Exception $e) {
+    if ($conn->inTransaction()) {
+        $conn->rollBack();
+    }
+    // Si hay un error, lo devolvemos como JSON limpio
+    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    exit();
+}
 ?>

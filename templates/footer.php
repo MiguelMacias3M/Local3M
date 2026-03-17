@@ -18,5 +18,6 @@
         }
     });
 </script>
+<script src="/local3M/js/carrito_global.js"></script>)
 </body>
 </html>

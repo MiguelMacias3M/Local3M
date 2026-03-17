@@ -54,3 +54,49 @@ if (!isset($_SESSION['nombre'])) {
     </nav>
 
     <div class="container">
+    <div id="btn-carrito-global" class="btn-carrito-flotante" onclick="toggleCarrito()">
+    <i class="fas fa-shopping-cart"></i>
+    <span id="badge-carrito" class="badge-carrito">0</span>
+</div>
+
+<div id="panel-carrito-global" class="panel-carrito">
+    <div class="carrito-header">
+        <h2><i class="fas fa-cash-register"></i> Punto de Venta</h2>
+        <button class="btn-cerrar-carrito" onclick="toggleCarrito()">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    
+    <div class="carrito-body">
+        <ul id="lista-items-carrito" class="lista-items">
+            <li class="item-vacio">El carrito está vacío</li>
+        </ul>
+    </div>
+    
+    <div class="carrito-footer">
+        <div class="fila-total">
+            <span>Total a Pagar:</span>
+            <span class="monto-total">$<span id="total-carrito">0.00</span></span>
+        </div>
+        
+        <div class="seccion-cobro">
+            <div class="input-group">
+                <label for="paga-con">Paga con:</label>
+                <div class="input-moneda">
+                    <span>$</span>
+                    <input type="number" id="paga-con" placeholder="0.00" onkeyup="calcularCambio()" onchange="calcularCambio()">
+                </div>
+            </div>
+            <div class="fila-cambio">
+                <span>Cambio:</span>
+                <span class="monto-cambio">$<span id="cambio-carrito">0.00</span></span>
+            </div>
+        </div>
+        
+        <button class="btn-procesar-cobro" onclick="procesarCobroGlobal()">
+            <i class="fas fa-check-circle"></i> Cobrar e Imprimir Ticket
+        </button>
+    </div>
+</div>
+
+<div id="overlay-carrito" class="overlay-carrito" onclick="toggleCarrito()"></div>

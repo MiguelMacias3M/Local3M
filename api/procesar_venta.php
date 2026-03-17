@@ -169,4 +169,63 @@ try {
     if ($conn->inTransaction()) $conn->rollBack();
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
+// --- NUEVO: 7. FINALIZAR VENTA DESDE EL CARRITO GLOBAL (JSON) ---
+    if ($action === 'finalizar_global') {
+        // Leer el JSON que manda JavaScript
+        $input = json_decode(file_get_contents('php://input'), true);
+        $carrito = $input['carrito'] ?? [];
+        $pagaCon = $input['paga_con'] ?? 0;
+
+        if (empty($carrito)) {
+            echo json_encode(['success' => false, 'error' => 'El carrito está vacío']);
+            exit();
+        }
+
+        $conn->beginTransaction();
+        
+        $idTx = 'VEN' . date('ymd') . '-' . strtoupper(bin2hex(random_bytes(2)));
+        $usuario = $_SESSION['nombre'];
+        $totalVenta = 0;
+
+        $sqlVenta = "INSERT INTO ventas (id_producto, cantidad, id_transaccion, usuario, fecha) VALUES (?, ?, ?, ?, NOW())";
+        $stmtVenta = $conn->prepare($sqlVenta);
+
+        $sqlUpdate = "UPDATE productos SET cantidad_piezas = cantidad_piezas - ? WHERE id_productos = ? AND cantidad_piezas >= ?";
+        $stmtUpdate = $conn->prepare($sqlUpdate);
+
+        foreach ($carrito as $item) {
+            // Por ahora solo procesamos los que son tipo 'producto'
+            if ($item['tipo'] === 'producto') {
+                // Descontar Stock
+                $stmtUpdate->execute([$item['cantidad'], $item['id'], $item['cantidad']]);
+                if ($stmtUpdate->rowCount() === 0) {
+                    throw new Exception("Stock insuficiente para: " . $item['nombre']);
+                }
+
+                // Registrar Venta
+                $stmtVenta->execute([$item['id'], $item['cantidad'], $idTx, $usuario]);
+
+                $totalVenta += ($item['precio'] * $item['cantidad']);
+            }
+            // Más adelante agregaremos aquí la lógica para cuando el tipo sea 'reparacion'
+        }
+
+        // Registrar en Caja
+        $sqlCaja = "INSERT INTO caja_movimientos 
+                    (id_transaccion, tipo, ref_id, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, cliente, fecha, categoria) 
+                    VALUES (?, 'INGRESO', 0, 'Venta (Punto de Venta Global)', 1, ?, ?, 0, ?, 'Público General', NOW(), 'Venta')";
+        
+        $stmtCaja = $conn->prepare($sqlCaja);
+        $stmtCaja->execute([$idTx, $totalVenta, $totalVenta, $usuario]);
+
+        $conn->commit();
+        
+        // Devolvemos el éxito y la URL del ticket
+        echo json_encode([
+            'success' => true, 
+            'id_transaccion' => $idTx, 
+            'ticketUrl' => '/local3M/generar_ticket_venta.php?id_transaccion=' . urlencode($idTx)
+        ]);
+        exit();
+    }
 ?>

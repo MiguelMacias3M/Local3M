@@ -18,8 +18,8 @@ function guardarCarrito() {
 // 3. Función principal para agregar cualquier cosa al carrito
 // Ejemplo de item: { id: 1, tipo: 'producto', nombre: 'Cable USB', precio: 150.00, cantidad: 1 }
 // Ejemplo de reparacion: { id: 24, tipo: 'reparacion', nombre: 'Pantalla Moto G20', precio: 800.00, cantidad: 1 }
+// 3. Función principal para agregar cualquier cosa al carrito
 function agregarAlCarritoGlobal(item) {
-    // Si es producto, verificamos si ya existe para sumar la cantidad
     if (item.tipo === 'producto') {
         let existe = carritoGlobal.find(p => p.id === item.id && p.tipo === 'producto');
         if (existe) {
@@ -27,14 +27,20 @@ function agregarAlCarritoGlobal(item) {
         } else {
             carritoGlobal.push(item);
         }
-    } else {
-        // Si es reparación, solo la agregamos (normalmente son únicas por folio)
-        carritoGlobal.push(item);
+    } else if (item.tipo === 'reparacion') {
+        // REPARACIONES: Verificamos si ya está en el carrito para no duplicarla
+        let existe = carritoGlobal.find(r => r.id === item.id && r.tipo === 'reparacion');
+        if (existe) {
+            Swal.fire('Aviso', 'Esta reparación ya está en el carrito.', 'info');
+            return; 
+        } else {
+            // El monto que suma al carrito es "a_cobrar" (que puede ser el adelanto o el saldo)
+            carritoGlobal.push(item);
+        }
     }
     
     guardarCarrito();
     
-    // Abrimos el panel para que el usuario vea que se agregó
     const panel = document.getElementById('panel-carrito-global');
     if (!panel.classList.contains('abierto')) {
         toggleCarrito();
@@ -65,19 +71,29 @@ function renderizarCarrito() {
         return;
     }
 
+    // Dentro de renderizarCarrito() en js/carrito_global.js, actualiza el foreach:
     carritoGlobal.forEach((item, index) => {
-        let subtotal = item.precio * item.cantidad;
-        totalCarrito += subtotal;
-        cantidadTotal += item.cantidad;
+        let subtotal = 0;
+        let detalleTexto = "";
 
-        // Identificador visual (P = Producto, R = Reparación)
+        if (item.tipo === 'producto') {
+            subtotal = item.precio * item.cantidad;
+            detalleTexto = `${item.cantidad} x $${item.precio.toFixed(2)}`;
+        } else if (item.tipo === 'reparacion') {
+            subtotal = item.a_cobrar; // Solo cobramos lo que entra a caja hoy
+            detalleTexto = `Folio: #${item.id} | Costo total: $${item.costo_total}`;
+        }
+
+        totalCarrito += subtotal;
+        cantidadTotal += (item.cantidad || 1);
+
         let icono = item.tipo === 'producto' ? '<i class="fas fa-box" style="color:#007aff;"></i>' : '<i class="fas fa-tools" style="color:#ff9500;"></i>';
 
         lista.innerHTML += `
             <li style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.05);">
                 <div style="flex-grow: 1; padding-right: 10px;">
                     <div style="font-weight: 600; color: #1d1d1f; font-size: 0.95rem;">${icono} ${item.nombre}</div>
-                    <div style="color: #86868b; font-size: 0.85rem;">${item.cantidad} x $${item.precio.toFixed(2)}</div>
+                    <div style="color: #86868b; font-size: 0.85rem;">${detalleTexto}</div>
                 </div>
                 <div style="font-weight: 600; color: #1d1d1f;">$${subtotal.toFixed(2)}</div>
                 <button onclick="eliminarItemCarrito(${index})" style="background:none; border:none; color:#ff3b30; cursor:pointer; margin-left: 15px; font-size: 1.1rem;">
@@ -137,14 +153,12 @@ async function procesarCobroGlobal() {
         return;
     }
 
-    // Cambiamos el botón para que muestre que está cargando
     const btnCobrar = document.querySelector('.btn-procesar-cobro');
     const textoOriginal = btnCobrar.innerHTML;
     btnCobrar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
     btnCobrar.disabled = true;
 
     try {
-        // Enviamos el carrito completo al backend
         const response = await fetch('/local3M/api/procesar_venta.php?action=finalizar_global', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -157,27 +171,40 @@ async function procesarCobroGlobal() {
         const data = await response.json();
 
         if (data.success) {
-            // Alerta de éxito con el cálculo del cambio
             Swal.fire({
                 icon: 'success',
                 title: '¡Venta Exitosa!',
                 text: `Cambio a entregar: $${(pagaCon - totalCarrito).toFixed(2)}`,
                 showConfirmButton: true,
-                confirmButtonText: 'Abrir Ticket y Cerrar',
+                confirmButtonText: 'Abrir Tickets y Cerrar',
                 confirmButtonColor: '#007aff'
             }).then(() => {
-                // 1. Abrimos el ticket en una pestaña nueva
-                window.open(data.ticketUrl, '_blank');
                 
-                // 2. Limpiamos el carrito flotante
+                // 1. Abrimos el ticket de venta (El del pago)
+                window.open(data.ticketUrl, '_blank');
+
+                // 2. Abrimos los tickets de reparación SIN temporizador
+                if (data.ticketsReparacion && data.ticketsReparacion.length > 0) {
+                    data.ticketsReparacion.forEach(url => {
+                        window.open(url, '_blank');
+                    });
+                }
+                
+                // 3. Limpiamos el carrito flotante
                 carritoGlobal = [];
                 guardarCarrito();
                 document.getElementById('paga-con').value = "";
-                toggleCarrito(); // Cerramos el panel
+                toggleCarrito(); 
 
-                // 3. Si estamos en la página de ventas, recargamos el catálogo para ver el stock actualizado
+                // 4. MAGIA DE REFRESCO
                 if (typeof cargarProductos === 'function') {
+                    // Si estamos en venta.php
                     cargarProductos();
+                } else {
+                    // Si estamos en editar_reparacion, esperamos medio segundo (500ms) y recargamos
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500); 
                 }
             });
         } else {
@@ -187,7 +214,6 @@ async function procesarCobroGlobal() {
         console.error('Error:', error);
         Swal.fire('Error', 'Hubo un problema de conexión con el servidor.', 'error');
     } finally {
-        // Restauramos el botón
         btnCobrar.innerHTML = textoOriginal;
         btnCobrar.disabled = false;
     }

@@ -300,24 +300,18 @@ try {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-    <script>
-        try {
-            JsBarcode("#barcode", "<?php echo $codigo_barras; ?>", {
-                format: "CODE128",
-                width: 1.2,
-                height: 60,
-                displayValue: false, 
-                margin: 0,
-                flat: true 
-            });
-        } catch (e) {}
-
-        function cerrarTicket() {
-            window.close();
+<script>
+        window.onload = function() {
+            // Le damos medio segundo de respiro para que el sistema abra el segundo ticket
             setTimeout(function() {
-                window.location.href = '/local3M/control.php';
-            }, 300);
-        }
+                window.print();
+                
+                // Cerramos un segundo después de mandar a imprimir
+                setTimeout(function() {
+                    window.close();
+                }, 1000);
+            }, 500); 
+        };
     </script>
 </body>
 </html>

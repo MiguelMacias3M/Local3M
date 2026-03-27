@@ -103,6 +103,9 @@ function renderFilas(chunk, baseIndex) {
                 <button class='form-button btn-secondary btn-barcode' data-action="barcode" data-id='${row.id}'>
                     <i class="fas fa-barcode"></i> Código
                 </button>
+                <button class="btn btn-success btn-sm" onclick="enviarReparacionAlCarritoGlobal(<?= $rep['id'] ?>, '<?= $rep['modelo'] ?>', <?= $rep['monto'] ?>, <?= $rep['deuda'] ?>)">
+                    <i class="fas fa-cart-plus"></i> Cobrar Saldo
+                </button>
             </td>`;
         tbody.appendChild(tr);
     });
@@ -387,5 +390,26 @@ if(btnPrintBarcode){
         }
     });
 }
+// Función para enviar una reparación pendiente de pago al carrito global
+function enviarReparacionAlCarritoGlobal(idReparacion, modelo, costoTotal, saldoPendiente) {
+    if (saldoPendiente <= 0) {
+        Swal.fire('Aviso', 'Esta reparación ya está liquidada.', 'info');
+        return;
+    }
 
+    const itemGlobal = {
+        id: idReparacion,
+        tipo: 'reparacion',
+        nombre: 'Entrega: ' + modelo,
+        costo_total: parseFloat(costoTotal),
+        a_cobrar: parseFloat(saldoPendiente) // Esto es lo que se suma al total del carrito
+    };
+
+    if (typeof agregarAlCarritoGlobal === 'function') {
+        agregarAlCarritoGlobal(itemGlobal);
+        Swal.fire({toast:true, position:'top-end', icon:'success', title:'Saldo enviado al carrito', timer:1500, showConfirmButton:false});
+    } else {
+        Swal.fire('Error', 'El carrito global no está conectado.', 'error');
+    }
+}
 cargarPagina();

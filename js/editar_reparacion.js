@@ -160,29 +160,64 @@ function calcularDeuda() {
 
 function agregarAbono() {
     let montoAbono = parseFloat(document.getElementById('nuevo_abono_monto').value);
+    
+    // 1. Validaciones
     if (!montoAbono || montoAbono <= 0) {
-        Swal.fire('Error', 'Ingrese un monto válido', 'warning');
+        Swal.fire('Error', 'Ingrese un monto válido para el abono.', 'warning');
         return;
     }
 
-    let adelantoInput = document.getElementById('adelanto');
-    let nuevoAdelanto = parseFloat(adelantoInput.value) + montoAbono;
-    
-    let montoTotal = parseFloat(document.getElementById('monto').value);
-    if (nuevoAdelanto > montoTotal) {
-        Swal.fire('Cuidado', 'El abono supera la deuda total', 'warning');
+    let montoTotal = parseFloat(document.getElementById('monto').value) || 0;
+    let deudaActual = parseFloat(document.getElementById('deuda').value) || 0;
+
+    if (montoAbono > deudaActual) {
+        Swal.fire('Cuidado', `El abono ($${montoAbono}) no puede ser mayor a la deuda actual ($${deudaActual}).`, 'warning');
         return;
     }
 
-    adelantoInput.value = nuevoAdelanto;
-    document.getElementById('nuevo_abono_monto').value = '';
-    calcularDeuda();
-    
+    const modelo = document.getElementById('modelo').value;
+    const marca = document.getElementById('marca_celular').value;
+
+    // 2. Confirmación y envío al carrito
     Swal.fire({
-        title: 'Abono agregado temporalmente',
-        text: 'Presiona "Guardar" para confirmar el abono y registrarlo en caja.',
+        title: '¿Cobrar Abono en Caja?',
+        html: `Se enviará un abono por <b>$${montoAbono.toFixed(2)}</b> para el equipo <b>${marca} ${modelo}</b> al carrito global.`,
         icon: 'info',
-        timer: 3000
+        showCancelButton: true,
+        confirmButtonColor: '#007aff',
+        confirmButtonText: '<i class="fas fa-cart-plus"></i> Mandar a Caja',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            
+            // Empaquetamos los datos con la etiqueta secreta "abonar"
+            const itemGlobal = {
+                id: REPARACION_ID,
+                tipo: 'reparacion',
+                accion_reparacion: 'abonar', // LA ETIQUETA SECRETA
+                nombre: 'Abono: ' + marca + ' ' + modelo,
+                costo_total: montoTotal,
+                a_cobrar: montoAbono
+            };
+
+            if (typeof agregarAlCarritoGlobal === 'function') {
+                agregarAlCarritoGlobal(itemGlobal);
+                
+                // Limpiamos la cajita de texto del abono para que no estorbe
+                document.getElementById('nuevo_abono_monto').value = '';
+
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: 'Abono enviado al carrito',
+                    showConfirmButton: false,
+                    timer: 2000
+                });
+            } else {
+                Swal.fire('Error', 'El carrito global no está conectado.', 'error');
+            }
+        }
     });
 }
 
@@ -234,34 +269,48 @@ function guardarCambios() {
 }
 
 function entregarReparacion() {
+    const deudaInput = document.getElementById('deuda');
+    const saldoPendiente = parseFloat(deudaInput.value) || 0;
+    const costoTotal = parseFloat(document.getElementById('monto').value) || 0;
+    const modelo = document.getElementById('modelo').value;
+    const marca = document.getElementById('marca_celular').value;
+
     Swal.fire({
-        title: '¿Entregar equipo?',
-        text: "Se marcará como entregado y se liquidará la deuda.",
-        icon: 'question',
+        title: '¿Mandar a Caja para Entregar?',
+        html: `El equipo <b>${marca} ${modelo}</b> se enviará al carrito global.<br><br>Saldo a cobrar: <b>$${saldoPendiente.toFixed(2)}</b>`,
+        icon: 'info',
         showCancelButton: true,
-        confirmButtonColor: '#28a745',
-        confirmButtonText: 'Sí, entregar'
+        confirmButtonColor: '#007aff',
+        confirmButtonText: '<i class="fas fa-cart-plus"></i> Mandar a Caja',
+        cancelButtonText: 'Cancelar'
     }).then((result) => {
         if (result.isConfirmed) {
-            let formData = new FormData();
-            formData.append('action', 'entregar');
-            formData.append('id', REPARACION_ID);
+            // Empaquetamos los datos con la etiqueta secreta "liquidar"
+            const itemGlobal = {
+                id: REPARACION_ID,
+                tipo: 'reparacion',
+                accion_reparacion: 'liquidar', // LA ETIQUETA SECRETA
+                nombre: 'Entrega: ' + marca + ' ' + modelo,
+                costo_total: costoTotal,
+                a_cobrar: saldoPendiente
+            };
 
-            fetch('api/editar_reparacion.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    Swal.fire('¡Entregado!', 'Equipo entregado.', 'success').then(() => {
-                        window.open(data.ticketUrl, '_blank');
-                        window.location.href = 'control.php';
-                    });
-                } else {
-                    Swal.fire('Error', data.message, 'error');
-                }
-            });
+            // Mandamos el paquete al carrito global
+            if (typeof agregarAlCarritoGlobal === 'function') {
+                agregarAlCarritoGlobal(itemGlobal);
+                
+                // Opcional: Redirigir a ventas o cerrar la ventana de edición
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: 'Enviado al Carrito Flotante',
+                    showConfirmButton: false,
+                    timer: 2000
+                });
+            } else {
+                Swal.fire('Error', 'El carrito global no está conectado. Verifica tu header.', 'error');
+            }
         }
     });
 }

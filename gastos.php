@@ -50,21 +50,20 @@
 
     <!-- Tabla de Resultados -->
     <div class="table-responsive">
-        <table class="table-gastos">
+       <table class="table table-hover" id="tablaGastos">
             <thead>
                 <tr>
-                    <th>Hora</th>
+                    <th>ID</th>
                     <th>Tipo</th>
-                    <th>Categoría</th>
                     <th>Descripción</th>
-                    <th class="text-center">Evidencia</th>
-                    <th class="text-right">Monto</th>
-                    <th class="text-center">Acciones</th>
+                    <th>Monto</th>
+                    <th>Categoría</th>
+                    <th>Fecha</th>
+                    <th>Usuario</th> <th>Acciones</th>
                 </tr>
             </thead>
-            <tbody id="tablaBody">
-                <!-- Se llena con JS -->
-            </tbody>
+            <tbody id="lista-movimientos">
+                </tbody>
         </table>
     </div>
 </div>
@@ -103,7 +102,10 @@
                 <label>Descripción detallada</label>
                 <textarea name="descripcion" id="inputDescripcion" class="form-input" rows="2" placeholder="Ej: Pago de recibo CFE Enero, Compra de material..." required></textarea>
             </div>
-
+            <div class="form-group">
+                <label>Usuario Responsable <span class="text-danger">*</span></label>
+                <input type="text" name="usuario" id="inputUsuario" class="form-input" required>
+            </div>
             <div class="row-2-col">
                 <div class="form-group">
                     <label>Monto ($)</label>
@@ -130,6 +132,9 @@
 </div>
 
 <!-- Scripts -->
+ <script>
+    const USUARIO_SESION = "<?php echo htmlspecialchars($_SESSION['nombre'] ?? 'Sistema'); ?>";
+</script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="js/gastos.js?v=<?php echo time(); ?>"></script>
 

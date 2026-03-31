@@ -76,9 +76,9 @@ function actualizarCategorias(categoriaExtra = null) {
 function cargarMovimientos() {
     const fecha = document.getElementById('filtroFecha').value;
     const tipo = document.getElementById('filtroTipo').value;
-    const tbody = document.getElementById('tablaBody');
+    const tbody = document.getElementById('lista-movimientos');
     
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center">Cargando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted"><i class="fas fa-spinner fa-spin fa-2x"></i><br><br><span style="font-weight: 500;">Cargando movimientos...</span></td></tr>';
 
     fetch(`api/gastos.php?action=listar&fecha=${fecha}&tipo=${tipo}&_t=${Date.now()}`)
         .then(res => res.json())
@@ -90,80 +90,114 @@ function cargarMovimientos() {
                     const valEgreso = parseFloat(m.egreso)||0;
                     const esEntrada = valIngreso > 0;
                     
-                    // --- DETECTAR MOVIMIENTOS NEUTROS (RETIROS Y CIERRES) ---
                     const tipoUpper = (m.tipo || '').toUpperCase();
-                    // Usamos la bandera del backend o verificamos el texto
                     const esNeutro = m.es_retiro_cierre === true || tipoUpper === 'RETIRO' || tipoUpper === 'CIERRE';
 
                     const monto = esEntrada ? valIngreso : valEgreso;
                     
+                    // Colores de los montos
                     let signo = esEntrada ? '+' : '-';
-                    let colorMonto = esEntrada ? '#28a745' : '#dc3545'; // Verde o Rojo
+                    let colorMonto = esEntrada ? '#28a745' : '#dc3545'; 
+                    let bgMonto = esEntrada ? 'rgba(40, 167, 69, 0.1)' : 'rgba(220, 53, 69, 0.1)';
                     
-                    // Si es neutro, lo pintamos gris
                     if (esNeutro) {
                         signo = '•'; 
                         colorMonto = '#6c757d'; 
+                        bgMonto = 'rgba(108, 117, 125, 0.1)';
                     }
 
                     // Badge de Origen
-                    let origenBadge = '';
-                    if (m.origen === 'CAJA') {
-                        origenBadge = '<span style="font-size:0.75em; background:#f8f9fa; padding:2px 6px; border-radius:4px; color:#6c757d; border:1px solid #dee2e6;">Mostrador</span>';
-                    } else {
-                        origenBadge = '<span style="font-size:0.75em; background:#e3f2fd; padding:2px 6px; border-radius:4px; color:#0d47a1; border:1px solid #bbdefb;">Admin</span>';
-                    }
+                    let origenBadge = m.origen === 'CAJA' 
+                        ? '<span style="font-size:0.65em; background:#f8f9fa; padding:3px 6px; border-radius:4px; color:#6c757d; border:1px solid #dee2e6; letter-spacing: 0.5px; text-transform: uppercase;"><i class="fas fa-store"></i> Mostrador</span>' 
+                        : '<span style="font-size:0.65em; background:#e3f2fd; padding:3px 6px; border-radius:4px; color:#0d47a1; border:1px solid #bbdefb; letter-spacing: 0.5px; text-transform: uppercase;"><i class="fas fa-laptop-code"></i> Admin</span>';
 
-                    // Etiquetas de tipo
+                    // ==========================================
+                    // ETIQUETAS DE TIPO (MORADO SUTIL)
+                    // ==========================================
                     let claseBadge = 'badge-gasto'; 
                     let textoTipo = m.tipo;
+                    let estiloBadge = 'padding: 5px 10px; border-radius: 6px; font-size: 0.8em; letter-spacing: 0.5px;';
 
                     if (esEntrada) claseBadge = 'badge-ingreso';
-                    
                     if (tipoUpper === 'VENTA') claseBadge = 'badge-primary'; 
-                    if (tipoUpper === 'REPARACION') claseBadge = 'badge-warning'; 
                     
-                    if (tipoUpper === 'CIERRE') {
-                        claseBadge = 'badge-dark';
-                        textoTipo = 'Cierre Caja';
-                    }
-                    if (tipoUpper === 'RETIRO') {
-                        claseBadge = 'badge-secondary'; // Gris claro
+                    // Aquí asignamos el MORADO SUTIL (Fondo transparente 12%, borde suave y letra fuerte)
+                    if (tipoUpper === 'REPARACION') { 
+                        claseBadge = ''; 
+                        estiloBadge += ' background-color: rgba(111, 66, 193, 0.12); color: #6f42c1; font-weight: 600; border: 1px solid rgba(111, 66, 193, 0.2);'; 
+                    } 
+                    else if (tipoUpper === 'CIERRE') { claseBadge = 'badge-dark'; textoTipo = 'Cierre Caja'; }
+                    else if (tipoUpper === 'RETIRO') { claseBadge = 'badge-secondary'; }
+                    // ==========================================
+
+                    let fechaLimpia = '--/--/----';
+                    let horaLimpia = '--:--';
+                    if(m.fecha) {
+                        let partes = m.fecha.split(' ');
+                        if(partes.length === 2) {
+                            let f = partes[0].split('-');
+                            fechaLimpia = `${f[2]}/${f[1]}/${f[0]}`;
+                            horaLimpia = partes[1].substring(0,5);
+                        }
                     }
 
-                    let btnFoto = '<span class="text-muted small">-</span>';
+                    let btnFoto = '';
                     if (m.foto) {
-                        btnFoto = `<a href="uploads/${m.foto}" target="_blank" class="btn-evidencia"><i class="fas fa-image"></i> Ver</a>`;
+                        btnFoto = `<a href="uploads/${m.foto}" target="_blank" class="btn-icon" style="background-color:#17a2b8; color:white; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; text-decoration: none; transition: 0.2s;" title="Ver Evidencia"><i class="fas fa-image"></i></a>`;
                     }
-
-                    let hora = '--:--';
-                    try { if(m.fecha) hora = m.fecha.split(' ')[1].substring(0,5); } catch(e){}
 
                     const tr = document.createElement('tr');
+                    tr.style.transition = "background-color 0.2s";
+                    tr.onmouseover = function() { this.style.backgroundColor = '#f8f9fa'; }
+                    tr.onmouseout = function() { this.style.backgroundColor = 'transparent'; }
+
                     tr.innerHTML = `
-                        <td>${hora}</td>
-                        <td class="text-center">${origenBadge}</td>
-                        <td><span class="badge-tipo ${claseBadge}">${textoTipo}</span></td>
-                        <td>${m.categoria || '-'}</td>
-                        <td>${m.descripcion}</td>
-                        <td class="text-center">${btnFoto}</td>
-                        <td class="text-right font-weight-bold" style="color: ${colorMonto}">
-                            ${signo} $${formatoDinero(monto)}
+                        <td style="vertical-align: middle;">
+                            <span style="background: #f1f3f5; padding: 4px 8px; border-radius: 6px; font-family: monospace; font-size: 0.85em; color: #495057; border: 1px solid #e9ecef;">${m.id_transaccion || m.id}</span>
                         </td>
-                        <td class="text-center">
-                            <button class="btn-icon btn-primary" onclick="editarMovimiento(${m.id})" title="Editar"><i class="fas fa-edit"></i></button>
-                            <button class="btn-icon btn-danger" onclick="eliminarMovimiento(${m.id})" title="Eliminar"><i class="fas fa-trash"></i></button>
+                        <td class="text-center" style="vertical-align: middle;">
+                            <div style="margin-bottom: 6px;"><span class="badge-tipo ${claseBadge}" style="${estiloBadge}">${textoTipo}</span></div>
+                            <div>${origenBadge}</div>
+                        </td>
+                        <td style="vertical-align: middle; color: #343a40; font-weight: 500; font-size: 0.95em;">
+                            ${m.descripcion}
+                        </td>
+                        <td class="text-right" style="vertical-align: middle;">
+                            <span style="background: ${bgMonto}; color: ${colorMonto}; padding: 6px 12px; border-radius: 8px; font-weight: bold; font-size: 0.95em; display: inline-block; min-width: 90px; text-align: center; letter-spacing: 0.5px;">
+                                ${signo} $${formatoDinero(monto)}
+                            </span>
+                        </td>
+                        <td style="vertical-align: middle;">
+                            <span style="background: #f8f9fa; color: #6c757d; padding: 5px 10px; border-radius: 20px; font-size: 0.85em; border: 1px solid #dee2e6; white-space: nowrap;">
+                                <i class="fas fa-tag" style="margin-right: 4px; opacity: 0.6;"></i> ${m.categoria || 'Sin Categoría'}
+                            </span>
+                        </td>
+                        <td style="vertical-align: middle; white-space: nowrap;">
+                            <div style="font-size: 0.85em; color: #495057; font-weight: 600;"><i class="far fa-calendar-alt" style="margin-right:5px; color:#adb5bd;"></i>${fechaLimpia}</div>
+                            <div style="font-size: 0.8em; color: #868e96; margin-top: 3px;"><i class="far fa-clock" style="margin-right:5px; color:#adb5bd;"></i>${horaLimpia} hrs</div>
+                        </td>
+                        <td style="vertical-align: middle;">
+                            <span style="background: #e9ecef; color: #495057; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; white-space: nowrap;">
+                                <i class="fas fa-user-circle" style="font-size: 1.2em; margin-right: 6px; color: #adb5bd;"></i> ${m.usuario || 'Sistema'}
+                            </span>
+                        </td>
+                        <td class="text-center" style="vertical-align: middle;">
+                            <div style="display: flex; gap: 6px; justify-content: center;">
+                                ${btnFoto}
+                                <button class="btn-icon btn-primary" onclick="editarMovimiento(${m.id})" title="Editar" style="width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; border: none; transition: 0.2s;"><i class="fas fa-edit"></i></button>
+                                <button class="btn-icon btn-danger" onclick="eliminarMovimiento(${m.id})" title="Eliminar" style="width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; border: none; transition: 0.2s;"><i class="fas fa-trash-alt"></i></button>
+                            </div>
                         </td>
                     `;
                     tbody.appendChild(tr);
                 });
             } else {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-muted">No hay movimientos registrados en esta fecha.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center p-5 text-muted" style="font-size: 1.1em;"><i class="fas fa-folder-open fa-3x mb-3" style="color: #dee2e6; display:block;"></i> No hay movimientos registrados en esta fecha.</td></tr>';
             }
         })
         .catch(err => {
             console.error(err);
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger p-3">Error al cargar datos.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger p-4"><i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>Error al cargar los datos. Revisa tu conexión.</td></tr>';
         });
 }
 
@@ -205,7 +239,7 @@ function abrirModalEdicion(movimiento) {
     if(btnGuardar) btnGuardar.textContent = 'Actualizar Cambios';
     
     document.getElementById('inputId').value = movimiento.id;
-    document.getElementById('inputUsuario').value = movimiento.usuario || '';
+    
     const inputTipo = document.getElementById('inputTipo');
     if(movimiento.tipo !== 'GASTO' && movimiento.tipo !== 'INGRESO') {
         inputTipo.value = (parseFloat(movimiento.ingreso) > 0) ? 'INGRESO' : 'GASTO';
@@ -219,13 +253,19 @@ function abrirModalEdicion(movimiento) {
     document.getElementById('inputDescripcion').value = movimiento.descripcion;
     document.getElementById('inputMonto').value = movimiento.monto_real;
 
-    // --- NUEVO: Cargar la fecha exacta que tiene el registro en la BD ---
     const inputFecha = document.getElementById('inputFechaMovimiento');
     if (inputFecha && movimiento.fecha) {
-        // Formateamos de "YYYY-MM-DD HH:MM:SS" a "YYYY-MM-DDTHH:MM" para el input
         inputFecha.value = movimiento.fecha.replace(' ', 'T').slice(0, 16);
     }
-    // --------------------------------------------------------
+
+    // ==========================================
+    // CAMPO DE USUARIO (MODO EDICIÓN)
+    // Carga el usuario original de la BD para que lo actualices manualmente
+    // ==========================================
+    const inputUsuario = document.getElementById('inputUsuario');
+    if(inputUsuario) {
+        inputUsuario.value = movimiento.usuario || '';
+    }
 
     const preview = document.getElementById('previewContainer');
     const img = document.getElementById('imgPreview');
@@ -286,7 +326,6 @@ if(form) {
 function abrirModalNuevo() {
     form.reset();
     document.getElementById('inputId').value = '';
-    document.getElementById('inputUsuario').value = (typeof USUARIO_SESION !== 'undefined') ? USUARIO_SESION : '';
     document.getElementById('modalTitle').textContent = 'Registrar Movimiento';
     const btnGuardar = document.querySelector('#formGasto button[type="submit"]');
     if(btnGuardar) btnGuardar.textContent = 'Guardar';
@@ -295,14 +334,21 @@ function abrirModalNuevo() {
     document.getElementById('inputTipo').value = 'GASTO';
     actualizarCategorias();
     
-    // --- NUEVO: Poner la fecha y hora actual por defecto ---
     const inputFecha = document.getElementById('inputFechaMovimiento');
     if (inputFecha) {
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         inputFecha.value = now.toISOString().slice(0, 16);
     }
-    // --------------------------------------------------------
+
+    // ==========================================
+    // CAMPO DE USUARIO (MODO NUEVO)
+    // Sugiere el nombre de sesión, pero es libre de borrarse
+    // ==========================================
+    const inputUsuario = document.getElementById('inputUsuario');
+    if(inputUsuario) {
+        inputUsuario.value = (typeof USUARIO_SESION !== 'undefined') ? USUARIO_SESION : '';
+    }
 
     document.getElementById('modalNuevo').style.display = 'flex';
 }

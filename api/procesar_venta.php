@@ -253,6 +253,27 @@ try {
                         $monto_pagado, $monto_pagado, $usuario, $clienteReal, 'Abono'
                     ]);
                 }
+
+                // ==========================================
+                // CASO C: NUEVO ADELANTO (Recién registrado)
+                // ==========================================
+                else if ($accionRep === 'nuevo_adelanto') {
+                    
+                    // La reparación ya fue creada en registrar_reparaciones.php
+                    // Así que SOLO necesitamos registrar el movimiento en la CAJA.
+                    $comentarioCaja = "Adelanto (Nueva Orden): " . $detalleReal;
+                    
+                    $stmtCaja->execute([
+                        $idTx, 'REPARACION', $item['id'], $comentarioCaja, 1, 
+                        $monto_pagado, $monto_pagado, $usuario, $clienteReal, 'Adelanto'
+                    ]);
+                    
+                    // Opcional: Agregar una nota extra al historial
+                    $comentarioHistorial = "Adelanto cobrado en caja general por $" . number_format($monto_pagado, 2) . ". Folio Venta: $idTx";
+                    $sqlHistExtra = "INSERT INTO historial_reparaciones (id_reparacion, estado_nuevo, comentario, usuario_responsable) VALUES (?, ?, ?, ?)";
+                    $stmtHistExtra = $conn->prepare($sqlHistExtra);
+                    $stmtHistExtra->execute([$item['id'], $estadoActual, $comentarioHistorial, $usuario]);
+                }
             }
         }
 

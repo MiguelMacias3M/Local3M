@@ -129,7 +129,6 @@ function enviarCarrito() {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando...';
 
-    // Usamos la variable global ID_TRANSACCION definida en el PHP
     const payload = {
         usuario: USUARIO_SESION, 
         nombreCliente,
@@ -147,26 +146,68 @@ function enviarCarrito() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // IMPORTANTE: Aquí recibimos el ID correcto del servidor
-            const nuevoIdTransaccion = data.id_transaccion;
+            
+            // 1. Verificar si hay algún adelanto que debamos cobrar
+            let hayAdelantos = false;
+            
+            // Usamos un retraso escalonado por si hay múltiples equipos con adelanto
+            carrito.forEach((rep, index) => {
+                if (rep.adelanto > 0) {
+                    hayAdelantos = true;
+                    // Buscar el ID real generado en la base de datos (lo mandaremos desde PHP)
+                    let idReal = data.ids_generados ? data.ids_generados[index] : data.id_transaccion;
 
-            Swal.fire({
-                title: 'Registro Exitoso',
-                text: 'Las reparaciones han sido registradas correctamente.',
-                icon: 'success',
-                showCancelButton: true,
-                confirmButtonText: 'Aceptar (Nueva Orden)',
-                cancelButtonText: 'Imprimir Ticket',
-                cancelButtonColor: '#ffc107'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    vaciarCarritoYUI();
-                    location.reload();
-                } else if (result.dismiss === Swal.DismissReason.cancel) {
-                    // Enviamos el ID nuevo a la función de imprimir
-                    imprimirUltimaYLimpiar(nuevoIdTransaccion);
+                    const itemGlobal = {
+                        id: idReal, // El ID de la reparación en BD
+                        tipo: 'reparacion',
+                        accion_reparacion: 'nuevo_adelanto', // ETIQUETA SECRETA
+                        nombre: 'Adelanto: ' + rep.tipoReparacion + ' ' + rep.modelo,
+                        costo_total: rep.monto,
+                        a_cobrar: rep.adelanto
+                    };
+
+                    // Mandamos al carrito global con un pequeño retraso
+                    setTimeout(() => {
+                        if (typeof agregarAlCarritoGlobal === 'function') {
+                            agregarAlCarritoGlobal(itemGlobal);
+                        }
+                    }, 200 * index); 
                 }
             });
+
+            // 2. Comportamiento según si hay dinero de por medio o no
+            if (hayAdelantos) {
+                Swal.fire({
+                    title: '¡Orden Registrada!',
+                    text: 'Los adelantos se han enviado a la caja para su cobro.',
+                    icon: 'success',
+                    timer: 2500,
+                    showConfirmButton: false
+                }).then(() => {
+                    vaciarCarritoYUI();
+                    // Refrescamos la página para resetear el id_transaccion
+                    setTimeout(() => location.reload(), 500);
+                });
+            } else {
+                // Si no hay adelantos, solo imprimimos el ticket de recepción normal
+                Swal.fire({
+                    title: 'Registro Exitoso',
+                    text: 'Las reparaciones han sido registradas sin adelanto.',
+                    icon: 'success',
+                    showCancelButton: true,
+                    confirmButtonText: 'Aceptar (Nueva Orden)',
+                    cancelButtonText: 'Imprimir Ticket',
+                    cancelButtonColor: '#ffc107'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        vaciarCarritoYUI();
+                        location.reload();
+                    } else if (result.dismiss === Swal.DismissReason.cancel) {
+                        imprimirUltimaYLimpiar(data.id_transaccion);
+                    }
+                });
+            }
+
         } else {
             Swal.fire('Error', 'Hubo un problema al registrar: ' + (data.error || 'Error desconocido'), 'error');
             btn.disabled = false;
@@ -180,7 +221,6 @@ function enviarCarrito() {
         btn.innerHTML = '<i class="fas fa-check-circle"></i> Registrar Orden';
     });
 }
-
 // Función corregida para abrir el ticket
 function imprimirUltimaYLimpiar(idTransaccion) {
     if (idTransaccion) {

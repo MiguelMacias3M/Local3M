@@ -205,7 +205,7 @@ function abrirModalEdicion(movimiento) {
     if(btnGuardar) btnGuardar.textContent = 'Actualizar Cambios';
     
     document.getElementById('inputId').value = movimiento.id;
-    
+    document.getElementById('inputUsuario').value = movimiento.usuario || '';
     const inputTipo = document.getElementById('inputTipo');
     if(movimiento.tipo !== 'GASTO' && movimiento.tipo !== 'INGRESO') {
         inputTipo.value = (parseFloat(movimiento.ingreso) > 0) ? 'INGRESO' : 'GASTO';
@@ -286,6 +286,7 @@ if(form) {
 function abrirModalNuevo() {
     form.reset();
     document.getElementById('inputId').value = '';
+    document.getElementById('inputUsuario').value = (typeof USUARIO_SESION !== 'undefined') ? USUARIO_SESION : '';
     document.getElementById('modalTitle').textContent = 'Registrar Movimiento';
     const btnGuardar = document.querySelector('#formGasto button[type="submit"]');
     if(btnGuardar) btnGuardar.textContent = 'Guardar';

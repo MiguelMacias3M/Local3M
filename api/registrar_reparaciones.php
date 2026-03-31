@@ -1,7 +1,8 @@
 <?php
 /*
  * API: REGISTRAR REPARACIONES (VERSIÓN COMPLETA Y FINAL)
- * Incluye: Reparación, Caja, Historial, Ubicación y Fecha Estimada.
+ * Incluye: Reparación, Historial, Ubicación y Fecha Estimada.
+ * (La inserción en Caja fue delegada al Carrito Global)
  */
 
 // 1. Configuración de errores (Silencioso para JSON)
@@ -75,16 +76,7 @@ try {
     
     $stmt_rep = $conn->prepare($sql_rep);
 
-    // 2. SQL Caja (Movimiento de dinero)
-    $sql_caja = "INSERT INTO caja_movimientos (
-        id_transaccion, tipo, ref_id, descripcion, 
-        cantidad, monto_unitario, ingreso, egreso, 
-        usuario, cliente, fecha
-    ) VALUES (?, 'REPARACION', ?, ?, 1, ?, ?, 0, ?, ?, NOW())";
-    
-    $stmt_caja = $conn->prepare($sql_caja);
-
-    // 3. SQL Historial (Primer evento: Ingreso)
+    // 2. SQL Historial (Primer evento: Ingreso)
     $sql_hist = "INSERT INTO historial_reparaciones (
         id_reparacion, estado_nuevo, comentario, usuario_responsable, fecha_cambio
     ) VALUES (?, 'Ingreso', 'Recepción del equipo', ?, NOW())";
@@ -95,6 +87,10 @@ try {
     // ---------------------------------------------------------
     // B. PROCESAR EL CARRITO
     // ---------------------------------------------------------
+    
+    // Arreglo para guardar los IDs generados y mandarlos al carrito global
+    $ids_generados = [];
+
     foreach ($carrito as $r) {
         $maxIntentos = 5;
         $exito = false;
@@ -135,20 +131,10 @@ try {
                     $usuario
                 ]);
 
-                // --- 3. Insertar en Caja (Solo si hay adelanto) ---
-                $adelanto = (float)$r['adelanto'];
-                if ($adelanto > 0) {
-                    $descripcion_caja = "Adelanto: " . $r['tipoReparacion'] . " (" . $r['modelo'] . ")";
-                    $stmt_caja->execute([
-                        $id_transaccion,
-                        $id_reparacion_insertada,
-                        $descripcion_caja,
-                        $adelanto, // Monto unitario
-                        $adelanto, // Ingreso total
-                        $usuario,
-                        $nombreCliente
-                    ]);
-                }
+                // --- 3. (ELIMINADO: La caja ahora se maneja en el Carrito Global) ---
+                
+                // Guardamos el ID insertado para enviarlo de vuelta al JS
+                $ids_generados[] = $id_reparacion_insertada;
 
                 $exito = true;
                 break; // Éxito, salir del bucle de intentos
@@ -170,7 +156,11 @@ try {
 
     // 6. Confirmar Transacción
     $conn->commit();
-    echo json_encode(['success' => true, 'id_transaccion' => $id_transaccion]);
+    echo json_encode([
+        'success' => true, 
+        'id_transaccion' => $id_transaccion, 
+        'ids_generados' => $ids_generados
+    ]);
 
 } catch (Exception $e) {
     // 7. Revertir cambios si algo falló

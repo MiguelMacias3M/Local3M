@@ -10,7 +10,6 @@ include 'templates/header.php';
 </div>
 
 <div class="content-box">
-    <!-- Barra de Herramientas -->
     <div class="toolbar">
         <div class="search-wrap">
             <i class="fas fa-search"></i>
@@ -21,7 +20,6 @@ include 'templates/header.php';
         </button>
     </div>
 
-    <!-- Tabla -->
     <div class="table-wrap">
         <table class="repair-table products-table">
             <thead>
@@ -34,13 +32,11 @@ include 'templates/header.php';
                 </tr>
             </thead>
             <tbody id="tablaProductosBody">
-                <!-- Se llena con JS -->
-            </tbody>
+                </tbody>
         </table>
     </div>
 </div>
 
-<!-- MODAL PARA AGREGAR/EDITAR -->
 <div id="modalProducto" class="modal-overlay" style="display:none;">
     <div class="modal-content">
         <button class="modal-close" onclick="cerrarModal()">&times;</button>
@@ -79,7 +75,12 @@ include 'templates/header.php';
                 </div>
             </div>
 
-            <div class="modal-footer">
+            <div id="barcodePreviewContainer" style="text-align: center; margin: 25px auto 10px auto; display: none; background: #ffffff; padding: 20px; border-radius: 8px; border: 2px dashed #adb5bd; max-width: 90%;">
+                <p style="font-size: 0.9em; color: #495057; margin-bottom: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Escanea este código</p>
+                <svg id="barcodePreview" style="max-width: 100%; height: auto;"></svg>
+            </div>
+
+            <div class="modal-footer" style="margin-top: 20px;">
                 <button type="button" class="form-button btn-secondary" onclick="cerrarModal()">Cancelar</button>
                 <button type="submit" class="form-button btn-primary" onclick="guardarProducto()">Guardar</button>
             </div>
@@ -87,10 +88,8 @@ include 'templates/header.php';
     </div>
 </div>
 
-<!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<!-- JsBarcode para imprimir códigos en el futuro si quieres -->
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
-<script src="/local3M/js/productos.js?v=1.0"></script>
+<script src="/local3M/js/productos.js?v=<?php echo time(); ?>"></script>
 
 <?php include 'templates/footer.php'; ?>

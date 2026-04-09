@@ -1,5 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
     cargarProductos();
+    
+    const inputCodigo = document.getElementById('codigo_barras');
+    if (inputCodigo) {
+        inputCodigo.addEventListener('input', generarPrevisualizacion);
+    }
 });
 
 const modal = document.getElementById('modalProducto');
@@ -34,7 +39,8 @@ async function cargarProductos(query = '') {
                     <td><code style="background:#eee; padding:2px 5px; border-radius:3px;">${p.codigo_barras || '--'}</code></td>
                     <td><strong>$${parseFloat(p.precio_producto).toFixed(2)}</strong></td>
                     <td><span class="stock-badge ${stockClass}">${p.cantidad_piezas}</span></td>
-                    <td class="text-right">
+                    <td class="text-right" style="white-space: nowrap;">
+                        <button class="btn-action" style="background-color: #17a2b8; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer;" onclick="imprimirEtiqueta('${p.codigo_barras}', '${p.nombre_producto}')" title="Imprimir Etiqueta"><i class="fas fa-print"></i></button>
                         <button class="btn-action btn-edit" onclick="editarProducto(${p.id_productos})"><i class="fas fa-edit"></i></button>
                         <button class="btn-action btn-delete" onclick="eliminarProducto(${p.id_productos})"><i class="fas fa-trash"></i></button>
                     </td>
@@ -45,15 +51,26 @@ async function cargarProductos(query = '') {
     } catch (e) { console.error(e); }
 }
 
-// Abrir Modal (Nuevo)
+function imprimirEtiqueta(codigo, nombre) {
+    if (!codigo || codigo === '--' || codigo === 'null' || codigo === 'undefined') {
+        Swal.fire('Atención', 'Este producto no tiene código de barras asignado.', 'warning');
+        return;
+    }
+    const url = `/local3M/imprimir_etiqueta.php?codigo=${encodeURIComponent(codigo)}&nombre=${encodeURIComponent(nombre)}`;
+    window.open(url, '_blank', 'width=400,height=300');
+}
+
 function abrirModal() {
     form.reset();
     document.getElementById('id_productos').value = '';
     document.getElementById('modalTitle').textContent = 'Nuevo Producto';
+    
+    const contenedor = document.getElementById('barcodePreviewContainer');
+    if(contenedor) contenedor.style.display = 'none';
+    
     modal.style.display = 'flex';
 }
 
-// Abrir Modal (Editar)
 async function editarProducto(id) {
     try {
         const res = await fetch(`/local3M/api/productos.php?action=obtener&id=${id}`);
@@ -65,9 +82,12 @@ async function editarProducto(id) {
             document.getElementById('codigo_barras').value = p.codigo_barras;
             document.getElementById('precio_producto').value = p.precio_producto;
             document.getElementById('cantidad_piezas').value = p.cantidad_piezas;
-            document.getElementById('ubicacion').value = p.id_ubicacion || ''; // Ajusta si el campo en BD es diferente
+            document.getElementById('ubicacion').value = p.id_ubicacion || ''; 
             
             document.getElementById('modalTitle').textContent = 'Editar Producto';
+            
+            generarPrevisualizacion();
+            
             modal.style.display = 'flex';
         }
     } catch (e) { Swal.fire('Error', 'No se pudo cargar el producto', 'error'); }
@@ -77,7 +97,6 @@ function cerrarModal() {
     modal.style.display = 'none';
 }
 
-// Guardar
 async function guardarProducto() {
     const formData = new FormData(form);
     formData.append('action', 'guardar');
@@ -99,7 +118,6 @@ async function guardarProducto() {
     } catch (e) { Swal.fire('Error', 'Error de conexión', 'error'); }
 }
 
-// Eliminar
 function eliminarProducto(id) {
     Swal.fire({
         title: '¿Eliminar producto?',
@@ -125,4 +143,32 @@ function eliminarProducto(id) {
 function generarCodigoAleatorio() {
     const random = 'PROD' + Math.floor(Math.random() * 1000000);
     document.getElementById('codigo_barras').value = random;
+    generarPrevisualizacion();
+}
+
+// ==========================================
+// FUNCIÓN: PREVISUALIZACIÓN DE CÓDIGO DE BARRAS (MODO GRANDE)
+// ==========================================
+function generarPrevisualizacion() {
+    const valor = document.getElementById('codigo_barras').value.trim();
+    const contenedor = document.getElementById('barcodePreviewContainer');
+    
+    if (valor.length > 0) {
+        if(contenedor) contenedor.style.display = 'block';
+        try {
+            JsBarcode("#barcodePreview", valor, {
+                format: "CODE128", 
+                lineColor: "#000",
+                width: 3,          // Hacemos las barras más gruesas
+                height: 80,        // Hacemos el código más alto
+                displayValue: true, 
+                fontSize: 22,      // Letra más grande
+                background: "transparent"
+            });
+        } catch (e) {
+            console.warn("Código no válido para generar barras aún");
+        }
+    } else {
+        if(contenedor) contenedor.style.display = 'none';
+    }
 }

@@ -37,13 +37,23 @@ try {
     if ($action === 'listar') {
         $q = $_GET['q'] ?? '';
         
-        // Hacemos JOIN para traer el nombre de la ubicación, no solo el ID
+        // ==========================================
+        // LA MAGIA: Capturamos la señal secreta
+        // ==========================================
+        $todo = $_GET['todo'] ?? 0; 
+        
+        // Armamos la consulta BASE sin el límite
         $sql = "SELECT p.*, u.ubicacion as nombre_ubicacion 
                 FROM productos p
                 LEFT JOIN ubicacion_stock u ON p.id_ubicacion = u.id
                 WHERE 
                 LOWER(p.nombre_producto) LIKE ? OR p.codigo_barras LIKE ? 
-                ORDER BY p.id_productos DESC LIMIT 50";
+                ORDER BY p.id_productos DESC";
+        
+        // Si no nos mandaron la señal, protegemos el sistema con el LÍMITE de 50
+        if ($todo != 1) {
+            $sql .= " LIMIT 50";
+        }
         
         $stmt = $conn->prepare($sql);
         $stmt->execute(["%$q%", "%$q%"]);
@@ -72,28 +82,23 @@ try {
         $stock = $_POST['cantidad_piezas'];
         $codigo = trim($_POST['codigo_barras']);
         // Recibimos 'ubicacion' que puede ser el texto o el ID (depende de tu frontend)
-        // Asumiremos que el frontend envía el TEXTO de la ubicación o el ID seleccionado.
-        // Si tu frontend envía el ID directamente en un <select>, úsalo. 
-        // Si es un input texto libre, hay que buscar/crear.
         $ubicacionInput = trim($_POST['ubicacion'] ?? ''); 
 
         if (empty($nombre) || empty($precio)) {
             throw new Exception('Nombre y Precio son obligatorios');
         }
 
-        // --- MANEJO DE UBICACIÓN (FIX CLAVE) ---
+        // --- MANEJO DE UBICACIÓN ---
         $idUbicacionFinal = null;
 
         if (!empty($ubicacionInput)) {
             // 1. Verificamos si lo que llegó es un número (ID existente)
             if (ctype_digit($ubicacionInput)) {
-                // Es un ID, verificamos que exista en la BD para evitar el error 1452
                 $stmtCheck = $conn->prepare("SELECT id FROM ubicacion_stock WHERE id = ?");
                 $stmtCheck->execute([$ubicacionInput]);
                 if ($stmtCheck->fetch()) {
                     $idUbicacionFinal = $ubicacionInput;
                 } else {
-                    // Si el ID no existe (raro), lo tratamos como nulo o insertamos como texto si no fuera ID
                     $idUbicacionFinal = null; 
                 }
             } else {
@@ -105,7 +110,6 @@ try {
                 if ($rowUbi) {
                     $idUbicacionFinal = $rowUbi['id'];
                 } else {
-                    // No existe, creamos la nueva ubicación
                     $stmtIns = $conn->prepare("INSERT INTO ubicacion_stock (ubicacion) VALUES (?)");
                     $stmtIns->execute([$ubicacionInput]);
                     $idUbicacionFinal = $conn->lastInsertId();
@@ -151,7 +155,6 @@ try {
     // --- 4. OBTENER (PARA EDITAR) ---
     if ($action === 'obtener') {
         $id = $_GET['id'] ?? null;
-        // Traemos también el nombre de la ubicación para mostrarlo en el input si es necesario
         $stmt = $conn->prepare("SELECT p.*, u.ubicacion as nombre_ubicacion 
                                 FROM productos p 
                                 LEFT JOIN ubicacion_stock u ON p.id_ubicacion = u.id 
@@ -160,9 +163,7 @@ try {
         $prod = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if ($prod) {
-            // Si el frontend espera 'ubicacion' como el nombre para un input de texto:
             $prod['ubicacion'] = $prod['nombre_ubicacion'] ?? ''; 
-            // O si espera el ID para un select, ya viene en 'id_ubicacion'
 
             if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
                 echo json_encode(['success' => true, 'data' => $prod], JSON_INVALID_UTF8_SUBSTITUTE);

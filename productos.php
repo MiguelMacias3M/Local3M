@@ -15,6 +15,11 @@ include 'templates/header.php';
             <i class="fas fa-search"></i>
             <input type="text" id="buscar" class="form-input" placeholder="Buscar producto...">
         </div>
+        
+        <button class="form-button" style="background-color: #6c757d; color: white; margin-right: 10px;" onclick="imprimirInventario()">
+            <i class="fas fa-file-pdf"></i> Imprimir Stock
+        </button>
+
         <button class="form-button btn-primary" onclick="abrirModal()">
             <i class="fas fa-plus"></i> Nuevo Producto
         </button>

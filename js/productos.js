@@ -70,6 +70,13 @@ async function cargarProductos(query = '') {
     } catch (e) { console.error(e); }
 }
 
+// ==========================================
+// FUNCIÓN PARA IMPRIMIR HOJA DE CONTEO
+// ==========================================
+function imprimirInventario() {
+    window.open('/local3M/imprimir_inventario.php', '_blank');
+}
+
 function imprimirEtiqueta(codigo, nombre) {
     if (!codigo || codigo === '--' || codigo === 'null' || codigo === 'undefined') {
         Swal.fire('Atención', 'Este producto no tiene código de barras asignado.', 'warning');

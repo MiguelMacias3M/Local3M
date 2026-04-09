@@ -26,7 +26,7 @@ include 'templates/header.php';
                 <tr>
                     <th>Producto</th>
                     <th>Código</th>
-                    <th>Precio</th>
+                    <th>Ubicación</th> <th>Precio</th>
                     <th>Stock</th>
                     <th class="text-right">Acciones</th>
                 </tr>

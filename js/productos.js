@@ -25,18 +25,37 @@ async function cargarProductos(query = '') {
         tbody.innerHTML = '';
         if (json.success) {
             if (json.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center">No hay productos.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center">No hay productos.</td></tr>';
                 return;
             }
             json.data.forEach(p => {
                 const stockClass = p.cantidad_piezas < 5 ? 'stock-low' : 'stock-ok';
                 const tr = document.createElement('tr');
+                
+                // ==========================================
+                // LECTURA EXACTA COMO EN LA FUNCIÓN EDITAR
+                // ==========================================
+                // Leemos 'id_ubicacion' igual que lo haces abajo en tu código
+                let rawUbi = p.id_ubicacion || p.ubicacion || ''; 
+                let textoUbi = String(rawUbi).trim();
+
+                let ubicacionTexto = '<span style="color: #ccc; font-style: italic;">Sin asignar</span>';
+                
+                // Si sí tiene texto y no es un nulo raro, lo mostramos
+                if (textoUbi !== '' && textoUbi !== 'null' && textoUbi !== 'undefined') {
+                    ubicacionTexto = textoUbi;
+                }
+
                 tr.innerHTML = `
                     <td>
-                        <strong>${p.nombre_producto}</strong><br>
-                        <small style="color:#666">${p.ubicacion || ''}</small>
+                        <strong style="color: #2c3e50;">${p.nombre_producto}</strong>
                     </td>
-                    <td><code style="background:#eee; padding:2px 5px; border-radius:3px;">${p.codigo_barras || '--'}</code></td>
+                    <td><code style="background:#f1f1f1; padding:3px 6px; border-radius:4px; color: #e83e8c;">${p.codigo_barras || '--'}</code></td>
+                    
+                    <td style="font-weight: 500; color: #666;">
+                        <i class="fas fa-map-marker-alt" style="margin-right: 5px; color: #adb5bd; font-size: 0.9em;"></i>${ubicacionTexto}
+                    </td>
+
                     <td><strong>$${parseFloat(p.precio_producto).toFixed(2)}</strong></td>
                     <td><span class="stock-badge ${stockClass}">${p.cantidad_piezas}</span></td>
                     <td class="text-right" style="white-space: nowrap;">

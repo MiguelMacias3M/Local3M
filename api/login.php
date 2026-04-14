@@ -30,8 +30,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     // =====================================
                     // NUEVO: GUARDAMOS EL ROL EN LA SESIÓN
                     // =====================================
+                    
                     $_SESSION['rol'] = $row['rol']; 
                     
+                    $_SESSION['ultimo_acceso'] = time();
+
                     $response['success'] = true;
                     $response['message'] = '¡Acceso correcto! Redirigiendo...';
                     $response['redirect'] = 'dashboard.php'; 

@@ -23,18 +23,23 @@ try {
         if ($caja) {
             $fechaApertura = $caja['fecha_apertura'];
             
-            // CORRECCIÓN 1: Filtramos solo los movimientos del Mostrador (CAJA)
-            $sqlMovs = "SELECT tipo, categoria, ingreso, egreso FROM caja_movimientos WHERE fecha >= :fecha AND (origen = 'CAJA' OR origen IS NULL)";
+            // CORRECCIÓN 1: Traemos el metodo_pago de la BD
+            $sqlMovs = "SELECT tipo, categoria, ingreso, egreso, metodo_pago FROM caja_movimientos WHERE fecha >= :fecha AND (origen = 'CAJA' OR origen IS NULL)";
             $stmtMovs = $conn->prepare($sqlMovs);
             $stmtMovs->execute([':fecha' => $fechaApertura]);
             $movimientos = $stmtMovs->fetchAll(PDO::FETCH_ASSOC);
 
-            $ingresos = 0;
+            $ingresosFisicos = 0; // Aquí solo sumaremos efectivo
             $gastosReales = 0;
             $retirosCaja = 0;
 
             foreach ($movimientos as $m) {
-                $ingresos += (float)$m['ingreso'];
+                // Filtro para ignorar transferencias y tarjeta en el cajón
+                $metodoPago = $m['metodo_pago'] ?? 'Efectivo';
+                if ($metodoPago === 'Efectivo') {
+                    $ingresosFisicos += (float)$m['ingreso'];
+                }
+
                 $valEgreso = (float)$m['egreso'];
 
                 if ($valEgreso > 0) {
@@ -51,7 +56,8 @@ try {
             }
 
             $saldo_inicial = (float)$caja['saldo_inicial'];
-            $saldo_teorico = $saldo_inicial + $ingresos - $gastosReales - $retirosCaja;
+            // El teórico ahora solo considera el efectivo
+            $saldo_teorico = $saldo_inicial + $ingresosFisicos - $gastosReales - $retirosCaja;
 
             echo json_encode([
                 'success' => true,
@@ -61,7 +67,7 @@ try {
                     'fecha_apertura' => $caja['fecha_apertura'],
                     'usuario_apertura' => $caja['usuario_apertura'],
                     'saldo_inicial' => $saldo_inicial,
-                    'ingresos' => $ingresos,
+                    'ingresos' => $ingresosFisicos, // Reflejamos solo efectivo en pantalla
                     'egresos' => $gastosReales + $retirosCaja, 
                     'saldo_teorico' => $saldo_teorico
                 ]
@@ -115,29 +121,31 @@ try {
 
         if (!$caja) throw new Exception("No se encontró la caja abierta");
 
-        // CORRECCIÓN 2: Calcular totales actuales asegurando que solo sean de CAJA
-        $stmtMovs = $conn->prepare("SELECT tipo, categoria, ingreso, egreso FROM caja_movimientos WHERE fecha >= ? AND (origen = 'CAJA' OR origen IS NULL)");
+        // CORRECCIÓN 2: Calcular el cierre final ignorando pagos virtuales
+        $stmtMovs = $conn->prepare("SELECT tipo, categoria, ingreso, egreso, metodo_pago FROM caja_movimientos WHERE fecha >= ? AND (origen = 'CAJA' OR origen IS NULL)");
         $stmtMovs->execute([$caja['fecha_apertura']]);
         $movs = $stmtMovs->fetchAll(PDO::FETCH_ASSOC);
 
-        $ingTotal = 0;
+        $ingTotalFisico = 0;
         $egrTotal = 0; 
 
         foreach($movs as $m) {
-            $ingTotal += (float)$m['ingreso'];
+            $metodoPago = $m['metodo_pago'] ?? 'Efectivo';
+            if ($metodoPago === 'Efectivo') {
+                $ingTotalFisico += (float)$m['ingreso'];
+            }
             $egrTotal += (float)$m['egreso'];
         }
 
-        $teorico = (float)$caja['saldo_inicial'] + $ingTotal - $egrTotal;
+        $teorico = (float)$caja['saldo_inicial'] + $ingTotalFisico - $egrTotal;
         $diferencia = $real - $teorico;
         
         $retiro = $real - $fondo;
 
-        // REGISTRAR RETIRO DE GANANCIA (Asignando el origen CAJA explícitamente)
         if ($retiro > 0) {
             $sqlRet = "INSERT INTO caja_movimientos 
-                       (id_transaccion, tipo, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, fecha, categoria, origen) 
-                       VALUES (?, 'RETIRO', ?, 1, ?, 0, ?, ?, NOW(), 'Cierre', 'CAJA')";
+                       (id_transaccion, tipo, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, fecha, categoria, origen, metodo_pago) 
+                       VALUES (?, 'RETIRO', ?, 1, ?, 0, ?, ?, NOW(), 'Cierre', 'CAJA', 'Efectivo')";
             $stmtRet = $conn->prepare($sqlRet);
             $stmtRet->execute([
                 'RET-' . date('ymd'),
@@ -167,7 +175,7 @@ try {
         $stmtUpd = $conn->prepare($sqlUpdate);
         $stmtUpd->execute([
             $usuario, 
-            $ingTotal, 
+            $ingTotalFisico, 
             $egrTotal, 
             $teorico, 
             $real, 

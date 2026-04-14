@@ -78,7 +78,14 @@ if (!isset($_SESSION['nombre'])) {
             <span>Total a Pagar:</span>
             <span class="monto-total">$<span id="total-carrito">0.00</span></span>
         </div>
-        
+        <div style="margin-bottom: 10px;">
+            <label style="font-size: 0.9em; color: #555;">Método de Pago:</label>
+            <select id="metodo-pago" class="form-input" style="width: 100%; margin-top: 5px;" onchange="cambiarMetodoPago()">
+                <option value="Efectivo">💵 Efectivo</option>
+                <option value="Transferencia">📱 Transferencia</option>
+                <option value="Terminal">💳 Terminal / Tarjeta</option>
+            </select>
+        </div>
         <div class="seccion-cobro">
             <div class="input-group">
                 <label for="paga-con">Paga con:</label>

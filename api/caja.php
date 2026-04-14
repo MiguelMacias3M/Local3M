@@ -23,7 +23,6 @@ try {
         $fin    = $_GET['fin']    ?? ($_GET['fecha'] ?? date('Y-m-d'));
         $usuario = $_GET['usuario'] ?? '';
 
-        // FILTRO MAGICO: (origen = 'CAJA' OR origen IS NULL)
         $sql = "SELECT * FROM caja_movimientos WHERE DATE(fecha) BETWEEN :inicio AND :fin AND (origen = 'CAJA' OR origen IS NULL) ORDER BY fecha DESC";
         $params = [':inicio' => $inicio, ':fin' => $fin];
         
@@ -37,6 +36,8 @@ try {
         $movs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $ingresoTotal = 0;
+        $ingresoEfectivo = 0;
+        $ingresoBanco = 0; // Transferencia + Terminal
         $gastoTotal   = 0; 
         $retiroTotal  = 0; 
 
@@ -46,8 +47,17 @@ try {
             $cat        = $m['categoria'] ?? '';
             $desc       = $m['descripcion'] ?? '';
             $tipo       = $m['tipo'] ?? '';
+            $metodoPago = $m['metodo_pago'] ?? 'Efectivo'; // Leemos el método
 
-            if ($valIngreso > 0) $ingresoTotal += $valIngreso;
+            if ($valIngreso > 0) {
+                $ingresoTotal += $valIngreso;
+                // Separamos físico vs virtual
+                if ($metodoPago === 'Efectivo') {
+                    $ingresoEfectivo += $valIngreso;
+                } else {
+                    $ingresoBanco += $valIngreso;
+                }
+            }
 
             if ($valEgreso > 0) {
                 $esRetiro = ($tipo === 'RETIRO') || (stripos($cat, 'Retiro') !== false) || (stripos($cat, 'Cierre') !== false) || (stripos($desc, 'Retiro') !== false);
@@ -60,9 +70,11 @@ try {
             'success' => true,
             'totales' => [
                 'ingreso' => $ingresoTotal, 
+                'ingreso_efectivo' => $ingresoEfectivo,
+                'ingreso_banco' => $ingresoBanco,
                 'egreso'  => $gastoTotal,      
                 'retiros' => $retiroTotal,     
-                'neto'    => $ingresoTotal - $gastoTotal 
+                'neto'    => $ingresoEfectivo - $gastoTotal // Solo se resta de lo físico
             ],
             'movimientos' => $movs,
             'estado_caja' => $estadoCaja
@@ -87,10 +99,9 @@ try {
         $ing = ($tipoBase === 'INGRESO') ? $monto : 0;
         $egr = ($tipoBase === 'INGRESO') ? 0 : $monto;
 
-        // GUARDAMOS CON ORIGEN = 'CAJA'
         $sql = "INSERT INTO caja_movimientos 
-                (id_transaccion, tipo, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, fecha, categoria, origen) 
-                VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, 'CAJA')";
+                (id_transaccion, tipo, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, fecha, categoria, origen, metodo_pago) 
+                VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, 'CAJA', 'Efectivo')";
         $stmt = $conn->prepare($sql);
         $stmt->execute([$idTx, $tipoFinal, $desc, $monto, $ing, $egr, $_SESSION['nombre'], date('Y-m-d H:i:s'), $cat]);
         
@@ -123,23 +134,26 @@ try {
         $caja = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$caja) throw new Exception('No hay una caja abierta');
 
-        // SUMAMOS SOLO LOS MOVIMIENTOS DE CAJA
-        $sqlMovs = "SELECT tipo, categoria, descripcion, ingreso, egreso FROM caja_movimientos WHERE fecha >= ? AND (origen = 'CAJA' OR origen IS NULL)";
+        $sqlMovs = "SELECT tipo, categoria, descripcion, ingreso, egreso, metodo_pago FROM caja_movimientos WHERE fecha >= ? AND (origen = 'CAJA' OR origen IS NULL)";
         $stmtMovs = $conn->prepare($sqlMovs);
         $stmtMovs->execute([$caja['fecha_apertura']]);
         $movimientos = $stmtMovs->fetchAll(PDO::FETCH_ASSOC);
 
-        $totalIngresos = 0;
+        $totalIngresosFisicos = 0;
         $totalRetiros = 0;
 
         foreach ($movimientos as $m) {
-            $totalIngresos += (float)$m['ingreso'];
+            $metodoPago = $m['metodo_pago'] ?? 'Efectivo';
+            if ($metodoPago === 'Efectivo') {
+                $totalIngresosFisicos += (float)$m['ingreso'];
+            }
             $valEgreso = (float)$m['egreso'];
             $esRetiro = ($m['tipo'] === 'RETIRO') || (stripos($m['categoria'], 'Retiro') !== false) || (stripos($m['categoria'], 'Cierre') !== false);
             if ($esRetiro && $valEgreso > 0) $totalRetiros += $valEgreso;
         }
 
-        $saldoSistema = (float)$caja['saldo_inicial'] + $totalIngresos - $totalRetiros;
+        // EL SALDO DEL SISTEMA AHORA SÓLO CUENTA EL EFECTIVO
+        $saldoSistema = (float)$caja['saldo_inicial'] + $totalIngresosFisicos - $totalRetiros;
         $montoReal = (float)$_POST['monto_final_real'];
         $notas = $_POST['notas'] ?? '';
         $retirar = $_POST['retirar_fondos'] ?? 'NO';
@@ -152,8 +166,7 @@ try {
 
         if ($retirar === 'SI' && $montoReal > 0) {
             $idTx = 'RET-CIERRE-' . date('ymdHi');
-            // ORIGEN CAJA AL RETIRAR
-            $sqlRetiro = "INSERT INTO caja_movimientos (id_transaccion, tipo, descripcion, monto_unitario, egreso, usuario, fecha, categoria, origen) VALUES (?, 'RETIRO', 'Retiro por Cierre de Caja', ?, ?, ?, ?, 'Cierre', 'CAJA')";
+            $sqlRetiro = "INSERT INTO caja_movimientos (id_transaccion, tipo, descripcion, monto_unitario, egreso, usuario, fecha, categoria, origen, metodo_pago) VALUES (?, 'RETIRO', 'Retiro por Cierre de Caja', ?, ?, ?, ?, 'Cierre', 'CAJA', 'Efectivo')";
             $stmtRet = $conn->prepare($sqlRetiro);
             $stmtRet->execute([$idTx, $montoReal, $montoReal, $usuarioCierre, date('Y-m-d H:i:s')]);
         }
@@ -173,16 +186,20 @@ function obtenerEstadoCaja($conn) {
         $caja = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($caja) {
-            // SOLO SUMAR CAJA
-            $sql = "SELECT tipo, categoria, descripcion, ingreso, egreso FROM caja_movimientos WHERE fecha >= ? AND (origen = 'CAJA' OR origen IS NULL)";
+            $sql = "SELECT tipo, categoria, descripcion, ingreso, egreso, metodo_pago FROM caja_movimientos WHERE fecha >= ? AND (origen = 'CAJA' OR origen IS NULL)";
             $stmtCalc = $conn->prepare($sql);
             $stmtCalc->execute([$caja['fecha_apertura']]);
             $movs = $stmtCalc->fetchAll(PDO::FETCH_ASSOC);
 
-            $totalIngresos = 0; $totalRetiros = 0;
+            $totalIngresosFisicos = 0; $totalRetiros = 0;
 
             foreach ($movs as $m) {
-                $totalIngresos += (float)$m['ingreso'];
+                // SOLO SUMAMOS AL CAJÓN FÍSICO LO QUE ES EFECTIVO
+                $metodoPago = $m['metodo_pago'] ?? 'Efectivo';
+                if ($metodoPago === 'Efectivo') {
+                    $totalIngresosFisicos += (float)$m['ingreso'];
+                }
+                
                 $valEgreso = (float)$m['egreso'];
                 $esRetiro = ($m['tipo'] === 'RETIRO') || (stripos($m['categoria'], 'Retiro') !== false) || (stripos($m['categoria'], 'Cierre') !== false);
                 if ($esRetiro && $valEgreso > 0) $totalRetiros += $valEgreso;
@@ -191,7 +208,8 @@ function obtenerEstadoCaja($conn) {
             return [
                 'estado' => 'ABIERTA',
                 'usuario' => $caja['usuario_apertura'],
-                'monto_actual' => (float)$caja['saldo_inicial'] + $totalIngresos - $totalRetiros,
+                // MONTO ACTUAL SOLO REFLEJA EL EFECTIVO
+                'monto_actual' => (float)$caja['saldo_inicial'] + $totalIngresosFisicos - $totalRetiros,
                 'inicio' => $caja['fecha_apertura'],
                 'id' => $caja['id']
             ];

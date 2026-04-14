@@ -1,24 +1,16 @@
 // js/carrito_global.js
-
-// 1. Inicializar el carrito desde la memoria del navegador o crear uno vacío
 let carritoGlobal = JSON.parse(localStorage.getItem('carritoGlobal')) || [];
 let totalCarrito = 0.00;
 
-// Renderizar el carrito al cargar la página en cualquier sección
 document.addEventListener("DOMContentLoaded", () => {
     renderizarCarrito();
 });
 
-// 2. Función para guardar y actualizar la vista
 function guardarCarrito() {
     localStorage.setItem('carritoGlobal', JSON.stringify(carritoGlobal));
     renderizarCarrito();
 }
 
-// 3. Función principal para agregar cualquier cosa al carrito
-// Ejemplo de item: { id: 1, tipo: 'producto', nombre: 'Cable USB', precio: 150.00, cantidad: 1 }
-// Ejemplo de reparacion: { id: 24, tipo: 'reparacion', nombre: 'Pantalla Moto G20', precio: 800.00, cantidad: 1 }
-// 3. Función principal para agregar cualquier cosa al carrito
 function agregarAlCarritoGlobal(item) {
     if (item.tipo === 'producto') {
         let existe = carritoGlobal.find(p => p.id === item.id && p.tipo === 'producto');
@@ -28,13 +20,11 @@ function agregarAlCarritoGlobal(item) {
             carritoGlobal.push(item);
         }
     } else if (item.tipo === 'reparacion') {
-        // REPARACIONES: Verificamos si ya está en el carrito para no duplicarla
         let existe = carritoGlobal.find(r => r.id === item.id && r.tipo === 'reparacion');
         if (existe) {
             Swal.fire('Aviso', 'Esta reparación ya está en el carrito.', 'info');
             return; 
         } else {
-            // El monto que suma al carrito es "a_cobrar" (que puede ser el adelanto o el saldo)
             carritoGlobal.push(item);
         }
     }
@@ -47,14 +37,12 @@ function agregarAlCarritoGlobal(item) {
     }
 }
 
-// 4. Función para eliminar un item del carrito
 function eliminarItemCarrito(index) {
     carritoGlobal.splice(index, 1);
     guardarCarrito();
-    calcularCambio(); // Recalcular cambio por si hay dinero en "paga con"
+    calcularCambio();
 }
 
-// 5. Función que dibuja los items en la ventana flotante
 function renderizarCarrito() {
     const lista = document.getElementById('lista-items-carrito');
     const badge = document.getElementById('badge-carrito');
@@ -71,7 +59,6 @@ function renderizarCarrito() {
         return;
     }
 
-    // Dentro de renderizarCarrito() en js/carrito_global.js, actualiza el foreach:
     carritoGlobal.forEach((item, index) => {
         let subtotal = 0;
         let detalleTexto = "";
@@ -80,7 +67,7 @@ function renderizarCarrito() {
             subtotal = item.precio * item.cantidad;
             detalleTexto = `${item.cantidad} x $${item.precio.toFixed(2)}`;
         } else if (item.tipo === 'reparacion') {
-            subtotal = item.a_cobrar; // Solo cobramos lo que entra a caja hoy
+            subtotal = item.a_cobrar; 
             detalleTexto = `Folio: #${item.id} | Costo total: $${item.costo_total}`;
         }
 
@@ -105,10 +92,9 @@ function renderizarCarrito() {
 
     badge.innerText = cantidadTotal;
     spanTotal.innerText = totalCarrito.toFixed(2);
-    calcularCambio(); // Mantiene actualizado el cálculo de pago
+    cambiarMetodoPago(); // Revisa si aplica auto-llenado
 }
 
-// 6. Funciones de Interfaz que ya teníamos
 function toggleCarrito() {
     const panel = document.getElementById('panel-carrito-global');
     const overlay = document.getElementById('overlay-carrito');
@@ -121,6 +107,22 @@ function toggleCarrito() {
     }
 }
 
+// NUEVA FUNCIÓN: Maneja la lógica de Efectivo vs Tarjeta/Transferencia
+function cambiarMetodoPago() {
+    const metodoSelect = document.getElementById('metodo-pago');
+    const metodo = metodoSelect ? metodoSelect.value : 'Efectivo';
+    const inputPagaCon = document.getElementById('paga-con');
+    
+    if (metodo !== 'Efectivo' && totalCarrito > 0) {
+        inputPagaCon.value = totalCarrito.toFixed(2);
+        inputPagaCon.disabled = true; // No hay cambio en transferencias
+    } else {
+        if(inputPagaCon.disabled) inputPagaCon.value = ''; // Limpiamos si antes estaba deshabilitado
+        inputPagaCon.disabled = false;
+    }
+    calcularCambio();
+}
+
 function calcularCambio() {
     const pagaConInput = document.getElementById('paga-con').value;
     const pagaCon = parseFloat(pagaConInput) || 0;
@@ -130,25 +132,27 @@ function calcularCambio() {
 
     if (cambio < 0) {
         spanCambio.innerText = "0.00 (Faltan $" + Math.abs(cambio).toFixed(2) + ")";
-        spanCambio.style.color = "#ff3b30"; // Rojo
+        spanCambio.style.color = "#ff3b30";
     } else {
         spanCambio.innerText = cambio.toFixed(2);
-        spanCambio.style.color = "#34c759"; // Verde
+        spanCambio.style.color = "#34c759";
     }
 }
-
-// js/carrito_global.js (Reemplaza la función procesarCobroGlobal)
 
 async function procesarCobroGlobal() {
     const pagaConInput = document.getElementById('paga-con').value;
     const pagaCon = parseFloat(pagaConInput) || 0;
+    
+    // Obtenemos el método de pago seleccionado
+    const metodoSelect = document.getElementById('metodo-pago');
+    const metodoPago = metodoSelect ? metodoSelect.value : 'Efectivo';
     
     if (carritoGlobal.length === 0) {
         Swal.fire('Atención', 'El carrito está vacío.', 'warning');
         return;
     }
     
-    if (pagaCon < totalCarrito) {
+    if (pagaCon < (totalCarrito - 0.01)) { // Margen de error por decimales
         Swal.fire('Atención', 'El monto pagado es menor al total a cobrar.', 'warning');
         return;
     }
@@ -164,7 +168,8 @@ async function procesarCobroGlobal() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 carrito: carritoGlobal,
-                paga_con: pagaCon
+                paga_con: pagaCon,
+                metodo_pago: metodoPago // Enviamos el método a PHP
             })
         });
 
@@ -174,37 +179,30 @@ async function procesarCobroGlobal() {
             Swal.fire({
                 icon: 'success',
                 title: '¡Venta Exitosa!',
-                text: `Cambio a entregar: $${(pagaCon - totalCarrito).toFixed(2)}`,
+                text: `Cobrado con ${metodoPago}. Cambio a entregar: $${(pagaCon - totalCarrito).toFixed(2)}`,
                 showConfirmButton: true,
                 confirmButtonText: 'Abrir Tickets y Cerrar',
                 confirmButtonColor: '#007aff'
             }).then(() => {
                 
-                // 1. Abrimos el ticket de venta (El del pago)
                 window.open(data.ticketUrl, '_blank');
 
-                // 2. Abrimos los tickets de reparación SIN temporizador
                 if (data.ticketsReparacion && data.ticketsReparacion.length > 0) {
                     data.ticketsReparacion.forEach(url => {
                         window.open(url, '_blank');
                     });
                 }
                 
-                // 3. Limpiamos el carrito flotante
                 carritoGlobal = [];
                 guardarCarrito();
                 document.getElementById('paga-con').value = "";
+                if(metodoSelect) metodoSelect.value = "Efectivo"; // Resetear a efectivo
                 toggleCarrito(); 
 
-                // 4. MAGIA DE REFRESCO
                 if (typeof cargarProductos === 'function') {
-                    // Si estamos en venta.php
                     cargarProductos();
                 } else {
-                    // Si estamos en editar_reparacion, esperamos medio segundo (500ms) y recargamos
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 500); 
+                    setTimeout(() => { window.location.reload(); }, 500); 
                 }
             });
         } else {

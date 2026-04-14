@@ -149,12 +149,13 @@ try {
     }
 
 // =========================================================================
-    // --- 7. FINALIZAR VENTA DESDE EL CARRITO GLOBAL (NUEVO SISTEMA FLOTANTE) ---
+    // --- 7. FINALIZAR VENTA DESDE EL CARRITO GLOBAL ---
     // =========================================================================
     if ($action === 'finalizar_global') {
         $input = json_decode(file_get_contents('php://input'), true);
         $carrito = $input['carrito'] ?? [];
         $pagaCon = $input['paga_con'] ?? 0;
+        $metodoPago = $input['metodo_pago'] ?? 'Efectivo'; // RECIBIMOS EL MÉTODO
 
         if (empty($carrito)) {
             echo json_encode(['success' => false, 'error' => 'El carrito está vacío']);
@@ -166,51 +167,43 @@ try {
         $idTx = 'VEN' . date('ymd') . '-' . strtoupper(bin2hex(random_bytes(2)));
         $usuario = $_SESSION['nombre'];
 
-        // Sentencias para Productos
         $sqlVenta = "INSERT INTO ventas (id_producto, cantidad, id_transaccion, usuario, fecha) VALUES (?, ?, ?, ?, NOW())";
         $stmtVenta = $conn->prepare($sqlVenta);
 
         $sqlUpdateStock = "UPDATE productos SET cantidad_piezas = cantidad_piezas - ? WHERE id_productos = ? AND cantidad_piezas >= ?";
         $stmtUpdateStock = $conn->prepare($sqlUpdateStock);
         
-        // Sentencias para Reparaciones
-        $sqlRepUpdate = "UPDATE reparaciones SET estado = 'Entregado', deuda = 0 WHERE id = ?";
-        $stmtRepUpdate = $conn->prepare($sqlRepUpdate);
+        $sqlRepUpdate = "UPDATE reparaciones SET estado = 'Entregado', adelanto = adelanto + deuda, deuda = 0 WHERE id = ?";        $stmtRepUpdate = $conn->prepare($sqlRepUpdate);
         
         $sqlHistorial = "INSERT INTO historial_reparaciones (id_reparacion, estado_nuevo, comentario, usuario_responsable) 
-                         VALUES (?, 'Entregado', 'Equipo entregado y saldo liquidado en caja general. Folio Venta: $idTx', ?)";
+                         VALUES (?, 'Entregado', ?, ?)";
         $stmtHist = $conn->prepare($sqlHistorial);
 
-        // NUEVO: Sentencia para Caja (Guardará ítem por ítem)
+        // NUEVO: Agregamos la columna metodo_pago a la consulta SQL
         $sqlCaja = "INSERT INTO caja_movimientos 
-                    (id_transaccion, tipo, ref_id, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, cliente, fecha, categoria) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, NOW(), ?)";
+                    (id_transaccion, tipo, ref_id, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, cliente, fecha, categoria, metodo_pago) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, NOW(), ?, ?)";
         $stmtCaja = $conn->prepare($sqlCaja);
 
         foreach ($carrito as $item) {
             
             if ($item['tipo'] === 'producto') {
-                // 1. Descontar Stock
                 $stmtUpdateStock->execute([$item['cantidad'], $item['id'], $item['cantidad']]);
-                if ($stmtUpdateStock->rowCount() === 0) {
-                    throw new Exception("Stock insuficiente para: " . $item['nombre']);
-                }
+                if ($stmtUpdateStock->rowCount() === 0) throw new Exception("Stock insuficiente para: " . $item['nombre']);
 
-                // 2. Registrar Venta Interna
                 $stmtVenta->execute([$item['id'], $item['cantidad'], $idTx, $usuario]);
                 
-                // 3. Registrar Movimiento Detallado en Caja
                 $subtotal = $item['precio'] * $item['cantidad'];
+                // Guardamos el movimiento con su método de pago
                 $stmtCaja->execute([
                     $idTx, 'INGRESO', $item['id'], $item['nombre'], $item['cantidad'], 
-                    $item['precio'], $subtotal, $usuario, 'Público General', 'Venta'
+                    $item['precio'], $subtotal, $usuario, 'Público General', 'Venta', $metodoPago
                 ]);
 
-} else if ($item['tipo'] === 'reparacion') {
+            } else if ($item['tipo'] === 'reparacion') {
                 $accionRep = $item['accion_reparacion'] ?? 'liquidar';
                 $monto_pagado = $item['a_cobrar'];
 
-                // 1. Buscamos el nombre del cliente y estado actual
                 $stmtGetRep = $conn->prepare("SELECT nombre_cliente, tipo_reparacion, modelo, estado FROM reparaciones WHERE id = ?");
                 $stmtGetRep->execute([$item['id']]);
                 $repDB = $stmtGetRep->fetch(PDO::FETCH_ASSOC);
@@ -219,57 +212,39 @@ try {
                 $detalleReal = $repDB ? $repDB['tipo_reparacion'] . ' ' . $repDB['modelo'] : $item['nombre'];
                 $estadoActual = $repDB ? $repDB['estado'] : 'En progreso';
 
-                // ==========================================
-                // CASO A: LIQUIDAR Y ENTREGAR
-                // ==========================================
                 if ($accionRep === 'liquidar') {
-                    $stmtRepUpdate->execute([$item['id']]); // Esto le pone estado 'Entregado' y deuda 0
-                    $stmtHist->execute([$item['id'], $usuario]);
+                    $stmtRepUpdate->execute([$item['id']]);
+                    $comentario = "Equipo entregado y saldo liquidado en caja ($metodoPago). Folio: $idTx";
+                    $stmtHist->execute([$item['id'], $comentario, $usuario]);
 
                     $stmtCaja->execute([
                         $idTx, 'REPARACION', $item['id'], 'Pago Final: ' . $detalleReal, 1, 
-                        $monto_pagado, $monto_pagado, $usuario, $clienteReal, 'General'
+                        $monto_pagado, $monto_pagado, $usuario, $clienteReal, 'General', $metodoPago
                     ]);
                 } 
-                // ==========================================
-                // CASO B: SOLO ABONAR (No se entrega)
-                // ==========================================
                 else if ($accionRep === 'abonar') {
-                    
-                    // Sumamos al adelanto y restamos a la deuda
                     $sqlAbono = "UPDATE reparaciones SET adelanto = adelanto + ?, deuda = GREATEST(0, deuda - ?) WHERE id = ?";
                     $stmtAbono = $conn->prepare($sqlAbono);
                     $stmtAbono->execute([$monto_pagado, $monto_pagado, $item['id']]);
 
-                    // Guardamos en el historial (dejando el mismo estado que ya tenía)
-                    $comentario = "Abono registrado en caja por $" . number_format($monto_pagado, 2) . ". Folio Venta: $idTx";
+                    $comentario = "Abono registrado en caja por $" . number_format($monto_pagado, 2) . " ($metodoPago). Folio: $idTx";
                     $sqlHistAbono = "INSERT INTO historial_reparaciones (id_reparacion, estado_nuevo, comentario, usuario_responsable) VALUES (?, ?, ?, ?)";
                     $stmtHistAbono = $conn->prepare($sqlHistAbono);
                     $stmtHistAbono->execute([$item['id'], $estadoActual, $comentario, $usuario]);
 
-                    // Registramos en Caja como "Abono"
                     $stmtCaja->execute([
                         $idTx, 'REPARACION', $item['id'], 'Abono: ' . $detalleReal, 1, 
-                        $monto_pagado, $monto_pagado, $usuario, $clienteReal, 'Abono'
+                        $monto_pagado, $monto_pagado, $usuario, $clienteReal, 'Abono', $metodoPago
                     ]);
                 }
-
-                // ==========================================
-                // CASO C: NUEVO ADELANTO (Recién registrado)
-                // ==========================================
                 else if ($accionRep === 'nuevo_adelanto') {
-                    
-                    // La reparación ya fue creada en registrar_reparaciones.php
-                    // Así que SOLO necesitamos registrar el movimiento en la CAJA.
                     $comentarioCaja = "Adelanto (Nueva Orden): " . $detalleReal;
-                    
                     $stmtCaja->execute([
                         $idTx, 'REPARACION', $item['id'], $comentarioCaja, 1, 
-                        $monto_pagado, $monto_pagado, $usuario, $clienteReal, 'Adelanto'
+                        $monto_pagado, $monto_pagado, $usuario, $clienteReal, 'Adelanto', $metodoPago
                     ]);
                     
-                    // Opcional: Agregar una nota extra al historial
-                    $comentarioHistorial = "Adelanto cobrado en caja general por $" . number_format($monto_pagado, 2) . ". Folio Venta: $idTx";
+                    $comentarioHistorial = "Adelanto cobrado en caja por $" . number_format($monto_pagado, 2) . " ($metodoPago). Folio: $idTx";
                     $sqlHistExtra = "INSERT INTO historial_reparaciones (id_reparacion, estado_nuevo, comentario, usuario_responsable) VALUES (?, ?, ?, ?)";
                     $stmtHistExtra = $conn->prepare($sqlHistExtra);
                     $stmtHistExtra->execute([$item['id'], $estadoActual, $comentarioHistorial, $usuario]);
@@ -282,7 +257,6 @@ try {
         echo json_encode([
             'success' => true, 
             'id_transaccion' => $idTx, 
-            // AQUÍ AGREGAMOS EL PARAMETRO &paga_con=
             'ticketUrl' => '/local3M/generar_ticket_venta.php?id_transaccion=' . urlencode($idTx) . '&paga_con=' . urlencode($pagaCon)
         ]);
         exit();
@@ -292,7 +266,6 @@ try {
     if ($conn->inTransaction()) {
         $conn->rollBack();
     }
-    // Si hay un error, lo devolvemos como JSON limpio
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     exit();
 }

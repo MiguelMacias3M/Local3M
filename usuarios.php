@@ -1,3 +1,12 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
+
+// BLOQUEO DE SEGURIDAD: Solo Admin
+if (!isset($_SESSION['rol']) || strtolower($_SESSION['rol']) !== 'admin') {
+    header("Location: /local3M/dashboard.php");
+    exit();
+}
+?>
 <?php include 'templates/header.php'; ?>
 <link rel="stylesheet" href="css/usuarios.css?v=<?php echo time(); ?>">
 <style>

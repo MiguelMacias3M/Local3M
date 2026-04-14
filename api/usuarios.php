@@ -5,6 +5,12 @@ error_reporting(0);
 header('Content-Type: application/json');
 
 session_start();
+// Validar que el que intenta operar la API sea administrador
+if (!isset($_SESSION['rol']) || strtolower($_SESSION['rol']) !== 'admin') {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => 'No tienes permisos para gestionar usuarios.']);
+    exit();
+}
 // Al incluir esto, la variable $MASTER_PASSWORD queda disponible aquí
 include '../config/conexion.php';
 

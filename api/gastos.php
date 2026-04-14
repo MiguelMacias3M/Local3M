@@ -1,5 +1,10 @@
 <?php
 session_start();
+// Agrégalo justo abajo de tu session_start();
+if (!isset($_SESSION['rol']) || strtolower($_SESSION['rol']) !== 'admin') {
+    echo json_encode(['success' => false, 'error' => 'No autorizado']);
+    exit();
+}
 header('Content-Type: application/json; charset=utf-8');
 date_default_timezone_set('America/Mexico_City');
 ini_set('display_errors', 0);

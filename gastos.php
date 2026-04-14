@@ -1,3 +1,12 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
+
+// BLOQUEO: Si no hay rol o el rol NO es admin, lo pateamos al panel principal
+if (!isset($_SESSION['rol']) || strtolower($_SESSION['rol']) !== 'admin') {
+    header("Location: /local3M/dashboard.php");
+    exit();
+}
+?>
 <?php include 'templates/header.php'; ?>
 
 <!-- Enlace a los estilos nuevos -->

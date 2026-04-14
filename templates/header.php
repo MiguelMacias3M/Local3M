@@ -1,6 +1,8 @@
 <?php
-// 1. Iniciamos la sesión (SOLO AQUÍ)
-session_start();
+// 1. Iniciamos la sesión (SOLO SI NO ESTÁ INICIADA YA)
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // 2. SOLUCIÓN DE CACHÉ
 header('Cache-Control: no-cache, no-store, must-revalidate'); 
@@ -42,7 +44,12 @@ if (!isset($_SESSION['nombre'])) {
                 <li><a href="/local3M/productos.php"><i class="fas fa-boxes"></i> Productos</a></li>
                 <li><a href="/local3M/mercancia.php"><i class="fas fa-clipboard-list"></i> Mercancía</a></li>
                 <li><a href="/local3M/caja.php"><i class="fas fa-cash-register"></i> Caja</a></li>
-                <li><a href="/local3M/gastos.php"><i class="far fa-money-bill-alt"></i> Gastos</a></li>
+                
+                <?php if (isset($_SESSION['rol']) && strtolower($_SESSION['rol']) === 'admin'): ?>
+                    <li><a href="/local3M/gastos.php"><i class="far fa-money-bill-alt"></i> Gastos</a></li>
+                    <li><a href="/local3M/usuarios.php"><i class="fas fa-users-cog"></i> Usuarios</a></li>
+                <?php endif; ?>
+                
                 <li><a href="/local3M/encargos.php"><i class="fas fa-clipboard-list"></i> Encargos</a></li>
             </ul>
         </div>

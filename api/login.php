@@ -11,8 +11,6 @@ $response = ['success' => false, 'message' => 'Error desconocido.'];
 // Solo proceder si se enviaron datos por POST
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     
-    // Obtener los datos (idealmente, los recibiremos como JSON)
-    // Para este formulario, usaremos $_POST
     $nombre = $_POST['nombre'] ?? '';
     $password = $_POST['password'] ?? '';
 
@@ -20,26 +18,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $response['message'] = 'Por favor, ingrese usuario y contraseña.';
     } else {
         try {
-            // Usamos la variable $conn de tu archivo conexion.php
             $query = $conn->prepare('SELECT * FROM usuarios WHERE nombre = :nombre');
             $query->execute(['nombre' => $nombre]);
             $row = $query->fetch(PDO::FETCH_ASSOC);
 
             if (!empty($row)) {
-                // Verificar la contraseña con password_verify
                 if (password_verify($password, $row['password'])) {
                     // Contraseña correcta: Iniciar sesión
                     $_SESSION['nombre'] = $row['nombre'];
                     
+                    // =====================================
+                    // NUEVO: GUARDAMOS EL ROL EN LA SESIÓN
+                    // =====================================
+                    $_SESSION['rol'] = $row['rol']; 
+                    
                     $response['success'] = true;
                     $response['message'] = '¡Acceso correcto! Redirigiendo...';
-                    $response['redirect'] = 'dashboard.php'; // Página a la que debe ir
+                    $response['redirect'] = 'dashboard.php'; 
                 } else {
-                    // Contraseña incorrecta
                     $response['message'] = 'Usuario o contraseña incorrectos.';
                 }
             } else {
-                // Usuario no encontrado
                 $response['message'] = 'Usuario o contraseña incorrectos.';
             }
         } catch (PDOException $e) {
@@ -50,8 +49,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $response['message'] = 'Método no permitido.';
 }
 
-// Enviar la respuesta como JSON
 header('Content-Type: application/json');
 echo json_encode($response);
-exit(); // Terminar el script
+exit(); 
 ?>

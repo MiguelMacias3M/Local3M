@@ -87,7 +87,13 @@ if (isset($_GET['msg'])) {
             </div>
             <div id="barcode-error" class="form-error" style="display:none;"></div>
         </div>
-        <div class="modal-footer">
+        <div class="modal-footer" style="display: flex; gap: 10px; justify-content: center;">
+            <button class="form-button btn-primary" id="btnPrintBarcode" style="background-color: #2ecc71;" disabled>
+                <i class="fas fa-print"></i> Imprimir Etiqueta
+            </button>
+            <button class="form-button btn-info" id="btnCopyBarcode" disabled>
+                <i class="fas fa-copy"></i> Copiar
+            </button>
             <button class="form-button btn-secondary" onclick="closeBarcodeModal()">Cerrar</button>
         </div>
     </div>

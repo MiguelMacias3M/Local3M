@@ -38,7 +38,7 @@ $nombre = isset($_GET['nombre']) ? $_GET['nombre'] : 'Producto Sin Nombre';
             text-align: center;
             box-sizing: border-box;
             
-            /* Margen izquierdo para centrar la etiqueta en tu Xprinter */
+            /* Seguimos respetando el margen para empujar a la derecha */
             padding: 1mm 1mm 1mm 4mm; 
         }
 
@@ -56,21 +56,20 @@ $nombre = isset($_GET['nombre']) ? $_GET['nombre'] : 'Producto Sin Nombre';
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            width: 45mm; 
+            width: 44mm; 
             color: #000;
         }
 
-        /* Barras más grandes: aumentamos la altura máxima permitida */
+        /* SEGURO VITAL: Obligamos a la imagen a no rebasar el ancho del papel */
         #barcode {
-            width: 45mm; 
-            max-height: 14mm; /* Subió de 11mm a 14mm */
+            max-width: 43mm; /* Límite estricto de ancho */
+            max-height: 14mm; 
             margin: 0;
             display: block;
         }
 
-        /* Números más pequeños, pero manteniendo el negro intenso */
         .codigo-texto {
-            font-size: 9pt; /* Bajó de 11pt a 9pt */
+            font-size: 9pt; 
             font-weight: 900; 
             color: #000;
             letter-spacing: 2px; 
@@ -112,8 +111,8 @@ $nombre = isset($_GET['nombre']) ? $_GET['nombre'] : 'Producto Sin Nombre';
     <script>
         JsBarcode("#barcode", "<?php echo $codigo; ?>", {
             format: "CODE128",
-            width: 1.9,       /* Barras un poquito más gruesas para compensar el tamaño */
-            height: 60,       /* Aumentamos la altura de las barras (antes 45) */
+            width: 1.5,       /* REDUCIDO DE 1.9 A 1.5 PARA QUE LAS BARRAS SEAN MÁS DELGADAS */
+            height: 60,       
             displayValue: false, 
             margin: 0,
             background: "#ffffff",

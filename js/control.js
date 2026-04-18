@@ -11,6 +11,7 @@ let datos = [];
 let busqueda = '';
 let currentBarcode = ''; 
 
+
 // Elementos del DOM
 const tbody = document.getElementById('tablaReparacionesBody');
 const btnMas = document.getElementById('btnMas');
@@ -150,10 +151,14 @@ tbody.addEventListener('click', (e) => {
         e.preventDefault();
         const idtx = btn.getAttribute('data-idtx');
         if (idtx) imprimirTicket(idtx);
-    } else if (action === 'barcode') {
+   } else if (action === 'barcode') {
         e.preventDefault();
         const id = btn.getAttribute('data-id');
-        if (id) mostrarCodigo(id);
+        // Buscamos el modelo en nuestros datos para ponerlo en la etiqueta
+        const row = datos.find(d => String(d.id) === String(id));
+        const modelo = row ? row.modelo : 'Reparación';
+        
+        if (id) mostrarCodigo(id, modelo);
     }
 });
 
@@ -324,12 +329,15 @@ function imprimirTicket(idTransaccion){
 function openBarcodeModal(){ barcodeModal.style.display = 'flex'; }
 function closeBarcodeModal(){ barcodeModal.style.display = 'none'; }
 
-async function mostrarCodigo(id) {
+async function mostrarCodigo(id, modelo = 'Reparación') {
     barcodeSpinner.style.display = 'block';
     barcodeWrap.style.display = 'none';
     barcodeError.style.display = 'none';
     
+    currentModelo = modelo; // Guardamos el nombre del celular
+
     if(btnPrintBarcode) btnPrintBarcode.disabled = true;
+// ... (el resto de la función se queda igual)
     if(btnCopyBarcode) btnCopyBarcode.disabled = true;
 
     document.getElementById('barcode-svg').innerHTML = '';
@@ -382,11 +390,14 @@ if(btnCopyBarcode){
 
 if(btnPrintBarcode){
     btnPrintBarcode.addEventListener('click', () => {
-        const svg = document.getElementById('barcode-svg');
-        if(svg && currentBarcode){
-            const w = window.open('', '_blank', 'width=400,height=300');
-            w.document.write(`<html><body style="text-align:center; margin-top:50px;">${svg.outerHTML}<br><strong style="font-family:monospace; letter-spacing:3px; font-size:20px;">${currentBarcode}</strong><script>window.print();</script></body></html>`);
-            w.document.close();
+        if(currentBarcode){
+            // Mandamos a llamar tu archivo especializado de etiquetas de 50x25mm
+            // Le agregamos la palabra "Rep: " antes del modelo para que sepas que es una reparación
+            const nombreEtiqueta = 'Rep: ' + currentModelo;
+            const url = `/local3M/imprimir_etiqueta.php?codigo=${encodeURIComponent(currentBarcode)}&nombre=${encodeURIComponent(nombreEtiqueta)}`;
+            
+            // Abre la ventana (si tienes el Modo Kiosco, se imprimirá y cerrará sola)
+            window.open(url, '_blank', 'width=400,height=400');
         }
     });
 }

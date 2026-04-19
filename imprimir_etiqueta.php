@@ -111,7 +111,7 @@ $nombre = isset($_GET['nombre']) ? $_GET['nombre'] : 'Producto Sin Nombre';
     <script>
         JsBarcode("#barcode", "<?php echo $codigo; ?>", {
             format: "CODE128",
-            width: 1.5,       /* REDUCIDO DE 1.9 A 1.5 PARA QUE LAS BARRAS SEAN MÁS DELGADAS */
+            width: 1.6,       /* REDUCIDO DE 1.9 A 1.5 PARA QUE LAS BARRAS SEAN MÁS DELGADAS */
             height: 60,       
             displayValue: false, 
             margin: 0,

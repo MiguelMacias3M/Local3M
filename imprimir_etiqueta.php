@@ -1,6 +1,7 @@
 <?php
 $codigo = isset($_GET['codigo']) ? $_GET['codigo'] : '000000';
-$nombre = isset($_GET['nombre']) ? $_GET['nombre'] : 'Producto Sin Nombre';
+// Si no nos mandan nombre, lo dejamos vacío
+$nombre = isset($_GET['nombre']) ? $_GET['nombre'] : ''; 
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -38,32 +39,32 @@ $nombre = isset($_GET['nombre']) ? $_GET['nombre'] : 'Producto Sin Nombre';
             text-align: center;
             box-sizing: border-box;
             
-            /* Seguimos respetando el margen para empujar a la derecha */
+            /* Margen izquierdo de 4mm para centrar en la impresora */
             padding: 1mm 1mm 1mm 4mm; 
         }
 
         .marca-negocio {
-            font-size: 8pt;
+            font-size: 7pt;
             font-weight: bold;
-            margin-bottom: 0px;
+            margin-bottom: 1px;
             color: #000;
         }
 
         .nombre-producto {
-            font-size: 9pt;
+            font-size: 8pt;
             font-weight: bold;
             margin-bottom: 1px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            width: 44mm; 
+            width: 45mm; 
             color: #000;
         }
 
-        /* SEGURO VITAL: Obligamos a la imagen a no rebasar el ancho del papel */
+        /* BARRAS MAXIMIZADAS */
         #barcode {
-            max-width: 43mm; /* Límite estricto de ancho */
-            max-height: 14mm; 
+            max-width: 45mm;  /* Abarca todo lo ancho disponible */
+            max-height: 17mm; /* Mucho más alto al no haber texto estorbando */
             margin: 0;
             display: block;
         }
@@ -101,18 +102,20 @@ $nombre = isset($_GET['nombre']) ? $_GET['nombre'] : 'Producto Sin Nombre';
 
     <div class="etiqueta-container">
         <div class="marca-negocio">3M TECHNOLOGY</div>
-        <div class="nombre-producto"><?php echo htmlspecialchars($nombre); ?></div>
+        
+        <?php if (!empty($nombre)): ?>
+            <div class="nombre-producto"><?php echo htmlspecialchars($nombre); ?></div>
+        <?php endif; ?>
         
         <img id="barcode">
-        
         <div class="codigo-texto"><?php echo htmlspecialchars($codigo); ?></div>
     </div>
 
     <script>
         JsBarcode("#barcode", "<?php echo $codigo; ?>", {
             format: "CODE128",
-            width: 1.6,       /* REDUCIDO DE 1.9 A 1.5 PARA QUE LAS BARRAS SEAN MÁS DELGADAS */
-            height: 60,       
+            width: 1.8,       /* BARRAS MÁS GRUESAS PARA LECTURA INMEDIATA */
+            height: 70,       /* BARRAS MUCHO MÁS ALTAS */
             displayValue: false, 
             margin: 0,
             background: "#ffffff",

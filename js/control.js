@@ -392,11 +392,10 @@ if(btnPrintBarcode){
     btnPrintBarcode.addEventListener('click', () => {
         if(currentBarcode){
             // Mandamos a llamar tu archivo especializado de etiquetas de 50x25mm
-            // Le agregamos la palabra "Rep: " antes del modelo para que sepas que es una reparación
-            const nombreEtiqueta = 'Rep: ' + currentModelo;
-            const url = `/local3M/imprimir_etiqueta.php?codigo=${encodeURIComponent(currentBarcode)}&nombre=${encodeURIComponent(nombreEtiqueta)}`;
+            // Dejamos el &nombre= vacío para que la etiqueta maximice el código
+            const url = `/local3M/imprimir_etiqueta.php?codigo=${encodeURIComponent(currentBarcode)}&nombre=`;
             
-            // Abre la ventana (si tienes el Modo Kiosco, se imprimirá y cerrará sola)
+            // Abre la ventana en modo Kiosco
             window.open(url, '_blank', 'width=400,height=400');
         }
     });

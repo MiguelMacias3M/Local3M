@@ -358,6 +358,9 @@ include 'templates/header.php';
         </div>
     </div>
 </div>
-<script src="js/equipos.js?v=<?php echo time(); ?>"></script>
+<script>
+    const ROL_USUARIO = '<?php echo isset($_SESSION["rol"]) ? strtolower($_SESSION["rol"]) : "empleado"; ?>';
+</script>
 
+<script src="js/equipos.js?v=<?php echo time(); ?>"></script>
 <?php include 'templates/footer.php'; ?>

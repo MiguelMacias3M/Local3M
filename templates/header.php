@@ -182,7 +182,7 @@ $esAdmin = (isset($_SESSION['rol']) && strtolower($_SESSION['rol']) === 'admin')
                 </div>
                 <div class="module-sub">
                    
-                    <a href="/local3M/equipos.php" class="sub-btn"><i class="fas fa-mobile-alt" style="color:#007aff;"></i> Vitrina Élite</a>
+                    <a href="/local3M/equipos.php" class="sub-btn"><i class="fas fa-mobile-alt" style="color:#007aff;"></i> Vitrina</a>
                     <a href="/local3M/productos.php" class="sub-btn"><i class="fas fa-boxes" style="color:#8e8e93;"></i> Productos</a>
                     <a href="/local3M/mercancia.php" class="sub-btn"><i class="fas fa-list" style="color:#5856d6;"></i> Mercancía</a>
                 </div>

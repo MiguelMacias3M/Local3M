@@ -63,6 +63,7 @@ if (!isset($_SESSION['nombre'])) {
                 <li><a href="/local3M/caja.php"><i class="fas fa-cash-register"></i> Caja</a></li>
                 
                 <?php if (isset($_SESSION['rol']) && strtolower($_SESSION['rol']) === 'admin'): ?>
+                    <li><a href="/local3M/equipos.php"><i class="fas fa-cash-register"></i> Equipos</a></li>
                     <li><a href="/local3M/gastos.php"><i class="far fa-money-bill-alt"></i> Gastos</a></li>
                     <li><a href="/local3M/usuarios.php"><i class="fas fa-users-cog"></i> Usuarios</a></li>
                     <li><a href="/local3M/bonos.php"><i class="fas fa-trophy" style="color: #f1c40f;"></i> Rendimiento</a></li>

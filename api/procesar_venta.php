@@ -155,7 +155,7 @@ try {
         $input = json_decode(file_get_contents('php://input'), true);
         $carrito = $input['carrito'] ?? [];
         $pagaCon = $input['paga_con'] ?? 0;
-        $metodoPago = $input['metodo_pago'] ?? 'Efectivo'; // RECIBIMOS EL MÉTODO
+        $metodoPago = $input['metodo_pago'] ?? 'Efectivo'; 
 
         if (empty($carrito)) {
             echo json_encode(['success' => false, 'error' => 'El carrito está vacío']);
@@ -167,19 +167,26 @@ try {
         $idTx = 'VEN' . date('ymd') . '-' . strtoupper(bin2hex(random_bytes(2)));
         $usuario = $_SESSION['nombre'];
 
+        // Queries preparadas para Productos
         $sqlVenta = "INSERT INTO ventas (id_producto, cantidad, id_transaccion, usuario, fecha) VALUES (?, ?, ?, ?, NOW())";
         $stmtVenta = $conn->prepare($sqlVenta);
 
         $sqlUpdateStock = "UPDATE productos SET cantidad_piezas = cantidad_piezas - ? WHERE id_productos = ? AND cantidad_piezas >= ?";
         $stmtUpdateStock = $conn->prepare($sqlUpdateStock);
         
-        $sqlRepUpdate = "UPDATE reparaciones SET estado = 'Entregado', adelanto = adelanto + deuda, deuda = 0 WHERE id = ?";        $stmtRepUpdate = $conn->prepare($sqlRepUpdate);
+        // Queries preparadas para Reparaciones
+        $sqlRepUpdate = "UPDATE reparaciones SET estado = 'Entregado', adelanto = adelanto + deuda, deuda = 0 WHERE id = ?";        
+        $stmtRepUpdate = $conn->prepare($sqlRepUpdate);
         
         $sqlHistorial = "INSERT INTO historial_reparaciones (id_reparacion, estado_nuevo, comentario, usuario_responsable) 
                          VALUES (?, 'Entregado', ?, ?)";
         $stmtHist = $conn->prepare($sqlHistorial);
 
-        // NUEVO: Agregamos la columna metodo_pago a la consulta SQL
+        // Queries preparadas para Equipos Elite
+        $sqlEquipoUpdate = "UPDATE equipos SET estado = 'Vendido' WHERE id = ?";
+        $stmtEquipoUpdate = $conn->prepare($sqlEquipoUpdate);
+
+        // Caja
         $sqlCaja = "INSERT INTO caja_movimientos 
                     (id_transaccion, tipo, ref_id, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, cliente, fecha, categoria, metodo_pago) 
                     VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, NOW(), ?, ?)";
@@ -187,6 +194,9 @@ try {
 
         foreach ($carrito as $item) {
             
+            // ==========================================
+            // PROCESAR PRODUCTOS NORMALES (Cables, Micas)
+            // ==========================================
             if ($item['tipo'] === 'producto') {
                 $stmtUpdateStock->execute([$item['cantidad'], $item['id'], $item['cantidad']]);
                 if ($stmtUpdateStock->rowCount() === 0) throw new Exception("Stock insuficiente para: " . $item['nombre']);
@@ -194,13 +204,33 @@ try {
                 $stmtVenta->execute([$item['id'], $item['cantidad'], $idTx, $usuario]);
                 
                 $subtotal = $item['precio'] * $item['cantidad'];
-                // Guardamos el movimiento con su método de pago
                 $stmtCaja->execute([
                     $idTx, 'INGRESO', $item['id'], $item['nombre'], $item['cantidad'], 
                     $item['precio'], $subtotal, $usuario, 'Público General', 'Venta', $metodoPago
                 ]);
 
-            } else if ($item['tipo'] === 'reparacion') {
+            } 
+            // ==========================================
+            // NUEVO: PROCESAR EQUIPOS DE VITRINA (Celulares, Bicis)
+            // ==========================================
+            else if ($item['tipo'] === 'equipo') {
+                
+                // Marcamos el equipo como Vendido
+                $stmtEquipoUpdate->execute([$item['id']]);
+                
+                // Registramos el ingreso en caja
+                $subtotal = $item['precio'] * $item['cantidad']; // Aunque siempre será 1
+                $descripcion = "Venta Equipo: " . $item['nombre'];
+                
+                $stmtCaja->execute([
+                    $idTx, 'INGRESO', $item['id'], $descripcion, $item['cantidad'], 
+                    $item['precio'], $subtotal, $usuario, 'Público General', 'Equipos', $metodoPago
+                ]);
+            }
+            // ==========================================
+            // PROCESAR REPARACIONES
+            // ==========================================
+            else if ($item['tipo'] === 'reparacion') {
                 $accionRep = $item['accion_reparacion'] ?? 'liquidar';
                 $monto_pagado = $item['a_cobrar'];
 

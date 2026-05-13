@@ -12,6 +12,8 @@ function guardarCarrito() {
 }
 
 function agregarAlCarritoGlobal(item) {
+    // --- DEBUG 2: Verificamos si llegó y cómo llegó ---
+    
     if (item.tipo === 'producto') {
         let existe = carritoGlobal.find(p => p.id === item.id && p.tipo === 'producto');
         if (existe) {
@@ -23,6 +25,20 @@ function agregarAlCarritoGlobal(item) {
         let existe = carritoGlobal.find(r => r.id === item.id && r.tipo === 'reparacion');
         if (existe) {
             Swal.fire('Aviso', 'Esta reparación ya está en el carrito.', 'info');
+            return; 
+        } else {
+            carritoGlobal.push(item);
+        }
+    } 
+    // Regla para Equipos
+    else if (item.tipo === 'equipo') {
+        
+        // Convertimos a String por si acaso hay conflicto de tipos (1 vs "1")
+        let existe = carritoGlobal.find(e => String(e.id) === String(item.id) && e.tipo === 'equipo');
+        
+        
+        if (existe) {
+            Swal.fire('Aviso', 'Este equipo ya está en el carrito.', 'info');
             return; 
         } else {
             carritoGlobal.push(item);
@@ -62,19 +78,34 @@ function renderizarCarrito() {
     carritoGlobal.forEach((item, index) => {
         let subtotal = 0;
         let detalleTexto = "";
+        let icono = "";
 
-        if (item.tipo === 'producto') {
-            subtotal = item.precio * item.cantidad;
-            detalleTexto = `${item.cantidad} x $${item.precio.toFixed(2)}`;
-        } else if (item.tipo === 'reparacion') {
-            subtotal = item.a_cobrar; 
-            detalleTexto = `Folio: #${item.id} | Costo total: $${item.costo_total}`;
+        // ==========================================
+        // 1. DIBUJAR PRODUCTOS NORMALES Y EQUIPOS
+        // ==========================================
+        if (item.tipo === 'producto' || item.tipo === 'equipo') {
+            subtotal = parseFloat(item.precio) * parseInt(item.cantidad);
+            detalleTexto = `${item.cantidad} x $${parseFloat(item.precio).toFixed(2)}`;
+            
+            // Icono azul para productos, verde para equipos de vitrina
+            if (item.tipo === 'producto') {
+                icono = '<i class="fas fa-box" style="color:#007aff;"></i>';
+            } else {
+                icono = '<i class="fas fa-mobile-alt" style="color:#34c759;"></i>';
+                detalleTexto = `Vitrina: ` + detalleTexto; // Le ponemos una etiqueta para distinguirlo
+            }
+        } 
+        // ==========================================
+        // 2. DIBUJAR REPARACIONES
+        // ==========================================
+        else if (item.tipo === 'reparacion') {
+            subtotal = parseFloat(item.a_cobrar); 
+            detalleTexto = `Folio: #${item.id} | Costo total: $${parseFloat(item.costo_total).toFixed(2)}`;
+            icono = '<i class="fas fa-tools" style="color:#ff9500;"></i>';
         }
 
         totalCarrito += subtotal;
-        cantidadTotal += (item.cantidad || 1);
-
-        let icono = item.tipo === 'producto' ? '<i class="fas fa-box" style="color:#007aff;"></i>' : '<i class="fas fa-tools" style="color:#ff9500;"></i>';
+        cantidadTotal += (parseInt(item.cantidad) || 1);
 
         lista.innerHTML += `
             <li style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.05);">

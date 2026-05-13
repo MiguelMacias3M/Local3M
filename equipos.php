@@ -361,6 +361,64 @@ include 'templates/header.php';
 <script>
     const ROL_USUARIO = '<?php echo isset($_SESSION["rol"]) ? strtolower($_SESSION["rol"]) : "empleado"; ?>';
 </script>
+<div id="modalApartado" class="glass-modal-overlay">
+    <div class="glass-modal-content">
+        <h3 style="margin-top: 0; margin-bottom: 25px; font-weight: 700; font-size: 22px; text-align: center;">📝 Iniciar Apartado</h3>
+        
+        <form id="formApartado">
+            <input type="hidden" id="ap_equipo_id">
+            <p id="ap_equipo_nombre" style="font-weight:bold; color:#ff9500; text-align:center; margin-bottom: 20px; font-size: 18px;"></p>
+
+            <div class="glass-input-row">
+                <div style="flex: 1;">
+                    <label class="glass-label">Nombre del Cliente</label>
+                    <input type="text" id="ap_cliente" class="glass-input" required placeholder="Ej. Juan Pérez">
+                </div>
+                <div style="flex: 1;">
+                    <label class="glass-label">Teléfono (WhatsApp)</label>
+                    <input type="tel" id="ap_telefono" class="glass-input" required placeholder="10 dígitos numéricos" maxlength="10" oninput="this.value = this.value.replace(/[^0-9]/g, '')">                </div>
+            </div>
+
+            <div class="glass-input-row">
+                <div style="flex: 1;">
+                    <label class="glass-label">Precio Total</label>
+                    <input type="number" id="ap_total" class="glass-input" readonly style="background: rgba(0,0,0,0.05); font-weight: bold;">
+                </div>
+                <div style="flex: 1;">
+                    <label class="glass-label">Enganche (Adelanto)</label>
+                    <input type="number" id="ap_enganche" class="glass-input" step="0.01" required placeholder="$ 0.00" onkeyup="calcularRestaApartado()" onchange="calcularRestaApartado()">
+                </div>
+            </div>
+
+            <div class="glass-input-row">
+                <div style="flex: 1;">
+                    <label class="glass-label">Resta (Saldo Pendiente)</label>
+                    <input type="number" id="ap_resta" class="glass-input" readonly style="background: rgba(0,0,0,0.05); color: #ff3b30; font-weight: bold;">
+                </div>
+                <div style="flex: 1;">
+                    <label class="glass-label">Fecha Límite</label>
+                    <input type="date" id="ap_fecha_limite" class="glass-input" required>
+                </div>
+            </div>
+
+            <div class="glass-input-group">
+                <label class="glass-label">Método de Pago (Enganche)</label>
+                <select id="ap_metodo_pago" class="glass-input" required>
+                    <option value="Efectivo">💵 Efectivo</option>
+                    <option value="Transferencia">📱 Transferencia</option>
+                    <option value="Terminal">💳 Terminal / Tarjeta</option>
+                </select>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 30px;">
+                <button type="button" class="glass-btn" onclick="cerrarModalApartado()">Cancelar</button>
+                <button type="submit" class="glass-btn warning">
+                    <i class="fas fa-file-signature"></i> Crear Contrato
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <script src="js/equipos.js?v=<?php echo time(); ?>"></script>
 <?php include 'templates/footer.php'; ?>

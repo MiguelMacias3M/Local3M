@@ -186,7 +186,7 @@ try {
         $sqlEquipoUpdate = "UPDATE equipos SET estado = 'Vendido' WHERE id = ?";
         $stmtEquipoUpdate = $conn->prepare($sqlEquipoUpdate);
 
-        // Caja
+        // Caja Central
         $sqlCaja = "INSERT INTO caja_movimientos 
                     (id_transaccion, tipo, ref_id, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, cliente, fecha, categoria, metodo_pago) 
                     VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, NOW(), ?, ?)";
@@ -195,7 +195,7 @@ try {
         foreach ($carrito as $item) {
             
             // ==========================================
-            // PROCESAR PRODUCTOS NORMALES (Cables, Micas)
+            // PROCESAR PRODUCTOS NORMALES
             // ==========================================
             if ($item['tipo'] === 'producto') {
                 $stmtUpdateStock->execute([$item['cantidad'], $item['id'], $item['cantidad']]);
@@ -208,18 +208,13 @@ try {
                     $idTx, 'INGRESO', $item['id'], $item['nombre'], $item['cantidad'], 
                     $item['precio'], $subtotal, $usuario, 'Público General', 'Venta', $metodoPago
                 ]);
-
             } 
             // ==========================================
-            // NUEVO: PROCESAR EQUIPOS DE VITRINA (Celulares, Bicis)
+            // PROCESAR EQUIPOS DE VITRINA 
             // ==========================================
             else if ($item['tipo'] === 'equipo') {
-                
-                // Marcamos el equipo como Vendido
                 $stmtEquipoUpdate->execute([$item['id']]);
-                
-                // Registramos el ingreso en caja
-                $subtotal = $item['precio'] * $item['cantidad']; // Aunque siempre será 1
+                $subtotal = $item['precio'] * $item['cantidad']; 
                 $descripcion = "Venta Equipo: " . $item['nombre'];
                 
                 $stmtCaja->execute([
@@ -258,8 +253,7 @@ try {
                     $stmtAbono->execute([$monto_pagado, $monto_pagado, $item['id']]);
 
                     $comentario = "Abono registrado en caja por $" . number_format($monto_pagado, 2) . " ($metodoPago). Folio: $idTx";
-                    $sqlHistAbono = "INSERT INTO historial_reparaciones (id_reparacion, estado_nuevo, comentario, usuario_responsable) VALUES (?, ?, ?, ?)";
-                    $stmtHistAbono = $conn->prepare($sqlHistAbono);
+                    $stmtHistAbono = $conn->prepare("INSERT INTO historial_reparaciones (id_reparacion, estado_nuevo, comentario, usuario_responsable) VALUES (?, ?, ?, ?)");
                     $stmtHistAbono->execute([$item['id'], $estadoActual, $comentario, $usuario]);
 
                     $stmtCaja->execute([
@@ -275,9 +269,51 @@ try {
                     ]);
                     
                     $comentarioHistorial = "Adelanto cobrado en caja por $" . number_format($monto_pagado, 2) . " ($metodoPago). Folio: $idTx";
-                    $sqlHistExtra = "INSERT INTO historial_reparaciones (id_reparacion, estado_nuevo, comentario, usuario_responsable) VALUES (?, ?, ?, ?)";
-                    $stmtHistExtra = $conn->prepare($sqlHistExtra);
+                    $stmtHistExtra = $conn->prepare("INSERT INTO historial_reparaciones (id_reparacion, estado_nuevo, comentario, usuario_responsable) VALUES (?, ?, ?, ?)");
                     $stmtHistExtra->execute([$item['id'], $estadoActual, $comentarioHistorial, $usuario]);
+                }
+            }
+            // ==========================================
+            // PROCESAR ABONOS DE APARTADOS (CORREGIDO)
+            // ==========================================
+            else if ($item['tipo'] === 'abono_apartado') {
+                $id_apartado = $item['id'];
+                $monto_abono = $item['precio'];
+
+                // 1. Obtener datos actuales del apartado
+                $stmtGet = $conn->prepare("SELECT * FROM apartados WHERE id = ?");
+                $stmtGet->execute([$id_apartado]);
+                $apartado = $stmtGet->fetch(PDO::FETCH_ASSOC);
+
+                if ($apartado && $apartado['estado'] !== 'Liquidado') {
+                    
+                    // 2. Calcular nueva deuda
+                    $nuevo_restante = max(0, $apartado['restante'] - $monto_abono);
+                    $estado_nuevo = ($nuevo_restante == 0) ? 'Liquidado' : $apartado['estado'];
+
+                    // 3. Actualizar el apartado
+                    $stmtUpd = $conn->prepare("UPDATE apartados SET restante = ?, estado = ? WHERE id = ?");
+                    $stmtUpd->execute([$nuevo_restante, $estado_nuevo, $id_apartado]);
+
+                    // EVITAMOS CHOQUE DE ENUM: Si mandas 'Terminal', la BD suele exigir 'Tarjeta'
+                    $metodoAbonoDB = ($metodoPago === 'Terminal') ? 'Tarjeta' : $metodoPago;
+
+                    // 4. Registrar historial de este abono
+                    $stmtAbono = $conn->prepare("INSERT INTO abonos_apartados (id_apartado, monto, metodo_pago, id_usuario) VALUES (?, ?, ?, (SELECT id FROM usuarios WHERE nombre = ? LIMIT 1))");
+                    $stmtAbono->execute([$id_apartado, $monto_abono, $metodoAbonoDB, $usuario]);
+
+                    // 5. Inyectar dinero a la CAJA (Usamos categoría 'Abono' para evitar conflictos de bases de datos)
+                    $descripcionCaja = "Abono a Contrato #" . $id_apartado . " (" . $apartado['cliente_nombre'] . ")";
+                    $stmtCaja->execute([
+                        $idTx, 'INGRESO', $id_apartado, $descripcionCaja, 1, 
+                        $monto_abono, $monto_abono, $usuario, $apartado['cliente_nombre'], 'Abono', $metodoPago
+                    ]);
+
+                    // 6. Si con este abono se pagó por completo, sacamos el equipo de la vitrina
+                    if ($estado_nuevo === 'Liquidado') {
+                        $stmtEq = $conn->prepare("UPDATE equipos SET estado = 'Vendido' WHERE id = ?");
+                        $stmtEq->execute([$apartado['id_equipo']]);
+                    }
                 }
             }
         }

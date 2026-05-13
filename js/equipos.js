@@ -1,8 +1,53 @@
 document.addEventListener('DOMContentLoaded', () => {
     cargarEquipos();
+// Interceptamos el formulario de Apartados
+    const formApartado = document.getElementById('formApartado');
+    if (formApartado) {
+        formApartado.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const telInput = document.getElementById('ap_telefono').value;
+            if (telInput.length !== 10) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Teléfono Inválido',
+                    text: 'El número de teléfono debe tener exactamente 10 dígitos.'
+                });
+                return; // Detiene el proceso y no guarda nada
+            }
+            const formData = new FormData();
+            formData.append('accion', 'nuevo_apartado');
+            formData.append('id_equipo', document.getElementById('ap_equipo_id').value);
+            formData.append('cliente_nombre', document.getElementById('ap_cliente').value);
+            formData.append('cliente_telefono', document.getElementById('ap_telefono').value);
+            formData.append('total', document.getElementById('ap_total').value);
+            formData.append('enganche', document.getElementById('ap_enganche').value);
+            formData.append('restante', document.getElementById('ap_resta').value);
+            formData.append('fecha_limite', document.getElementById('ap_fecha_limite').value);
+            formData.append('metodo_pago', document.getElementById('ap_metodo_pago').value);
 
+            try {
+                const response = await fetch('/local3M/api/apartados.php', { method: 'POST', body: formData });
+                const data = await response.json();
+
+                if (data.success) {
+                    Swal.fire('¡Apartado Creado!', 'El equipo ha sido reservado exitosamente.', 'success');
+                    cerrarModalApartado();
+                    cargarEquipos(); // Refrescamos la vitrina (el equipo cambiará a estado 'Apartado')
+                    
+                    // Opcional: Imprimir ticket de apartado (lo haremos en el siguiente paso)
+                } else {
+                    Swal.fire('Error', data.message, 'error');
+                }
+            } catch (error) {
+                console.error(error);
+                Swal.fire('Error', 'Hubo un problema de conexión con el servidor', 'error');
+            }
+        });
+    }
+    
     const formEquipo = document.getElementById('formEquipo');
     
+
     if(formEquipo) {
         formEquipo.addEventListener('submit', async (e) => {
             e.preventDefault(); 
@@ -60,6 +105,9 @@ if(btnNuevo) {
 // ----------------------------------------------------
 // DIBUJAR LA TABLA Y LOS BOTONES
 // ----------------------------------------------------
+// ----------------------------------------------------
+// DIBUJAR LA TABLA Y LOS BOTONES
+// ----------------------------------------------------
 async function cargarEquipos() {
     try {
         const response = await fetch('/local3M/api/equipos.php?accion=listar');
@@ -80,7 +128,6 @@ async function cargarEquipos() {
             // MAGIA DE SEGURIDAD: BOTONES DE ADMIN
             // ===============================================
             let adminButtons = '';
-            // ROL_USUARIO viene desde equipos.php
             if (typeof ROL_USUARIO !== 'undefined' && ROL_USUARIO === 'admin') {
                 adminButtons = `
                     <button class="glass-btn" style="padding: 6px 12px; font-size: 13px; color: #ff9500;" onclick="editarEquipo(${eq.id})" title="Editar Detalles">
@@ -92,6 +139,14 @@ async function cargarEquipos() {
                 `;
             }
 
+            // ===============================================
+            // NUEVO: CANDADO PARA EQUIPOS APARTADOS/VENDIDOS
+            // ===============================================
+            let isDisponible = (eq.estado === 'Disponible');
+            let opacidadBoton = isDisponible ? '' : 'opacity: 0.4; cursor: not-allowed;';
+            let eventoClic = isDisponible ? `onclick="abrirModalAccion(${eq.id}, '${eq.marca} ${eq.modelo}', ${eq.precio_venta})"` : '';
+            let tituloBoton = isDisponible ? 'Realizar Venta o Apartado' : 'Equipo NO disponible';
+
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><b>#${eq.id}</b></td>
@@ -102,7 +157,7 @@ async function cargarEquipos() {
                 <td><span style="background: ${badgeColor}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; letter-spacing: 0.5px;">${eq.estado}</span></td>
                 <td style="text-align: center; display: flex; gap: 8px; justify-content: center;">
                     
-                    <button class="glass-btn primary" style="padding: 6px 12px; font-size: 13px;" onclick="abrirModalAccion(${eq.id}, '${eq.marca} ${eq.modelo}', ${eq.precio_venta})" title="Realizar Venta o Apartado">
+                    <button class="glass-btn primary" style="padding: 6px 12px; font-size: 13px; ${opacidadBoton}" ${eventoClic} ${isDisponible ? '' : 'disabled'} title="${tituloBoton}">
                         <i class="fas fa-shopping-cart"></i>
                     </button>
 
@@ -110,7 +165,8 @@ async function cargarEquipos() {
                         <i class="fas fa-barcode"></i>
                     </button>
                     
-                    ${adminButtons} </td>
+                    ${adminButtons}
+                </td>
             `;
             tbody.appendChild(tr);
         });
@@ -223,6 +279,52 @@ function mandarAlCarritoGlobal() {
     cerrarModalAccion();
 }
 
+// --- FUNCIONES DEL SISTEMA DE APARTADOS ---
+
 function abrirModalApartado() {
-    alert("Próximamente: Abriendo contrato de apartado...");
+    cerrarModalAccion(); // Cerramos el menú de decisión
+    
+    const id = document.getElementById('accion_equipo_id').value;
+    const nombre = document.getElementById('accion_equipo_nombre').value;
+    const precio = parseFloat(document.getElementById('accion_equipo_precio').value);
+
+    // Llenamos el formulario con los datos iniciales
+    document.getElementById('ap_equipo_id').value = id;
+    document.getElementById('ap_equipo_nombre').innerText = nombre;
+    document.getElementById('ap_total').value = precio;
+    document.getElementById('ap_enganche').value = '';
+    document.getElementById('ap_resta').value = precio;
+    document.getElementById('ap_cliente').value = '';
+    document.getElementById('ap_telefono').value = '';
+    
+    // Le sugerimos automáticamente 30 días de plazo al cliente
+    let fecha = new Date();
+    fecha.setDate(fecha.getDate() + 30);
+    document.getElementById('ap_fecha_limite').value = fecha.toISOString().split('T')[0];
+
+    const modal = document.getElementById('modalApartado');
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show-modal'), 10);
+}
+
+function cerrarModalApartado() {
+    const modal = document.getElementById('modalApartado');
+    modal.classList.remove('show-modal');
+    setTimeout(() => modal.style.display = 'none', 300);
+}
+
+function calcularRestaApartado() {
+    const total = parseFloat(document.getElementById('ap_total').value) || 0;
+    const enganche = parseFloat(document.getElementById('ap_enganche').value) || 0;
+    
+    if (enganche > total) {
+        Swal.fire('Atención', 'El enganche no puede ser mayor al precio del equipo.', 'warning');
+        document.getElementById('ap_enganche').value = total;
+    }
+    
+    let resta = total - (parseFloat(document.getElementById('ap_enganche').value) || 0);
+    document.getElementById('ap_resta').value = resta.toFixed(2);
+}
+function verApartados() {
+    window.location.href = '/local3M/apartados.php';
 }

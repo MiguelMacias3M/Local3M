@@ -44,6 +44,16 @@ function agregarAlCarritoGlobal(item) {
             carritoGlobal.push(item);
         }
     }
+
+    else if (item.tipo === 'abono_apartado') {
+        let existe = carritoGlobal.find(a => String(a.id) === String(item.id) && a.tipo === 'abono_apartado');
+        if (existe) {
+            Swal.fire('Aviso', 'El abono de este cliente ya está en el carrito.', 'info');
+            return; 
+        } else {
+            carritoGlobal.push(item);
+        }
+    }
     
     guardarCarrito();
     
@@ -102,6 +112,12 @@ function renderizarCarrito() {
             subtotal = parseFloat(item.a_cobrar); 
             detalleTexto = `Folio: #${item.id} | Costo total: $${parseFloat(item.costo_total).toFixed(2)}`;
             icono = '<i class="fas fa-tools" style="color:#ff9500;"></i>';
+        }
+        // NUEVO: ESTILO PARA ABONOS
+        else if (item.tipo === 'abono_apartado') {
+            subtotal = parseFloat(item.precio); 
+            detalleTexto = `Cliente: ${item.cliente_nombre} (Folio #${item.id})`;
+            icono = '<i class="fas fa-hand-holding-usd" style="color:#9c27b0;"></i>'; // Un color moradito elegante
         }
 
         totalCarrito += subtotal;

@@ -115,13 +115,25 @@ $esAdmin = (isset($_SESSION['rol']) && strtolower($_SESSION['rol']) === 'admin')
         }
         .module-group:hover .icon-box { transform: translateY(-8px) scale(1.05); box-shadow: 0 20px 40px rgba(0,0,0,0.12); }
 
+        /* RECUADROS QUE BROTAN (Con Puente Invisible) */
         .module-sub {
-            position: absolute; top: 105%; left: 50%; transform: translateX(-50%) translateY(-20px);
-            width: 220px; display: flex; flex-direction: column; gap: 10px;
-            opacity: 0; pointer-events: none; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: absolute; 
+            top: 85%; /* Lo subimos para que empalme con la carpeta */
+            left: 50%; 
+            transform: translateX(-50%) translateY(0);
+            width: 220px; 
+            display: flex; flex-direction: column; gap: 10px;
+            opacity: 0; pointer-events: none; 
+            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            padding-top: 35px; /* 🔥 EL PUENTE INVISIBLE 🔥 */
+            z-index: 10;
         }
-        .module-group:hover .module-sub { opacity: 1; pointer-events: all; transform: translateX(-50%) translateY(0); }
 
+        .module-group:hover .module-sub { 
+            opacity: 1; 
+            pointer-events: all; 
+            transform: translateX(-50%) translateY(15px); /* Baja suavemente */
+        }
         .sub-btn {
             background: white; padding: 14px 18px; border-radius: 16px;
             display: flex; align-items: center; gap: 12px; text-decoration: none;

@@ -41,6 +41,10 @@ async function cargarMercancia(query = '') {
                         </div>
                     </td>
                     <td class="text-right">
+                        <button class="btn-action" style="color: #007aff; border: none; background: transparent; cursor: pointer; margin-right: 5px; font-size: 16px;" onclick="imprimirEtiquetaMercancia('${p.codigo_barras}', '${p.marca} ${p.modelo}')" title="Imprimir Etiqueta">
+                            <i class="fas fa-barcode"></i>
+                        </button>
+                        
                         <button class="btn-action btn-edit" onclick="editarMercancia(${p.id})"><i class="fas fa-edit"></i></button>
                         <button class="btn-action btn-delete" onclick="eliminarMercancia(${p.id})"><i class="fas fa-trash"></i></button>
                     </td>
@@ -154,4 +158,18 @@ function generarCodigo() {
                    (d.getMonth()+1).toString().padStart(2,'0') + 
                    Math.floor(Math.random() * 1000);
     document.getElementById('codigo_barras').value = codigo;
+}
+
+// ==========================================
+// NUEVO: IMPRIMIR ETIQUETA XPRINTER
+// ==========================================
+function imprimirEtiquetaMercancia(codigo, nombre) {
+    if (!codigo || codigo === 'null' || codigo.trim() === '') {
+        Swal.fire('Atención', 'Este artículo no tiene un código de barras registrado. Edítalo y presiona "Generar Código" primero.', 'warning');
+        return;
+    }
+    
+    // Llamamos al mismo archivo que imprime los equipos de vitrina
+    const url = `/local3M/imprimir_etiqueta.php?codigo=${encodeURIComponent(codigo)}&nombre=${encodeURIComponent(nombre)}`;
+    window.open(url, '_blank', 'width=400,height=400');
 }

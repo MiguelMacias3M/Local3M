@@ -294,7 +294,7 @@ try {
         
         <div class="center" style="margin-top:10px; font-size:11px;">
             <strong>WhatsApp:</strong> 449 491 2164<br>
-            Lunes a Sábado 10am - 10pm
+            Lunes a Sábado 09:00 am - 09:00 pm
         </div>
         <div class="center" style="margin-top:5px;">--- 3M TECHNOLOGY ---</div>
     </div>

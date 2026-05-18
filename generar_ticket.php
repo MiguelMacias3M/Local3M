@@ -278,7 +278,7 @@ try {
         <div class="footer-text">
             <strong>CONDICIONES DE SERVICIO</strong><br>
             1. Garantía válida solo con este ticket.<br>
-            2. Después de 30 días no nos hacemos responsables por equipos olvidados.<br>
+            2. Después de 30 días no nos hacemos responsables por su equipo.<br>
             3. No hay garantía en equipos mojados.<br>
             <br>
             <strong>¡Gracias por su confianza!</strong>
@@ -294,7 +294,7 @@ try {
         
         <div class="center" style="margin-top:10px; font-size:11px;">
             <strong>WhatsApp:</strong> 449 491 2164<br>
-            Lunes a Sábado 10am - 10pm
+            Lunes a Sábado 09:00 am - 09:00 pm
         </div>
         <div class="center" style="margin-top:5px;">--- 3M TECHNOLOGY ---</div>
     </div>

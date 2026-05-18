@@ -147,6 +147,46 @@ $esAdmin = (isset($_SESSION['rol']) && strtolower($_SESSION['rol']) === 'admin')
             border-radius: 10px; font-size: 13px; font-weight: 600; transition: 0.3s;
         }
         .logout-button:hover { background: #d72c21; transform: translateY(-1px); }
+
+        /* =========================================
+           📱 RESPONSIVE: ADAPTACIÓN PARA CELULARES
+           ========================================= */
+        @media (max-width: 768px) {
+            /* Barra superior más compacta */
+            .navbar { padding: 10px 15px; }
+            .logo-3m { font-size: 22px; margin-bottom: 2px; }
+            .logo-tech { font-size: 9px; letter-spacing: 1.5px; }
+            .nav-left { gap: 15px; }
+            
+            /* Ocultamos el nombre de usuario para dar espacio (solo queda el botón de Salir) */
+            .navbar-user span { display: none; } 
+            .logout-button { padding: 6px 12px; font-size: 12px; }
+
+            /* Menú de cristal adaptado a pantallas chicas */
+            .btn-cerrar-menu { top: 15px; right: 15px; width: 35px; height: 35px; font-size: 18px; }
+            .launchpad-overlay { padding-top: 60px; }
+            .launchpad-overlay h2 { font-size: 26px !important; }
+            .launchpad-overlay p { margin-bottom: 20px !important; font-size: 14px !important; text-align: center; padding: 0 10px; }
+            
+            .launchpad-grid { gap: 15px; padding: 10px; }
+            
+            /* Hacemos que quepan exactamente 2 iconos por fila para usar bien el espacio */
+            .module-group { width: 145px; }
+            .icon-box { width: 80px; height: 80px; font-size: 32px; border-radius: 20px; }
+            .module-core { gap: 10px; font-size: 14px; }
+            
+            /* Reducimos el tamaño de los submenús */
+            .module-sub { width: 160px; padding-top: 25px; }
+            .sub-btn { padding: 10px 12px; font-size: 12px; gap: 8px; }
+            
+            /* MAGIA PARA EVITAR DESBORDAMIENTO: 
+               Los de la izquierda abren hacia la derecha, los de la derecha hacia la izquierda */
+            .module-group:nth-child(odd) .module-sub { left: 0; transform: translateX(0) translateY(0); }
+            .module-group:nth-child(odd):hover .module-sub { transform: translateX(0) translateY(10px); }
+            
+            .module-group:nth-child(even) .module-sub { left: auto; right: 0; transform: translateX(0) translateY(0); }
+            .module-group:nth-child(even):hover .module-sub { transform: translateX(0) translateY(10px); }
+        }
     </style>
 </head>
 <body>

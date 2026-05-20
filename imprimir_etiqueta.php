@@ -12,15 +12,15 @@ $nombre = isset($_GET['nombre']) ? $_GET['nombre'] : '';
     
     <style>
         @page {
-            size: 50mm 25mm;
+            size: 57mm 40mm; /* NUEVO TAMAÑO DE ETIQUETA */
             margin: 0mm;
         }
 
         html, body {
             margin: 0 !important;
             padding: 0 !important;
-            width: 50mm !important;
-            height: 25mm !important;
+            width: 57mm !important; /* NUEVO TAMAÑO */
+            height: 40mm !important; /* NUEVO TAMAÑO */
             background-color: white;
             color: black;
             font-family: Arial, sans-serif;
@@ -30,8 +30,8 @@ $nombre = isset($_GET['nombre']) ? $_GET['nombre'] : '';
         }
 
         .etiqueta-container {
-            width: 50mm;
-            height: 25mm;
+            width: 57mm;
+            height: 40mm;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -39,42 +39,42 @@ $nombre = isset($_GET['nombre']) ? $_GET['nombre'] : '';
             text-align: center;
             box-sizing: border-box;
             
-            /* Margen izquierdo de 4mm para centrar en la impresora */
-            padding: 1mm 1mm 1mm 4mm; 
+            /* Ajustamos los márgenes para la impresora (dejamos 4mm a la izquierda por el rodillo) */
+            padding: 2mm 2mm 2mm 4mm; 
         }
 
         .marca-negocio {
-            font-size: 7pt;
-            font-weight: bold;
-            margin-bottom: 1px;
+            font-size: 9pt; /* Letra crecida */
+            font-weight: 900;
+            margin-bottom: 2px;
             color: #000;
         }
 
         .nombre-producto {
-            font-size: 8pt;
+            font-size: 10pt; /* Letra crecida */
             font-weight: bold;
-            margin-bottom: 1px;
+            margin-bottom: 4px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            width: 45mm; 
+            width: 52mm; 
             color: #000;
         }
 
-        /* BARRAS MAXIMIZADAS */
+        /* BARRAS MAXIMIZADAS AL NUEVO TAMAÑO */
         #barcode {
-            max-width: 45mm;  /* Abarca todo lo ancho disponible */
-            max-height: 17mm; /* Mucho más alto al no haber texto estorbando */
+            max-width: 52mm;  
+            max-height: 22mm; 
             margin: 0;
             display: block;
         }
 
         .codigo-texto {
-            font-size: 9pt; 
+            font-size: 11pt; /* Números más grandes y legibles */
             font-weight: 900; 
             color: #000;
-            letter-spacing: 2px; 
-            margin-top: 1px;
+            letter-spacing: 3px; 
+            margin-top: 3px;
         }
 
         @media print {
@@ -114,8 +114,8 @@ $nombre = isset($_GET['nombre']) ? $_GET['nombre'] : '';
     <script>
         JsBarcode("#barcode", "<?php echo $codigo; ?>", {
             format: "CODE128",
-            width: 1.8,       /* BARRAS MÁS GRUESAS PARA LECTURA INMEDIATA */
-            height: 70,       /* BARRAS MUCHO MÁS ALTAS */
+            width: 2.2,       /* BARRAS MÁS GRUESAS: Al tener 57mm de ancho, la pistola lo leerá rapidísimo */
+            height: 90,       /* BARRAS MÁS ALTAS: Aprovechamos los 40mm de altura */
             displayValue: false, 
             margin: 0,
             background: "#ffffff",

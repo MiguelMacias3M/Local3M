@@ -1,7 +1,11 @@
 <?php
 $codigo = isset($_GET['codigo']) ? $_GET['codigo'] : '000000';
-// Si no nos mandan nombre, lo dejamos vacío
 $nombre = isset($_GET['nombre']) ? $_GET['nombre'] : ''; 
+
+// NUEVOS PARAMETROS PARA EL CONTROL DE TALLER
+$cliente  = isset($_GET['cliente']) ? $_GET['cliente'] : ''; 
+$detalles = isset($_GET['detalles']) ? $_GET['detalles'] : ''; 
+$es_reparacion = (!empty($cliente) || !empty($detalles));
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -12,15 +16,15 @@ $nombre = isset($_GET['nombre']) ? $_GET['nombre'] : '';
     
     <style>
         @page {
-            size: 57mm 40mm; /* NUEVO TAMAÑO DE ETIQUETA */
+            size: 57mm 40mm;
             margin: 0mm;
         }
 
         html, body {
             margin: 0 !important;
             padding: 0 !important;
-            width: 57mm !important; /* NUEVO TAMAÑO */
-            height: 40mm !important; /* NUEVO TAMAÑO */
+            width: 57mm !important;
+            height: 40mm !important;
             background-color: white;
             color: black;
             font-family: Arial, sans-serif;
@@ -38,22 +42,21 @@ $nombre = isset($_GET['nombre']) ? $_GET['nombre'] : '';
             justify-content: center;
             text-align: center;
             box-sizing: border-box;
-            
-            /* Ajustamos los márgenes para la impresora (dejamos 4mm a la izquierda por el rodillo) */
-            padding: 2mm 2mm 2mm 4mm; 
+            padding: 1.5mm 1mm 1.5mm 4mm; /* 4mm izquierdo para rodillo */
         }
 
         .marca-negocio {
-            font-size: 9pt; /* Letra crecida */
+            font-size: 8pt;
             font-weight: 900;
             margin-bottom: 2px;
             color: #000;
+            text-transform: uppercase;
         }
 
         .nombre-producto {
-            font-size: 10pt; /* Letra crecida */
+            font-size: 9pt;
             font-weight: bold;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -61,20 +64,31 @@ $nombre = isset($_GET['nombre']) ? $_GET['nombre'] : '';
             color: #000;
         }
 
-        /* BARRAS MAXIMIZADAS AL NUEVO TAMAÑO */
+        /* ESTILOS EXTRAS PARA TALLER */
+        .linea-taller {
+            font-size: 7.5pt;
+            font-weight: 500;
+            margin-bottom: 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 52mm;
+            color: #000;
+            text-align: left; /* Alineado a la izquierda para mayor orden */
+        }
+
         #barcode {
             max-width: 52mm;  
-            max-height: 22mm; 
             margin: 0;
             display: block;
         }
 
         .codigo-texto {
-            font-size: 11pt; /* Números más grandes y legibles */
+            font-size: 10pt; 
             font-weight: 900; 
             color: #000;
-            letter-spacing: 3px; 
-            margin-top: 3px;
+            letter-spacing: 2.5px; 
+            margin-top: 2px;
         }
 
         @media print {
@@ -82,17 +96,8 @@ $nombre = isset($_GET['nombre']) ? $_GET['nombre'] : '';
         }
 
         .btn-flotante {
-            position: fixed;
-            top: 5px;
-            right: 5px;
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 10px;
-            z-index: 1000;
+            position: fixed; top: 5px; right: 5px; background: #007aff; color: white;
+            border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; z-index: 1000;
         }
     </style>
 </head>
@@ -106,16 +111,28 @@ $nombre = isset($_GET['nombre']) ? $_GET['nombre'] : '';
         <?php if (!empty($nombre)): ?>
             <div class="nombre-producto"><?php echo htmlspecialchars($nombre); ?></div>
         <?php endif; ?>
+
+        <?php if (!empty($cliente)): ?>
+            <div class="linea-taller"><strong>👤 Cli:</strong> <?php echo htmlspecialchars($cliente); ?></div>
+        <?php endif; ?>
+        
+        <?php if (!empty($detalles)): ?>
+            <div class="linea-taller"><strong>🔧 Falla:</strong> <?php echo htmlspecialchars($detalles); ?></div>
+        <?php endif; ?>
         
         <img id="barcode">
         <div class="codigo-texto"><?php echo htmlspecialchars($codigo); ?></div>
     </div>
 
     <script>
+        // Si la etiqueta lleva datos de taller, bajamos la altura de las barras a 60 para que quepa todo limpio.
+        // Si es una etiqueta normal de producto, aprovecha toda la altura en 90.
+        let alturaBarras = <?php echo $es_reparacion ? '60' : '90'; ?>;
+
         JsBarcode("#barcode", "<?php echo $codigo; ?>", {
             format: "CODE128",
-            width: 2.2,       /* BARRAS MÁS GRUESAS: Al tener 57mm de ancho, la pistola lo leerá rapidísimo */
-            height: 90,       /* BARRAS MÁS ALTAS: Aprovechamos los 40mm de altura */
+            width: 2.0,       
+            height: alturaBarras,       
             displayValue: false, 
             margin: 0,
             background: "#ffffff",

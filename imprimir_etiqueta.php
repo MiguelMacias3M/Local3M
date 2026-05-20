@@ -1,11 +1,9 @@
 <?php
 $codigo = isset($_GET['codigo']) ? $_GET['codigo'] : '000000';
-$nombre = isset($_GET['nombre']) ? $_GET['nombre'] : ''; 
+$marca_modelo = isset($_GET['nombre']) ? $_GET['nombre'] : ''; 
+$tipo_reparacion = isset($_GET['detalles']) ? $_GET['detalles'] : ''; 
 
-// NUEVOS PARAMETROS PARA EL CONTROL DE TALLER
-$cliente  = isset($_GET['cliente']) ? $_GET['cliente'] : ''; 
-$detalles = isset($_GET['detalles']) ? $_GET['detalles'] : ''; 
-$es_reparacion = (!empty($cliente) || !empty($detalles));
+$es_reparacion = (!empty($tipo_reparacion));
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -42,39 +40,43 @@ $es_reparacion = (!empty($cliente) || !empty($detalles));
             justify-content: center;
             text-align: center;
             box-sizing: border-box;
-            padding: 1.5mm 1mm 1.5mm 4mm; /* 4mm izquierdo para rodillo */
+            padding: 2mm 1mm 1mm 4mm; /* 4mm izquierdo para el rodillo */
         }
 
         .marca-negocio {
-            font-size: 8pt;
+            font-size: 10pt;
             font-weight: 900;
             margin-bottom: 2px;
             color: #000;
-            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        .nombre-producto {
-            font-size: 9pt;
+        /* PASTILLA NEGRA PARA EL TIPO DE REPARACIÓN */
+        .pastilla-reparacion {
+            font-size: 8.5pt;
             font-weight: bold;
+            background-color: #000;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-bottom: 3px;
+            max-width: 50mm;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: inline-block;
+        }
+
+        /* MARCA Y MODELO EN UNA SOLA LÍNEA */
+        .marca-modelo {
+            font-size: 11pt;
+            font-weight: 900;
             margin-bottom: 2px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             width: 52mm; 
             color: #000;
-        }
-
-        /* ESTILOS EXTRAS PARA TALLER */
-        .linea-taller {
-            font-size: 7.5pt;
-            font-weight: 500;
-            margin-bottom: 1px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            width: 52mm;
-            color: #000;
-            text-align: left; /* Alineado a la izquierda para mayor orden */
         }
 
         #barcode {
@@ -84,10 +86,10 @@ $es_reparacion = (!empty($cliente) || !empty($detalles));
         }
 
         .codigo-texto {
-            font-size: 10pt; 
+            font-size: 11pt; 
             font-weight: 900; 
             color: #000;
-            letter-spacing: 2.5px; 
+            letter-spacing: 3px; 
             margin-top: 2px;
         }
 
@@ -108,16 +110,12 @@ $es_reparacion = (!empty($cliente) || !empty($detalles));
     <div class="etiqueta-container">
         <div class="marca-negocio">3M TECHNOLOGY</div>
         
-        <?php if (!empty($nombre)): ?>
-            <div class="nombre-producto"><?php echo htmlspecialchars($nombre); ?></div>
+        <?php if (!empty($tipo_reparacion)): ?>
+            <div class="pastilla-reparacion"><?php echo htmlspecialchars($tipo_reparacion); ?></div>
         <?php endif; ?>
 
-        <?php if (!empty($cliente)): ?>
-            <div class="linea-taller"><strong>👤 Cli:</strong> <?php echo htmlspecialchars($cliente); ?></div>
-        <?php endif; ?>
-        
-        <?php if (!empty($detalles)): ?>
-            <div class="linea-taller"><strong>🔧 Falla:</strong> <?php echo htmlspecialchars($detalles); ?></div>
+        <?php if (!empty($marca_modelo)): ?>
+            <div class="marca-modelo"><?php echo htmlspecialchars($marca_modelo); ?></div>
         <?php endif; ?>
         
         <img id="barcode">
@@ -125,13 +123,12 @@ $es_reparacion = (!empty($cliente) || !empty($detalles));
     </div>
 
     <script>
-        // Si la etiqueta lleva datos de taller, bajamos la altura de las barras a 60 para que quepa todo limpio.
-        // Si es una etiqueta normal de producto, aprovecha toda la altura en 90.
-        let alturaBarras = <?php echo $es_reparacion ? '60' : '90'; ?>;
+        // Si la etiqueta tiene reparación, acortamos un poquito las barras. Si es de inventario, las hacemos enormes.
+        let alturaBarras = <?php echo $es_reparacion ? '80' : '90'; ?>;
 
         JsBarcode("#barcode", "<?php echo $codigo; ?>", {
             format: "CODE128",
-            width: 2.0,       
+            width: 2.6,       
             height: alturaBarras,       
             displayValue: false, 
             margin: 0,

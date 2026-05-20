@@ -154,11 +154,24 @@ tbody.addEventListener('click', (e) => {
    } else if (action === 'barcode') {
         e.preventDefault();
         const id = btn.getAttribute('data-id');
-        // Buscamos el modelo en nuestros datos para ponerlo en la etiqueta
-        const row = datos.find(d => String(d.id) === String(id));
-        const modelo = row ? row.modelo : 'Reparación';
         
-        if (id) mostrarCodigo(id, modelo);
+        // Buscamos TODOS los datos de la fila que seleccionaste
+        const row = datos.find(d => String(d.id) === String(id));
+        
+        if (id && row) {
+            // Unimos la Marca y el Modelo en un solo renglón limpio
+            const marca = (row.marca_celular || '').trim();
+            const modeloRaw = (row.modelo || '').trim();
+            const marcaModelo = (marca + ' ' + modeloRaw).trim() || 'Equipo';
+            
+            // Extraemos el tipo de reparación
+            const falla = row.tipo_reparacion || 'Revisión';
+            
+            // Los mandamos a la función (El espacio de cliente se manda vacío '')
+            mostrarCodigo(id, marcaModelo, '', falla);
+        } else {
+            Swal.fire('Error', 'No se pudieron extraer los datos de la fila.', 'error');
+        }
     }
 });
 
@@ -329,15 +342,24 @@ function imprimirTicket(idTransaccion){
 function openBarcodeModal(){ barcodeModal.style.display = 'flex'; }
 function closeBarcodeModal(){ barcodeModal.style.display = 'none'; }
 
-async function mostrarCodigo(id, modelo = 'Reparación') {
+// ==========================================
+// VARIABLES GLOBALES PARA LA ETIQUETA
+// ==========================================
+let currentModelo = '';
+let currentCliente = '';
+let currentFalla = '';
+
+async function mostrarCodigo(id, modelo = 'Equipo', cliente = '', falla = '') {
     barcodeSpinner.style.display = 'block';
     barcodeWrap.style.display = 'none';
     barcodeError.style.display = 'none';
     
-    currentModelo = modelo; // Guardamos el nombre del celular
+    // Guardamos los datos recibidos en las variables globales
+    currentModelo = modelo;
+    currentCliente = cliente;
+    currentFalla = falla;
 
     if(btnPrintBarcode) btnPrintBarcode.disabled = true;
-// ... (el resto de la función se queda igual)
     if(btnCopyBarcode) btnCopyBarcode.disabled = true;
 
     document.getElementById('barcode-svg').innerHTML = '';
@@ -391,12 +413,13 @@ if(btnCopyBarcode){
 if(btnPrintBarcode){
     btnPrintBarcode.addEventListener('click', () => {
         if(currentBarcode){
-            // Mandamos a llamar tu archivo especializado de etiquetas de 50x25mm
-            // Dejamos el &nombre= vacío para que la etiqueta maximice el código
-            const url = `/local3M/imprimir_etiqueta.php?codigo=${encodeURIComponent(currentBarcode)}&nombre=`;
+            // Usamos las variables globales que guardamos en mostrarCodigo()
+            const url = `/local3M/imprimir_etiqueta.php?codigo=${encodeURIComponent(currentBarcode)}` +
+                        `&nombre=${encodeURIComponent(currentModelo)}` +
+                        `&cliente=${encodeURIComponent(currentCliente)}` +
+                        `&detalles=${encodeURIComponent(currentFalla)}`;
             
-            // Abre la ventana en modo Kiosco
-            window.open(url, '_blank', 'width=400,height=400');
+            window.open(url, '_blank', 'width=400,height=500');
         }
     });
 }

@@ -21,6 +21,7 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
 ?>
 
 <link rel="stylesheet" href="/local3M/css/editar_reparacion.css?v=<?php echo time(); ?>">
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 
 <div class="page-title">
     <h1>Editar Reparación #<?= $id ?></h1>
@@ -226,7 +227,29 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
         </div>
     </div>
 </div>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Tomamos el input donde está escrito el código (revisa que el ID sea correcto)
+        let inputCodigo = document.getElementById('codigo_barras');
+        
+        // Buscamos el lugar donde se va a dibujar (usualmente un <svg id="barcode-svg"> o <img>)
+        let contenedorDibujo = document.getElementById('barcode-svg');
 
+        if(inputCodigo && contenedorDibujo) {
+            let codigoGuardado = inputCodigo.value;
+            
+            // Si el cliente sí tiene un código guardado, lo dibujamos
+            if(codigoGuardado && codigoGuardado.trim() !== "") {
+                JsBarcode("#barcode-svg", codigoGuardado, {
+                    format: "CODE128",
+                    width: 2,
+                    height: 50,
+                    displayValue: true // Aquí sí mostramos los números abajo para que los veas al editar
+                });
+            }
+        }
+    });
+</script>
 <script>
     const REPARACION_ID = <?= $id ?>;
     const TICKET_URL = "<?= $ticketUrl ?>";

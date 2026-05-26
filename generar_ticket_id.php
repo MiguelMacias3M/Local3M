@@ -73,6 +73,7 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ticket #<?php echo $codigo_barras; ?></title>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
     <style>
         @page {
             margin: 0; 
@@ -301,17 +302,31 @@ try {
 
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 <script>
-        window.onload = function() {
-            // Le damos medio segundo de respiro para que el sistema abra el segundo ticket
-            setTimeout(function() {
-                window.print();
-                
-                // Cerramos un segundo después de mandar a imprimir
-                setTimeout(function() {
-                    window.close();
-                }, 1000);
-            }, 500); 
-        };
-    </script>
+    window.onload = function() {
+        // 1. Usamos tu variable real $codigo_barras que creaste en la línea 32
+        let codigoBarras = "<?php echo trim(preg_replace('/\s+/', '', $codigo_barras)); ?>";
+        
+        // 2. Solo intentamos dibujar si realmente llegó un código válido
+        if (codigoBarras !== "") {
+            try {
+                JsBarcode("#barcode", codigoBarras, {
+                    format: "CODE128",
+                    width: 1.5,
+                    height: 40,
+                    displayValue: false,
+                    margin: 0
+                });
+            } catch (error) {
+                console.error("Error al dibujar el código de barras:", error);
+            }
+        }
+
+        // 3. Imprimimos el ticket (con o sin código)
+        setTimeout(function() {
+            window.print();
+            setTimeout(function() { window.close(); }, 1000);
+        }, 500); 
+    };
+</script>
 </body>
 </html>

@@ -224,6 +224,7 @@ $esAdmin = (isset($_SESSION['rol']) && strtolower($_SESSION['rol']) === 'admin')
                     <a href="/local3M/dashboard.php" class="sub-btn"><i class="fas fa-home"></i> Inicio</a>
                     <a href="/local3M/venta.php" class="sub-btn"><i class="fas fa-cash-register" style="color:#34c759;"></i> Punto de Venta</a>
                     <a href="/local3M/apartados.php" class="sub-btn"><i class="fas fa-book" style="color:#ff9500;"></i> Apartados</a>
+                    <a href="/local3M/encargos.php" class="sub-btn"><i class="fas fa-list" style="color:#ff9500;"></i> Encargos</a>
                 </div>
             </div>
 

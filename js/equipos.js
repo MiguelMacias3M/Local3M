@@ -144,7 +144,7 @@ async function cargarEquipos() {
             // ===============================================
             let isDisponible = (eq.estado === 'Disponible');
             let opacidadBoton = isDisponible ? '' : 'opacity: 0.4; cursor: not-allowed;';
-            let eventoClic = isDisponible ? `onclick="abrirModalAccion(${eq.id}, '${eq.marca} ${eq.modelo}', ${eq.precio_venta})"` : '';
+            let eventoClic = isDisponible ? `onclick="abrirModalAccion(${eq.id}, '${eq.marca} ${eq.modelo}', ${eq.precio_venta}, '${eq.imei_serie}')"` : '';
             let tituloBoton = isDisponible ? 'Realizar Venta o Apartado' : 'Equipo NO disponible';
 
             const tr = document.createElement('tr');
@@ -247,10 +247,15 @@ function cerrarModalEquipo() {
 }
 
 // --- FUNCIONES DEL MODAL DE ACCIÓN (VENTA/APARTADO) ---
-function abrirModalAccion(id, nombre, precio) {
+function abrirModalAccion(id, nombre, precio, imei) {
+    // Guardamos los datos ocultos
     document.getElementById('accion_equipo_id').value = id;
     document.getElementById('accion_equipo_nombre').value = nombre;
     document.getElementById('accion_equipo_precio').value = precio;
+    document.getElementById('accion_equipo_imei').value = imei; 
+    
+    // (Ya quitamos las líneas que limpiaban los campos viejos del cliente)
+    
     document.getElementById('texto-accion-equipo').innerText = `Equipo: ${nombre}\nPrecio: $${parseFloat(precio).toLocaleString('es-MX', {minimumFractionDigits: 2})}`;
     
     const modal = document.getElementById('modalAccionEquipo');
@@ -263,20 +268,115 @@ function cerrarModalAccion() {
     modal.classList.remove('show-modal');
     setTimeout(() => modal.style.display = 'none', 300);
 }
+// ==========================================
+// VENTANA EMERGENTE PARA DATOS DE GARANTÍA
+// ==========================================
 
-function mandarAlCarritoGlobal() {
+async function pedirDatosGarantia() {
+    cerrarModalAccion(); // Cerramos la ventana de decisiones
+
+    // 1. Extraemos los datos del equipo que estaban ocultos
     const id = document.getElementById('accion_equipo_id').value;
     const nombre = document.getElementById('accion_equipo_nombre').value;
     const precio = parseFloat(document.getElementById('accion_equipo_precio').value);
+    const imei = document.getElementById('accion_equipo_imei').value;
 
-    const itemEquipo = { id: id, nombre: nombre, precio: precio, cantidad: 1, tipo: 'equipo' };
+    // 2. Lanzamos la alerta obligatoria
+    const { value: formValues } = await Swal.fire({
+        title: 'Datos de Garantía',
+        html:
+            '<p style="font-size:14px; color:#1d1d1f; margin-bottom: 15px; font-weight:500;">Ingresa los datos del cliente <span style="color:#dc3545; font-weight:bold;">(Obligatorio)</span></p>' +
+            '<div style="margin-bottom:12px;">' +
+            '<input id="swal-input-cliente" class="swal2-input solid-swal-input" placeholder="Nombre completo *" style="width: 85%; margin:0 auto; display:block;">' +
+            '</div>' +
+            '<div>' +
+            '<input id="swal-input-telefono" class="swal2-input solid-swal-input" placeholder="Teléfono a 10 dígitos *" type="tel" maxlength="10" style="width: 85%; margin:0 auto; display:block;" oninput="this.value = this.value.replace(/[^0-9]/g, \'\')">' +
+            '</div>',
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-cart-plus"></i> Al Carrito',
+        cancelButtonText: 'Cancelar',
+        customClass: {
+            container: 'blur-swal-backdrop', 
+            popup: 'solid-swal-popup',       
+            title: 'solid-swal-title',
+            confirmButton: 'glass-btn primary',
+            cancelButton: 'glass-btn'
+        },
+        backdrop: false, 
+        preConfirm: () => {
+            const cliente = document.getElementById('swal-input-cliente').value.trim();
+            const telefono = document.getElementById('swal-input-telefono').value.trim();
+
+            if (!cliente) {
+                Swal.showValidationMessage('El nombre del cliente es obligatorio.');
+                return false;
+            }
+            if (!telefono || telefono.length !== 10) {
+                Swal.showValidationMessage('Debes ingresar un teléfono válido de 10 dígitos.');
+                return false;
+            }
+            return { cliente, telefono };
+        }
+    });
+
+    // 3. SI LLENARON LOS DATOS, ARMAMOS EL PAQUETE Y LO MANDAMOS DIRECTO AL CARRITO
+    if (formValues) {
+        // 🔥 AQUÍ ESTÁ LA MAGIA: Soldamos el teléfono al nombre del cliente
+        const clienteConTelefono = formValues.cliente + " - Tel: " + formValues.telefono;
+        
+        // Soldamos el IMEI al nombre del equipo
+        const nombreConImei = nombre + " (IMEI/Serie: " + imei + ")";
+
+        // Armamos el objeto para el carrito
+        const itemEquipo = { 
+            id: id, 
+            nombre: nombreConImei, 
+            precio: precio, 
+            cantidad: 1, 
+            tipo: 'equipo',
+            cliente_nombre: clienteConTelefono 
+        };
+
+        // Lo inyectamos a tu carrito global
+        if (typeof agregarAlCarritoGlobal === 'function') {
+            agregarAlCarritoGlobal(itemEquipo);
+            Swal.fire({
+                toast: true, position: 'top-end', icon: 'success', 
+                title: 'Equipo agregado', showConfirmButton: false, timer: 1500
+            });
+        } else {
+            Swal.fire('Error', 'No se pudo conectar con el carrito.', 'error');
+        }
+    }
+}
+// ==========================================
+// ENVÍO FINAL AL CARRITO
+// ==========================================
+function mandarAlCarritoGlobal(id, nombre, precio, imei, cliente, telefono) {
+    const nombreConImei = `${nombre} (IMEI/Serie: ${imei})`;
+    
+    // 🔥 NUEVO: Juntamos el cliente con su teléfono para que se guarde en el historial
+    const clienteConTelefono = `${cliente} - Tel: ${telefono}`;
+
+    const itemEquipo = { 
+        id: id, 
+        nombre: nombreConImei, 
+        precio: precio, 
+        cantidad: 1, 
+        tipo: 'equipo',
+        cliente_nombre: clienteConTelefono 
+    };
 
     if (typeof agregarAlCarritoGlobal === 'function') {
         agregarAlCarritoGlobal(itemEquipo);
+        Swal.fire({
+            toast: true, position: 'top-end', icon: 'success', 
+            title: 'Equipo agregado', showConfirmButton: false, timer: 1500
+        });
     } else {
         Swal.fire('Error', 'No se pudo conectar con el carrito.', 'error');
     }
-    cerrarModalAccion();
 }
 
 // --- FUNCIONES DEL SISTEMA DE APARTADOS ---
@@ -327,4 +427,123 @@ function calcularRestaApartado() {
 }
 function verApartados() {
     window.location.href = '/local3M/apartados.php';
+}
+// ==========================================
+// BUSCADOR DE GARANTÍAS
+// ==========================================
+// ==========================================
+// BUSCADOR DE GARANTÍAS (CORREGIDO CON ANIMACIÓN GLASS)
+// ==========================================
+function abrirModalGarantia() {
+    document.getElementById('inputBuscarGarantia').value = '';
+    document.getElementById('resultadosGarantia').innerHTML = '<p style="text-align:center; color:#86868b; font-size:14px; margin-top:20px;">Escribe el nombre, teléfono o escanea el IMEI y presiona Buscar</p>';
+    
+    const modal = document.getElementById('modalGarantia');
+    modal.style.display = 'flex'; // 1. Lo ponemos en la pantalla
+    
+    // 2. Le damos 10 milisegundos y le inyectamos la clase que lo hace visible y animado
+    setTimeout(() => { 
+        modal.classList.add('show-modal'); 
+        document.getElementById('inputBuscarGarantia').focus(); // Ponemos el cursor listo para la pistola
+    }, 10);
+}
+
+function cerrarModalGarantia() {
+    const modal = document.getElementById('modalGarantia');
+    modal.classList.remove('show-modal'); // 1. Lo hacemos transparente (animación de salida)
+    
+    // 2. Esperamos a que termine la animación (300ms) y lo quitamos de la pantalla
+    setTimeout(() => {
+        modal.style.display = 'none';
+    }, 300);
+}
+
+// (La función async function buscarGarantia() se queda exactamente igual)
+
+async function buscarGarantia() {
+    const q = document.getElementById('inputBuscarGarantia').value.trim();
+    const resDiv = document.getElementById('resultadosGarantia');
+    
+    if(!q) { 
+        resDiv.innerHTML = '<p style="text-align:center; color:#dc3545;">Por favor, ingresa un dato para buscar.</p>'; 
+        return; 
+    }
+    
+    resDiv.innerHTML = '<p style="text-align:center; margin-top:20px;"><i class="fas fa-spinner fa-spin fa-2x" style="color:#007aff;"></i></p>';
+    
+    try {
+        const res = await fetch(`/local3M/api/buscar_garantia.php?q=${encodeURIComponent(q)}`);
+        const json = await res.json();
+        
+        if(json.success) {
+            if(json.data.length === 0) {
+                resDiv.innerHTML = '<p style="text-align:center; color:#dc3545; font-weight:bold; margin-top:20px;">No se encontraron ventas con esos datos.</p>';
+                return;
+            }
+            
+            let html = '<ul style="list-style:none; padding:0; margin:0;">';
+            json.data.forEach(v => {
+                // 1. Formateamos la fecha
+                const fechaObj = new Date(v.fecha);
+                const fechaStr = fechaObj.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+                
+                // 2. DESGLOSAR EL EQUIPO Y EL IMEI
+                // v.descripcion trae algo como: "Venta Equipo: iPhone 13 (IMEI/Serie: 123456)"
+                let nombreEquipo = v.descripcion;
+                let imeiEquipo = "No registrado";
+                
+                const matchImei = v.descripcion.match(/\(IMEI\/Serie:\s*(.*?)\)/);
+                if (matchImei) {
+                    imeiEquipo = matchImei[1]; // Sacamos solo el número
+                    // Limpiamos el texto para que solo quede el nombre del equipo
+                    nombreEquipo = v.descripcion.replace("Venta Equipo: ", "").replace(/\(IMEI\/Serie:.*?\)/, "").trim();
+                }
+
+                // 3. DESGLOSAR EL CLIENTE Y EL TELÉFONO
+                // v.cliente trae algo como: "Juan Perez - Tel: 4491234567"
+                let nombreCliente = v.cliente;
+                let telCliente = "Sin teléfono";
+                
+                if (v.cliente && v.cliente.includes(" - Tel: ")) {
+                    let partes = v.cliente.split(" - Tel: ");
+                    nombreCliente = partes[0].trim();
+                    telCliente = partes[1].trim() || "Sin teléfono";
+                }
+
+                // 4. Armamos la tarjeta limpia usando monto_unitario
+                html += `
+                    <li style="background:#f5f5f7; border:1px solid #e5e5ea; padding:15px; margin-bottom:10px; border-radius:12px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px solid #ddd; padding-bottom:8px;">
+                            <strong style="color:#1d1d1f;"><i class="far fa-calendar-alt"></i> Venta: ${fechaStr}</strong>
+                            <span style="color:#34c759; font-weight:900; font-size:16px;">$${parseFloat(v.monto_unitario).toLocaleString('es-MX', {minimumFractionDigits:2})}</span>
+                        </div>
+                        
+                        <div style="font-size:15px; margin-bottom:4px; font-weight:bold; color:#007aff;">
+                            <i class="fas fa-mobile-alt"></i> ${nombreEquipo}
+                        </div>
+                        <div style="font-size:13px; color:#1d1d1f; margin-bottom:10px;">
+                            <i class="fas fa-barcode"></i> <strong>IMEI:</strong> <span style="background:#fff; padding:2px 6px; border-radius:4px; border:1px solid #ccc;">${imeiEquipo}</span>
+                        </div>
+                        
+                        <div style="font-size:13px; color:#1d1d1f; margin-bottom:4px;">
+                            <i class="fas fa-user"></i> <strong>Cliente:</strong> ${nombreCliente}
+                        </div>
+                        <div style="font-size:13px; color:#1d1d1f; margin-bottom:10px;">
+                            <i class="fas fa-phone-alt"></i> <strong>Teléfono:</strong> <a href="tel:${telCliente}" style="color:#5856d6; text-decoration:none;">${telCliente}</a>
+                        </div>
+                        
+                        <div style="font-size:12px; color:#86868b; display:flex; justify-content:space-between; border-top:1px dashed #ccc; padding-top:8px;">
+                            <span><i class="fas fa-user-tie"></i> Atendió: ${v.usuario}</span>
+                            <span><i class="fas fa-money-bill-wave"></i> Pago: ${v.metodo_pago}</span>
+                        </div>
+                    </li>`;
+            });
+            html += '</ul>';
+            resDiv.innerHTML = html;
+        } else {
+            resDiv.innerHTML = `<p style="text-align:center; color:#dc3545;">Error: ${json.error}</p>`;
+        }
+    } catch(e) {
+        resDiv.innerHTML = `<p style="text-align:center; color:#dc3545;">Error de conexión.</p>`;
+    }
 }

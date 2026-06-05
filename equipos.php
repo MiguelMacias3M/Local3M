@@ -9,6 +9,40 @@ include 'templates/header.php';
 
 <style>
     /* =========================================
+           ESTILOS PARA EL POP-UP DE GARANTÍA (SÓLIDO)
+           ========================================= */
+        /* 1. Fondo de toda la pantalla (Desenfocado y oscuro) */
+        .blur-swal-backdrop {
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important;
+            background-color: rgba(0, 0, 0, 0.5) !important;
+        }
+        
+        /* 2. La ventana principal (Totalmente sólida y redondeada) */
+        .solid-swal-popup {
+            background: #ffffff !important; /* Blanco sólido */
+            border-radius: 24px !important; /* Esquinas bien redondas */
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2) !important; /* Sombra profunda */
+            border: none !important;
+        }
+        
+        .solid-swal-title { color: #1d1d1f !important; font-weight: 800 !important; }
+        
+        /* 3. Cajas de texto limpias */
+        .solid-swal-input {
+            background: #f5f5f7 !important; /* Gris muy clarito */
+            border: 1px solid #e5e5ea !important;
+            border-radius: 12px !important;
+            color: #1d1d1f !important;
+            font-size: 15px !important;
+            transition: all 0.3s !important;
+        }
+        .solid-swal-input:focus {
+            background: #ffffff !important;
+            border-color: #007aff !important;
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15) !important;
+        }
+    /* =========================================
        ESTILO GLASSMORPHISM (iOS / Apple Style)
        ========================================= */
     .glass-container {
@@ -212,17 +246,21 @@ include 'templates/header.php';
     ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.3); }
 </style>
 
-<div class="container glass-container">
-    
     <div class="glass-header">
         <div>
             <h2><i class="fas fa-mobile-alt" style="color: #007aff;"></i> Inventario Elite</h2>
             <p>Control de equipos de alto valor y sistema de apartados.</p>
         </div>
-        <div style="display: flex; gap: 12px;">
+        
+        <div class="header-actions" style="display: flex; gap: 12px; align-items: center;"> 
+            <button class="glass-btn" style="background: rgba(88, 86, 214, 0.15); color: #5856d6; border: 1px solid rgba(88, 86, 214, 0.3);" onclick="abrirModalGarantia()">
+                <i class="fas fa-shield-alt"></i> Buscar Garantía
+            </button>
+            
             <button class="glass-btn primary" onclick="abrirModalEquipo()">
                 <i class="fas fa-plus"></i> Registrar Equipo
             </button>
+            
             <button class="glass-btn warning" onclick="verApartados()">
                 <i class="fas fa-book"></i> Ver Apartados
             </button>
@@ -333,28 +371,28 @@ include 'templates/header.php';
         setTimeout(() => modal.style.display = 'none', 300);
     }
 </script>
-<!-- Modal: ¿Vender o Apartar? -->
+<!-- Modal de Acciones para Venta (Agregar al Carrito o Apartado) -->
 <div id="modalAccionEquipo" class="glass-modal-overlay">
-    <div class="glass-modal-content" style="max-width: 400px; text-align: center;">
-        <h3 style="margin-top: 0; margin-bottom: 10px; font-weight: 700; font-size: 20px;">¿Qué deseas hacer?</h3>
-        <p id="texto-accion-equipo" style="color: #86868b; margin-bottom: 25px; font-size: 14px;"></p>
+    <div class="glass-modal-content">
+        <h3 style="text-align: center; margin-top:0; font-weight: 800;">Opciones de Venta</h3>
         
-        <!-- Guardamos los datos temporalmente escondidos -->
         <input type="hidden" id="accion_equipo_id">
-        <input type="hidden" id="accion_equipo_precio">
         <input type="hidden" id="accion_equipo_nombre">
+        <input type="hidden" id="accion_equipo_precio">
+        <input type="hidden" id="accion_equipo_imei">
 
-        <div style="display: flex; flex-direction: column; gap: 15px;">
-            <button class="glass-btn primary" onclick="mandarAlCarritoGlobal()" style="justify-content: center; font-size: 16px; padding: 15px; background: rgba(52, 199, 89, 0.9); border-color: rgba(52, 199, 89, 0.4);">
-                <i class="fas fa-shopping-cart"></i> Vender al Contado
+        <p id="texto-accion-equipo" style="text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 25px; color: #007aff;"></p>
+
+        <div style="display: flex; gap: 12px; flex-direction: column;">
+            <button class="glass-btn primary" style="width: 100%; justify-content: center;" onclick="pedirDatosGarantia()">
+                <i class="fas fa-shopping-cart"></i> Agregar al Carrito (Contado)
             </button>
-            <button class="glass-btn warning" onclick="abrirModalApartado()" style="justify-content: center; font-size: 16px; padding: 15px;">
-                <i class="fas fa-calendar-alt"></i> Iniciar Sistema de Apartado
+            <button class="glass-btn warning" style="width: 100%; justify-content: center;" onclick="abrirModalApartado()">
+                <i class="fas fa-book"></i> Iniciar Sistema de Apartado
             </button>
-        </div>
-        
-        <div style="margin-top: 25px;">
-            <button class="glass-btn" onclick="cerrarModalAccion()" style="width: 100%; justify-content: center;">Cancelar</button>
+            <button class="glass-btn" style="width: 100%; justify-content: center;" onclick="cerrarModalAccion()">
+                Cancelar
+            </button>
         </div>
     </div>
 </div>
@@ -417,6 +455,24 @@ include 'templates/header.php';
                 </button>
             </div>
         </form>
+    </div>
+</div>
+<div id="modalGarantia" class="glass-modal-overlay">
+    <div class="glass-modal-content" style="max-width: 600px; width: 90%;">
+        <h3 style="margin-top:0; font-weight: 800;"><i class="fas fa-search" style="color:#5856d6;"></i> Validar Garantía</h3>
+        
+        <div class="glass-input-group">
+            <input type="text" id="inputBuscarGarantia" class="glass-input" placeholder="Escanea IMEI o ingresa nombre/teléfono..." onkeyup="if(event.key === 'Enter') buscarGarantia()">
+        </div>
+        
+        <button class="glass-btn primary" style="width:100%; justify-content:center; margin-bottom:15px;" onclick="buscarGarantia()">
+            Buscar Registro
+        </button>
+        
+        <div id="resultadosGarantia" style="max-height: 350px; overflow-y: auto; padding-right: 5px;">
+            </div>
+        
+        <button class="glass-btn" style="width:100%; justify-content:center; margin-top:15px;" onclick="cerrarModalGarantia()">Cerrar</button>
     </div>
 </div>
 

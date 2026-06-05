@@ -215,11 +215,16 @@ try {
             else if ($item['tipo'] === 'equipo') {
                 $stmtEquipoUpdate->execute([$item['id']]);
                 $subtotal = $item['precio'] * $item['cantidad']; 
+                
+                // Si escribieron el nombre del cliente, lo usamos. Si lo dejaron en blanco, usamos Público General
+                $clienteEq = (isset($item['cliente_nombre']) && trim($item['cliente_nombre']) !== '') ? $item['cliente_nombre'] : 'Público General';
+                
+                // En el item['nombre'] ya viene el IMEI fusionado desde Javascript
                 $descripcion = "Venta Equipo: " . $item['nombre'];
                 
                 $stmtCaja->execute([
                     $idTx, 'INGRESO', $item['id'], $descripcion, $item['cantidad'], 
-                    $item['precio'], $subtotal, $usuario, 'Público General', 'Equipos', $metodoPago
+                    $item['precio'], $subtotal, $usuario, $clienteEq, 'Equipos', $metodoPago
                 ]);
             }
             // ==========================================

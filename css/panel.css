@@ -663,3 +663,120 @@ Responsividad (Móviles)
     background-color: #006ce4;
     box-shadow: 0 12px 24px rgba(0, 122, 255, 0.4);
 }
+
+/* --- ESTILOS EXTRAÍDOS DEL DASHBOARD --- */
+
+/* Tarjeta de alerta activa */
+.stat-card-alert {
+    border: 2px solid #dc3545;
+}
+.stat-icon-alert-active {
+    background: #ffe6e6; 
+    color: #dc3545;
+}
+.stat-text-alert-active {
+    color: #dc3545;
+}
+
+/* Contenedor principal de Alertas */
+.alert-center-box {
+    border-left: 5px solid #dc3545;
+}
+.alert-center-title {
+    color: #333; 
+    margin-bottom: 1.5rem;
+}
+.alert-center-title i {
+    color: #dc3545;
+}
+
+/* Grid del Centro de Alertas */
+.alert-center-grid {
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+    gap: 20px;
+}
+
+/* Bloques de Alertas Individuales */
+.alert-block-danger {
+    background: #fff5f5; 
+    border: 1px solid #fed7d7; 
+    border-radius: 8px; 
+    padding: 15px;
+}
+.alert-block-danger h3 {
+    font-size: 1rem; 
+    margin-top: 0; 
+    margin-bottom: 10px; 
+    color: #c53030;
+}
+
+.alert-block-warning {
+    background: #fffaf0; 
+    border: 1px solid #feebc8; 
+    border-radius: 8px; 
+    padding: 15px;
+}
+.alert-block-warning h3 {
+    font-size: 1rem; 
+    margin-top: 0; 
+    margin-bottom: 10px; 
+    color: #c05621;
+}
+
+.alert-block-info {
+    background: #fffff0; 
+    border: 1px solid #fefcbf; 
+    border-radius: 8px; 
+    padding: 15px;
+}
+.alert-block-info h3 {
+    font-size: 1rem; 
+    margin-top: 0; 
+    margin-bottom: 10px; 
+    color: #744210;
+}
+
+/* Tablas y elementos internos de alertas */
+.alert-table {
+    font-size: 0.85rem; 
+    background: white;
+}
+.text-danger-bold {
+    color: #c53030; 
+    font-weight: bold;
+}
+.text-warning-bold {
+    color: #c05621; 
+    font-weight: bold;
+}
+.text-align-right {
+    text-align: right;
+}
+.text-align-center {
+    text-align: center;
+}
+
+/* Bloque de stock */
+.stock-alert-container {
+    text-align: center; 
+    padding: 10px;
+}
+.stock-alert-container p {
+    color: #744210; 
+    margin-bottom: 10px;
+}
+.btn-stock-view {
+    background-color: #d69e2e; 
+    border: none; 
+    cursor: pointer;
+}
+.btn-stock-hide {
+    background-color: #ccc; 
+    color: #333; 
+    border: none; 
+    cursor: pointer;
+}
+#tabla-stock {
+    margin-top: 15px;
+}

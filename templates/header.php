@@ -38,156 +38,9 @@ $esAdmin = (isset($_SESSION['rol']) && strtolower($_SESSION['rol']) === 'admin')
     
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/local3M/css/panel.css">
+    <link rel="stylesheet" href="/local3M/css/header.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <style>
-        body { font-family: 'Poppins', sans-serif; }
-
-        /* =========================================
-           HEADER REORDENADO Y LOGO MEJORADO
-           ========================================= */
-        .navbar {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(255,255,255,0.5);
-            padding: 12px 40px; display: flex; justify-content: space-between; align-items: center;
-            position: sticky; top: 0; z-index: 1000;
-        }
-
-        .nav-left { display: flex; align-items: center; gap: 30px; }
-
-        /* Botón de Hamburguesa */
-        .btn-menu-trigger {
-            background: none; border: none; font-size: 24px; color: #1d1d1f;
-            cursor: pointer; transition: 0.3s; padding: 5px;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .btn-menu-trigger:hover { color: #007aff; transform: scale(1.1); }
-
-        /* Logo 3M TECHNOLOGY */
-        .logo-group {
-            display: flex; flex-direction: column; align-items: flex-start;
-            line-height: 0.8; cursor: default;
-        }
-        .logo-3m {
-            font-size: 32px; font-weight: 800;
-            background: linear-gradient(45deg, #007aff 25%, #00c6ff 25%, #00c6ff 50%, #007aff 50%, #007aff 75%, #00c6ff 75%, #00c6ff 100%);
-            background-size: 10px 10px;
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            margin-bottom: 4px;
-        }
-        .logo-tech {
-            font-size: 12px; font-weight: 600; color: #86868b;
-            letter-spacing: 3.5px; text-transform: uppercase;
-        }
-
-        /* =========================================
-           LAUNCHPAD (Cierre al tocar fondo)
-           ========================================= */
-        .launchpad-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.3);
-            backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
-            z-index: 9999; display: flex; flex-direction: column; align-items: center; padding-top: 100px;
-            opacity: 0; pointer-events: none; transition: all 0.4s ease;
-        }
-        .launchpad-overlay.active { opacity: 1; pointer-events: all; }
-
-        /* Contenedor de apps (para evitar que se cierre al hacer clic aquí) */
-        .launchpad-grid {
-            display: flex; flex-wrap: wrap; justify-content: center; gap: 45px;
-            max-width: 1100px; padding: 20px;
-        }
-
-        .module-group { position: relative; width: 160px; transition: all 0.4s ease; }
-        .launchpad-grid:hover .module-group:not(:hover) { opacity: 0.3; filter: blur(5px); transform: scale(0.92); }
-
-        .module-core {
-            display: flex; flex-direction: column; align-items: center; gap: 18px;
-            color: #1d1d1f; font-weight: 600; font-size: 16px; cursor: pointer;
-        }
-        
-        .icon-box {
-            width: 100px; height: 100px; background: rgba(255,255,255,0.9);
-            border-radius: 26px; display: flex; align-items: center; justify-content: center;
-            font-size: 42px; box-shadow: 0 10px 30px rgba(0,0,0,0.06); transition: 0.3s;
-        }
-        .module-group:hover .icon-box { transform: translateY(-8px) scale(1.05); box-shadow: 0 20px 40px rgba(0,0,0,0.12); }
-
-        /* RECUADROS QUE BROTAN (Con Puente Invisible) */
-        .module-sub {
-            position: absolute; 
-            top: 85%; /* Lo subimos para que empalme con la carpeta */
-            left: 50%; 
-            transform: translateX(-50%) translateY(0);
-            width: 220px; 
-            display: flex; flex-direction: column; gap: 10px;
-            opacity: 0; pointer-events: none; 
-            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            padding-top: 35px; /* 🔥 EL PUENTE INVISIBLE 🔥 */
-            z-index: 10;
-        }
-
-        .module-group:hover .module-sub { 
-            opacity: 1; 
-            pointer-events: all; 
-            transform: translateX(-50%) translateY(15px); /* Baja suavemente */
-        }
-        .sub-btn {
-            background: white; padding: 14px 18px; border-radius: 16px;
-            display: flex; align-items: center; gap: 12px; text-decoration: none;
-            color: #1d1d1f; font-weight: 600; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-        .sub-btn:hover { transform: scale(1.05); color: #007aff; }
-
-        .navbar-user span { font-weight: 600; font-size: 14px; color: #1d1d1f; }
-        .logout-button {
-            text-decoration: none; background: #ff3b30; color: white; padding: 8px 16px;
-            border-radius: 10px; font-size: 13px; font-weight: 600; transition: 0.3s;
-        }
-        .logout-button:hover { background: #d72c21; transform: translateY(-1px); }
-
-        /* =========================================
-           📱 RESPONSIVE: ADAPTACIÓN PARA CELULARES
-           ========================================= */
-        @media (max-width: 768px) {
-            /* Barra superior más compacta */
-            .navbar { padding: 10px 15px; }
-            .logo-3m { font-size: 22px; margin-bottom: 2px; }
-            .logo-tech { font-size: 9px; letter-spacing: 1.5px; }
-            .nav-left { gap: 15px; }
-            
-            /* Ocultamos el nombre de usuario para dar espacio (solo queda el botón de Salir) */
-            .navbar-user span { display: none; } 
-            .logout-button { padding: 6px 12px; font-size: 12px; }
-
-            /* Menú de cristal adaptado a pantallas chicas */
-            .btn-cerrar-menu { top: 15px; right: 15px; width: 35px; height: 35px; font-size: 18px; }
-            .launchpad-overlay { padding-top: 60px; }
-            .launchpad-overlay h2 { font-size: 26px !important; }
-            .launchpad-overlay p { margin-bottom: 20px !important; font-size: 14px !important; text-align: center; padding: 0 10px; }
-            
-            .launchpad-grid { gap: 15px; padding: 10px; }
-            
-            /* Hacemos que quepan exactamente 2 iconos por fila para usar bien el espacio */
-            .module-group { width: 145px; }
-            .icon-box { width: 80px; height: 80px; font-size: 32px; border-radius: 20px; }
-            .module-core { gap: 10px; font-size: 14px; }
-            
-            /* Reducimos el tamaño de los submenús */
-            .module-sub { width: 160px; padding-top: 25px; }
-            .sub-btn { padding: 10px 12px; font-size: 12px; gap: 8px; }
-            
-            /* MAGIA PARA EVITAR DESBORDAMIENTO: 
-               Los de la izquierda abren hacia la derecha, los de la derecha hacia la izquierda */
-            .module-group:nth-child(odd) .module-sub { left: 0; transform: translateX(0) translateY(0); }
-            .module-group:nth-child(odd):hover .module-sub { transform: translateX(0) translateY(10px); }
-            
-            .module-group:nth-child(even) .module-sub { left: auto; right: 0; transform: translateX(0) translateY(0); }
-            .module-group:nth-child(even):hover .module-sub { transform: translateX(0) translateY(10px); }
-        }
-    </style>
 </head>
 <body>
 
@@ -210,8 +63,8 @@ $esAdmin = (isset($_SESSION['rol']) && strtolower($_SESSION['rol']) === 'admin')
     </nav>
 
     <div class="launchpad-overlay" id="menuCristal" onclick="toggleMenu()">
-        <h2 style="font-weight: 800; font-size: 36px; margin-bottom: 5px;">Módulos</h2>
-        <p style="color: #86868b; margin-bottom: 40px;">Gestiona tu negocio de forma inteligente</p>
+        <h2 class="launchpad-title">Módulos</h2>
+        <p class="launchpad-subtitle">Gestiona tu negocio de forma inteligente</p>
         
         <div class="launchpad-grid" onclick="event.stopPropagation()">
             
@@ -234,7 +87,6 @@ $esAdmin = (isset($_SESSION['rol']) && strtolower($_SESSION['rol']) === 'admin')
                     Inventario
                 </div>
                 <div class="module-sub">
-                   
                     <a href="/local3M/equipos.php" class="sub-btn"><i class="fas fa-mobile-alt" style="color:#007aff;"></i> Vitrina</a>
                     <a href="/local3M/productos.php" class="sub-btn"><i class="fas fa-boxes" style="color:#8e8e93;"></i> Productos</a>
                     <a href="/local3M/mercancia.php" class="sub-btn"><i class="fas fa-list" style="color:#5856d6;"></i> Mercancía</a>

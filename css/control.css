@@ -1,253 +1,226 @@
-/* =====================================
-ESTILOS PARA CONTROL.PHP (control.css)
-=====================================
-*/
+/* =========================================
+   LIQUID GLASS & RESPONSIVE - CONTROL.PHP
+   ========================================= */
 
-/* --- 1. BUSCADOR Y FILTROS --- */
+/* Contenedores Base */
+.glass-container { 
+    padding: 20px; 
+    animation: fadeIn 0.5s ease; 
+    color: #1d1d1f; 
+}
+.glass-card { 
+    background: rgba(255, 255, 255, 0.65); 
+    backdrop-filter: blur(20px); 
+    -webkit-backdrop-filter: blur(20px); 
+    border: 1px solid rgba(255, 255, 255, 0.8); 
+    border-radius: 24px; 
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08); 
+    padding: 25px; 
+    margin-bottom: 25px; 
+}
 
-.search-box {
+/* Cabecera */
+.glass-header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 25px; 
+    flex-wrap: wrap; 
+    gap: 15px; 
+}
+.glass-header h1 { margin: 0; font-weight: 800; font-size: 26px; letter-spacing: -0.5px; }
+.glass-header p { color: #86868b; margin-top: 5px; font-size: 15px; }
+
+/* Buscador Responsivo */
+.glass-search-box { 
+    display: flex; 
+    flex-wrap: wrap; 
+    gap: 15px; 
+    align-items: center; 
+    padding: 20px; 
+}
+.glass-search-wrap { flex: 1; min-width: 250px; position: relative; }
+.glass-search-wrap i { 
+    position: absolute; 
+    left: 16px; 
+    top: 50%; 
+    transform: translateY(-50%); 
+    color: #888; 
+    font-size: 1.1rem; 
+}
+.glass-input { 
+    width: 100%; 
+    height: 48px; 
+    padding-left: 45px; 
+    padding-right: 15px; 
+    background: rgba(255, 255, 255, 0.6); 
+    border: 1px solid rgba(0, 0, 0, 0.08); 
+    border-radius: 14px; 
+    font-size: 15px; 
+    color: #1d1d1f; 
+    outline: none; 
+    transition: 0.3s; 
+    box-sizing: border-box; 
+}
+.glass-input:focus { 
+    background: rgba(255, 255, 255, 0.9); 
+    border-color: #007aff; 
+    box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.15); 
+}
+
+/* Botones Cristalinos */
+.glass-btn { 
+    background: rgba(255, 255, 255, 0.5); 
+    backdrop-filter: blur(10px); 
+    border: 1px solid rgba(255, 255, 255, 0.8); 
+    border-radius: 14px; 
+    padding: 0 20px; 
+    height: 48px; 
+    font-weight: 600; 
+    font-size: 14px; 
+    color: #1d1d1f; 
+    cursor: pointer; 
+    transition: all 0.3s; 
+    display: inline-flex; 
+    align-items: center; 
+    justify-content: center; 
+    gap: 8px; 
+}
+.glass-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+.glass-btn.primary { background: rgba(0, 122, 255, 0.9); color: white; border-color: rgba(0, 122, 255, 0.4); }
+.glass-btn.success { background: rgba(52, 199, 89, 0.9); color: white; border-color: rgba(52, 199, 89, 0.4); }
+.glass-btn.info { background: rgba(88, 86, 214, 0.9); color: white; border-color: rgba(88, 86, 214, 0.4); }
+
+/* Tabla Estilo Cristal */
+.glass-table-wrapper { 
+    border-radius: 16px; 
+    overflow-x: auto; 
+    -webkit-overflow-scrolling: touch; 
+    border: 1px solid rgba(255, 255, 255, 0.5); 
+    background: rgba(255, 255, 255, 0.3); 
+}
+.glass-table { width: 100%; border-collapse: collapse; min-width: 800px; }
+.glass-table th { 
+    background: rgba(255, 255, 255, 0.5); 
+    padding: 16px; 
+    text-align: left; 
+    font-weight: 600; 
+    font-size: 13px; 
+    color: #86868b; 
+    text-transform: uppercase; 
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05); 
+}
+.glass-table td { 
+    padding: 16px; 
+    border-bottom: 1px solid rgba(255, 255, 255, 0.4); 
+    font-size: 14px; 
+    font-weight: 500; 
+    vertical-align: middle; 
+}
+
+/* Modales e Interfaces de Cristal */
+.glass-modal-overlay { 
+    position: fixed; 
+    top: 0; left: 0; 
+    width: 100%; height: 100%; 
+    background: rgba(0, 0, 0, 0.25); 
+    backdrop-filter: blur(20px); 
+    -webkit-backdrop-filter: blur(20px); 
+    z-index: 2000; 
     display: flex;
-    flex-wrap: wrap;
-    gap: 15px; /* Espacio entre la barra y los botones */
+    justify-content: center; 
+    align-items: center; 
+    animation: fadeInModal 0.3s ease; 
+}
+.glass-modal-content { 
+    background: rgba(255, 255, 255, 0.82); 
+    backdrop-filter: blur(30px); 
+    border: 1px solid rgba(255, 255, 255, 0.9); 
+    border-radius: 28px; 
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15); 
+    padding: 30px; 
+    width: 92%; 
+    max-width: 550px; 
+    max-height: 88vh; 
+    overflow-y: auto; 
+}
+
+/* Nuevas Clases Amigables para Ventana "Ver" */
+.detail-modal-header {
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
-    background: #fff;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+.detail-modal-header h2 { margin: 0; font-size: 22px; font-weight: 800; }
+.detail-section-card {
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 16px;
     padding: 15px;
-    border-radius: 10px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    margin-bottom: 15px;
 }
-
-.search-wrap {
-    flex: 1; /* Ocupa el espacio disponible */
-    min-width: 300px;
-    position: relative; /* Para posicionar el icono */
-}
-
-.search-wrap i {
-    position: absolute;
-    left: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #888;
-    font-size: 1.1rem;
-}
-
-/* Estilo del Input de búsqueda */
-.search-wrap .form-input {
-    width: 100%;
-    height: 45px; /* Altura FIJA para igualar botones */
-    padding-left: 45px; /* Espacio para el icono */
-    padding-right: 15px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 1rem;
-    outline: none;
-    box-sizing: border-box;
-    transition: border-color 0.3s;
-}
-
-.search-wrap .form-input:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(0, 78, 146, 0.1);
-}
-
-.search-buttons {
-    display: flex;
-    gap: 10px;
-}
-
-/* --- 2. ESTILOS DE BOTONES (GENERALES) --- */
-/* Estos estilos aplican a TODOS los botones .form-button */
-
-.form-button {
-    height: 45px; /* Misma altura que el input */
-    padding: 0 20px;
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px; /* Espacio entre icono y texto */
-    transition: all 0.3s ease;
-    text-decoration: none;
-    line-height: 1;
-}
-
-/* Colores de botones */
-.btn-primary {
-    background-color: #02a2e1; /* Azul */
-    color: white;
-}
-.btn-primary:hover { background-color: #003973; }
-
-.btn-secondary {
-    background-color: #e9ecef; /* Gris claro */
-    color: #333;
-    border: 1px solid #ced4da;
-}
-.btn-secondary:hover { background-color: #dde0e3; }
-
-.btn-danger {
-    background-color: #dc3545; /* Rojo */
-    color: white;
-}
-.btn-danger:hover { background-color: #c82333; }
-
-.btn-warning {
-    background-color: #ffc107; /* Amarillo */
-    color: #333;
-}
-.btn-warning:hover { background-color: #e0a800; }
-
-.btn-info {
-    background-color: #17a2b8; /* Cyan */
-    color: white;
-}
-.btn-info:hover { background-color: #138496; }
-
-
-/* --- 3. TABLA DE RESULTADOS --- */
-
-.table-wrap {
-    overflow-x: auto;
-    border-radius: 8px;
-    border: 1px solid #eee;
-}
-
-.control-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 900px; /* Fuerza scroll horizontal en móviles */
-}
-
-.control-table th {
-    background-color: #f8f9fa;
-    color: #555;
+.detail-section-title {
+    font-size: 13px;
     font-weight: 700;
-    text-align: left;
-    padding: 15px;
-    border-bottom: 2px solid #dee2e6;
-}
-
-.control-table td {
-    padding: 12px 15px;
-    border-bottom: 1px solid #eee;
-    vertical-align: middle;
-    color: #333;
-}
-
-.control-table tr:hover {
-    background-color: #f8f9fa;
-}
-
-/* Columna de Acciones */
-.control-table .td-actions {
-    text-align: right;
-    white-space: nowrap;
-    width: 1%;
-}
-
-/* Botones dentro de la tabla (más pequeños) */
-.td-actions .form-button {
-    height: 32px; /* Altura reducida */
-    padding: 0 12px;
-    font-size: 0.85rem;
-    border-radius: 6px;
-    margin-left: 4px;
-}
-
-
-/* --- 4. ESTADOS (Etiquetas de color) --- */
-.status {
-    padding: 5px 10px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 700;
-    display: inline-block;
-    text-transform: capitalize;
-}
-.status-wait { background-color: #ffea00ec; color: #5d5d5d; }      /* En espera */
-.status-pending { background-color: #cce5ff; color: #004085; }   /* Diagnóstico */
-.status-progress { background-color: #d1ecf1; color: #0c5460; }  /* En progreso */
-.status-ready { background-color: #d4edda; color: #155724; }     /* Reparado */
-.status-completed { background-color: #d4edda; color: #155724; } /* Entregado */
-.status-cancelled { background-color: #f8d7da; color: #721c24; } /* Cancelado */
-.status-unknown { background-color: #e2e3e5; color: #383d41; }   /* Otro */
-
-
-/* --- 5. EXTRAS (Spinner, Feedback) --- */
-.table-feedback {
-    text-align: center;
-    padding: 3rem;
-    color: #777;
-    background: #fff;
-    border-radius: 8px;
-    margin-top: 10px;
-}
-
-.more-wrap {
-    text-align: center;
-    padding: 20px;
-}
-
-.spinner {
-    width: 30px;
-    height: 30px;
-    border: 3px solid rgba(0,0,0,0.1);
-    border-left-color: #004e92;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    display: inline-block;
-    vertical-align: middle;
-    margin-left: 10px;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-
-/* --- 6. MODALES --- */
-.modal-overlay {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 2000;
+    color: #86868b;
+    text-transform: uppercase;
+    margin-bottom: 10px;
     display: flex;
-    justify-content: center;
     align-items: center;
-    backdrop-filter: blur(3px);
+    gap: 6px;
 }
-
-.modal-content {
-    background: white;
-    padding: 2rem;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 600px;
-    position: relative;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-    max-height: 90vh;
-    overflow-y: auto;
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
 }
+.detail-item-label { font-size: 12px; color: #86868b; margin-bottom: 2px; }
+.detail-item-value { font-size: 15px; font-weight: 600; color: #1d1d1f; }
 
-.modal-close {
-    position: absolute;
-    top: 15px;
-    right: 20px;
-    font-size: 1.8rem;
-    cursor: pointer;
-    background: none;
-    border: none;
-    color: #aaa;
-    line-height: 1;
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeInModal { from { opacity: 0; } to { opacity: 1; } }
+
+/* =========================================
+   📱 RESPONSIVE: VISTA EXCLUSIVA CELULARES
+   ========================================= */
+@media (max-width: 768px) {
+    .glass-header h1 { font-size: 22px; }
+    .glass-search-box { flex-direction: column; align-items: stretch; padding: 15px; }
+    .glass-btn { width: 100%; }
+    
+    /* Transformación de Tabla a Tarjetas */
+    .glass-table { min-width: 100%; }
+    .glass-table, .glass-table tbody, .glass-table tr, .glass-table td { display: block; width: 100%; box-sizing: border-box; }
+    .glass-table thead { display: none; } 
+    
+    .glass-table tr { 
+        margin-bottom: 15px; 
+        background: rgba(255, 255, 255, 0.5); 
+        border-radius: 16px; 
+        border: 1px solid rgba(255, 255, 255, 0.8); 
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04); 
+        padding: 10px; 
+    }
+    .glass-table td { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        text-align: right; 
+        border-bottom: 1px solid rgba(0, 0, 0, 0.04); 
+        padding: 12px 10px; 
+    }
+    .glass-table td:last-child { border-bottom: none; justify-content: center; gap: 10px; }
+    
+    .glass-table td::before { 
+        content: attr(data-label); 
+        font-weight: 700; 
+        color: #86868b; 
+        text-transform: uppercase; 
+        font-size: 11px; 
+        text-align: left; 
+        flex: 1; 
+    }
 }
-.modal-close:hover { color: #333; }
-
-.modal-body { margin-top: 1rem; line-height: 1.6; }
-.modal-footer { margin-top: 1.5rem; text-align: right; border-top: 1px solid #eee; padding-top: 1rem; }
-
-/* Modal Código de barras */
-#barcode-wrap { margin: 20px 0; }
-#barcode-text { font-family: monospace; font-size: 1.2rem; margin-top: 10px; letter-spacing: 3px; }

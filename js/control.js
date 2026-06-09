@@ -10,7 +10,9 @@ let finDeLista = false;
 let datos = [];
 let busqueda = '';
 let currentBarcode = ''; 
-
+let currentModelo = '';
+let currentCliente = '';
+let currentFalla = '';
 
 // Elementos del DOM
 const tbody = document.getElementById('tablaReparacionesBody');
@@ -23,7 +25,7 @@ const btnLimpiar = document.getElementById('btnLimpiar');
 const modalDetalles = document.getElementById('modalDetalles');
 const detallesContenido = document.getElementById('detallesContenido');
 
-// Elementos Modal Código de Barras
+// Elementos Modal Código de Barras Independiente
 const barcodeModal = document.getElementById('barcodeModal');
 const barcodeSpinner = document.getElementById('barcode-spinner');
 const barcodeWrap = document.getElementById('barcode-wrap');
@@ -31,399 +33,330 @@ const barcodeError = document.getElementById('barcode-error');
 const btnPrintBarcode = document.getElementById('btnPrintBarcode');
 const btnCopyBarcode = document.getElementById('btnCopyBarcode');
 
-
 // ========= Carga paginada =========
 async function cargarPagina() {
     if (cargando || finDeLista) return;
     cargando = true;
-    btnMas.disabled = true;
-    globalLoader.style.display = 'block';
+    if (btnMas) btnMas.disabled = true;
+    if (globalLoader) globalLoader.style.display = 'inline-block';
+    if (noResults) noResults.style.display = 'none';
 
     try {
-        const url = new URL('/local3M/api/get_reparaciones.php', window.location.origin);
-        url.searchParams.set('offset', offset);
-        url.searchParams.set('limit', LIMIT);
-        if (busqueda) url.searchParams.set('q', busqueda);
+        const url = `/local3M/api/get_reparaciones.php?limit=${LIMIT}&offset=${offset}&q=${encodeURIComponent(busqueda)}`;
+        const res = await fetch(url);
+        const data = await res.json();
 
-        const res = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
-        const json = await res.json();
-        
-        if (!res.ok) throw new Error(json.error || 'Error de servidor');
-        if (!json.success) throw new Error(json.error || 'Error al cargar');
+        if (data.success) {
+            const lista = data.data || [];
+            if (lista.length < LIMIT) {
+                finDeLista = true;
+                if (btnMas) btnMas.style.display = 'none';
+            } else {
+                if (btnMas) btnMas.style.display = 'inline-block';
+            }
 
-        const chunk = json.data || [];
+            datos = datos.concat(lista);
+            renderizarFilas(lista);
+            offset += lista.length;
 
-        if (offset === 0) {
-            datos = [];
-            tbody.innerHTML = '';
+            if (datos.length === 0) {
+                if (noResults) noResults.style.display = 'block';
+                if (btnMas) btnMas.style.display = 'none';
+            }
+        } else {
+            console.error("Error del servidor:", data.error);
         }
-
-        noResults.style.display = (offset === 0 && chunk.length === 0) ? 'block' : 'none';
-
-        const baseIndex = datos.length;
-        datos.push(...chunk);
-        renderFilas(chunk, baseIndex);
-
-        finDeLista = !json.hasMore;
-        btnMas.style.display = finDeLista ? 'none' : 'block';
-        offset += LIMIT;
-
-    } catch (err) {
-        console.error(err);
-        Swal.fire('Ups', err.message || 'Error inesperado', 'error');
+    } catch (e) {
+        console.error("Error al cargar reparaciones:", e);
     } finally {
         cargando = false;
-        btnMas.disabled = false;
-        globalLoader.style.display = 'none';
+        if (btnMas) btnMas.disabled = false;
+        if (globalLoader) globalLoader.style.display = 'none';
     }
 }
 
-function renderFilas(chunk, baseIndex) {
-    chunk.forEach((row, i) => {
-        const idx = baseIndex + i;
+// ========= Renderizar Filas de la Tabla =========
+function renderizarFilas(lista) {
+    lista.forEach(rep => {
         const tr = document.createElement('tr');
+        
+        let estadoClass = 'status-unknown';
+        const est = (rep.estado || '').toLowerCase();
+        if (est.includes('espera')) estadoClass = 'status-wait';
+        else if (est.includes('revision') || est.includes('diagnosticado')) estadoClass = 'status-pending';
+        else if (est.includes('progreso')) estadoClass = 'status-progress';
+        else if (est.includes('reparado')) estadoClass = 'status-ready';
+
+        // SINCRO BD: monto, adelanto, deuda
+        const costoTotal = parseFloat(rep.monto) || 0;
+        const totalAbonado = parseFloat(rep.adelanto) || 0; 
+        const saldoPendiente = rep.deuda !== undefined && rep.deuda !== null ? parseFloat(rep.deuda) : (costoTotal - totalAbonado);
+
+        const codigoVisual = rep.codigo_barras || rep.codigo || rep.folio || rep.id;
+
         tr.innerHTML = `
-            <td>${esc(row.nombre_cliente)}</td>
-            <td>${esc(row.tipo_reparacion)}</td>
-            <td>${esc(row.modelo)}</td>
-            <td>${esc(row.codigo_barras)}</td>
-            <td>${renderEstado(esc(row.estado))}</td>
-            <td class="td-actions">
-                <button class='form-button btn-info' data-action="ver" data-index="${idx}">
-                    <i class="fas fa-eye"></i> Ver
-                </button>
-                <a href='/local3M/editar_reparacion.php?id=${row.id}' class='form-button btn-warning'>
-                    <i class="fas fa-edit"></i> Editar
-                </a>
-                <button class='form-button btn-danger' data-action="eliminar" data-id="${row.id}">
-                    <i class="fas fa-trash"></i> Eliminar
-                </button>
-                <button class='form-button btn-primary' data-action="imprimir" data-idtx="${esc(row.id_transaccion)}">
-                    <i class="fas fa-print"></i> Ticket
-                </button>
-                <button class='form-button btn-secondary btn-barcode' data-action="barcode" data-id='${row.id}'>
-                    <i class="fas fa-barcode"></i> Código
-                </button>
-                <button class="btn btn-success btn-sm" onclick="enviarReparacionAlCarritoGlobal(<?= $rep['id'] ?>, '<?= $rep['modelo'] ?>', <?= $rep['monto'] ?>, <?= $rep['deuda'] ?>)">
-                    <i class="fas fa-cart-plus"></i> Cobrar Saldo
-                </button>
-            </td>`;
+            <td data-label="Folio"><strong>${escapeHTML(codigoVisual)}</strong></td>
+            <td data-label="Cliente">
+                <div style="font-weight:600;">${escapeHTML(rep.nombre_cliente)}</div>
+                <div style="font-size:12px; color:#86868b;">${escapeHTML(rep.telefono)}</div>
+            </td>
+            <td data-label="Equipo">
+                <div style="font-weight:600; color:#007aff;">${escapeHTML(rep.modelo)}</div>
+            </td>
+            <td data-label="Problema">${escapeHTML(rep.tipo_reparacion)}</td>
+            <td data-label="Estado"><span class="status ${estadoClass}">${escapeHTML(rep.estado)}</span></td>
+            <td data-label="Acciones" style="text-align: center;">
+                <div style="display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: center;">
+                    <button class="glass-btn" style="height:36px; padding:0 12px; font-size:13px;" onclick="verDetalles(${rep.id})" title="Ver Detalles y Código">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="glass-btn info" style="height:36px; padding:0 12px; font-size:13px;" onclick="mostrarCodigo(${rep.id})" title="Imprimir/Copiar Código de Barras">
+                        <i class="fas fa-barcode"></i>
+                    </button>
+                    <a href="/local3M/editar_reparacion.php?id=${rep.id}" class="glass-btn primary" style="height:36px; padding:0 12px; font-size:13px; text-decoration:none;" title="Editar / Actualizar">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    ${saldoPendiente > 0 && est.includes('reparado') ? `
+                        <button class="glass-btn success" style="height:36px; padding:0 12px; font-size:13px;" onclick="enviarReparacionAlCarritoGlobal(${rep.id}, '${escapeJS(rep.modelo)}', ${costoTotal}, ${saldoPendiente})" title="Cobrar Entrega">
+                            <i class="fas fa-cash-register"></i>
+                        </button>
+                    ` : ''}
+                    <button class="glass-btn" style="height:36px; padding:0 12px; font-size:13px; background: rgba(255,59,48,0.1); color:#ff3b30; border-color:rgba(255,59,48,0.2);" onclick="eliminarReparacion(${rep.id})" title="Eliminar">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            </td>
+        `;
         tbody.appendChild(tr);
     });
 }
 
-function esc(val){ return (val ?? '').toString().replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-
-function renderEstado(estadoRaw){
-    const text = (estadoRaw || '').toString().trim();
-    if (!text) return `<span class="status status-unknown">--</span>`;
-    
-    const normalized = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ');
-
-    let cls = 'status-unknown';
-    if (normalized.includes('espera')) cls = 'status-wait';
-    else if (normalized.includes('revision') || normalized.includes('diagnosticado')) cls = 'status-pending';
-    else if (normalized.includes('progreso')) cls = 'status-progress';
-    else if (normalized.includes('reparado')) cls = 'status-ready';
-    else if (normalized.includes('entregado')) cls = 'status-completed';
-    else if (normalized.includes('cancelado') || normalized.includes('no se pudo')) cls = 'status-cancelled';
-    
-    return `<span class="status ${cls}">${text}</span>`;
+// ========= Filtrado y Búsqueda =========
+function ejecutarBusqueda() {
+    busqueda = inputBuscar.value.trim();
+    tbody.innerHTML = '';
+    offset = 0;
+    datos = [];
+    finDeLista = false;
+    cargarPagina();
 }
 
-// ========= Acciones de la tabla =========
-tbody.addEventListener('click', (e) => {
-    const btn = e.target.closest('button, a');
-    if (!btn) return;
-
-    const action = btn.getAttribute('data-action');
-    
-    if (action === 'ver') {
-        e.preventDefault();
-        const index = parseInt(btn.getAttribute('data-index'), 10);
-        const row = isNaN(index) ? null : datos[index];
-        if (row) mostrarDetalles(row);
-    } else if (action === 'eliminar') {
-        e.preventDefault();
-        const id = btn.getAttribute('data-id');
-        if (id) confirmarEliminar(id);
-    } else if (action === 'imprimir') {
-        e.preventDefault();
-        const idtx = btn.getAttribute('data-idtx');
-        if (idtx) imprimirTicket(idtx);
-   } else if (action === 'barcode') {
-        e.preventDefault();
-        const id = btn.getAttribute('data-id');
-        
-        // Buscamos TODOS los datos de la fila que seleccionaste
-        const row = datos.find(d => String(d.id) === String(id));
-        
-        if (id && row) {
-            // Unimos la Marca y el Modelo en un solo renglón limpio
-            const marca = (row.marca_celular || '').trim();
-            const modeloRaw = (row.modelo || '').trim();
-            const marcaModelo = (marca + ' ' + modeloRaw).trim() || 'Equipo';
-            
-            // Extraemos el tipo de reparación
-            const falla = row.tipo_reparacion || 'Revisión';
-            
-            // Los mandamos a la función (El espacio de cliente se manda vacío '')
-            mostrarCodigo(id, marcaModelo, '', falla);
-        } else {
-            Swal.fire('Error', 'No se pudieron extraer los datos de la fila.', 'error');
-        }
-    }
-});
-
-function confirmarEliminar(id) {
-    Swal.fire({
-        title: 'Confirmar Eliminación',
-        text: "Esta acción no se puede deshacer. Ingresa la contraseña de administrador:",
-        input: 'password',
-        inputPlaceholder: 'Contraseña',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Eliminar',
-        cancelButtonText: 'Cancelar',
-        showLoaderOnConfirm: true,
-        preConfirm: (password) => {
-            return fetch('/local3M/api/eliminar_reparacion.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: id, password: password })
-            })
-            .then(response => {
-                if (!response.ok) throw new Error(response.statusText);
-                return response.json();
-            })
-            .then(data => {
-                if (!data.success) throw new Error(data.error || 'Error desconocido');
-                return data;
-            })
-            .catch(error => {
-                Swal.showValidationMessage(`Error: ${error.message}`);
-            });
-        },
-        allowOutsideClick: () => !Swal.isLoading()
-    }).then((result) => {
-        if (result.isConfirmed) {
-            Swal.fire('¡Eliminado!', 'La reparación ha sido eliminada correctamente.', 'success')
-                .then(() => {
-                    offset = 0; datos = []; tbody.innerHTML = ''; cargarPagina();
-                });
-        }
+if (btnBuscar) btnBuscar.addEventListener('click', ejecutarBusqueda);
+if (inputBuscar) {
+    inputBuscar.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') ejecutarBusqueda();
     });
 }
 
-inputBuscar.addEventListener('input', () => {
-    const txt = inputBuscar.value.trim().toLowerCase();
-    if (!txt) {
+if (btnLimpiar) {
+    btnLimpiar.addEventListener('click', () => {
+        inputBuscar.value = '';
+        busqueda = '';
         tbody.innerHTML = '';
-        renderFilas(datos, 0);
-        noResults.style.display = (datos.length === 0) ? 'block' : 'none';
-        return;
-    }
-    const filtrados = datos.filter(d => coincideBusqueda(d, txt));
-    tbody.innerHTML = '';
-    if(filtrados.length > 0) renderFilas(filtrados, 0);
-    noResults.style.display = (filtrados.length === 0) ? 'block' : 'none';
-});
-
-function coincideBusqueda(row, txt){
-    if(!txt) return true;
-    const campos = [
-        row.nombre_cliente, row.tipo_reparacion, row.modelo, row.codigo_barras
-    ].map(v => (v||'').toString().toLowerCase());
-    return campos.some(c => c.includes(txt));
+        offset = 0;
+        datos = [];
+        finDeLista = false;
+        cargarPagina();
+    });
 }
 
-btnBuscar.addEventListener('click', ejecutarBusquedaServidor);
-btnLimpiar.addEventListener('click', () => {
-    inputBuscar.value = '';
-    busqueda = '';
-    offset = 0; 
-    finDeLista = false;
-    cargarPagina();
-});
+// ========= Ventana Amigable de Detalles de Orden (Liquid Glass) =========
+function verDetalles(id) {
+    const rep = datos.find(x => x.id == id);
+    if (!rep) return;
 
-function ejecutarBusquedaServidor(){
-    busqueda = inputBuscar.value.trim();
-    offset = 0; 
-    finDeLista = false;
-    cargarPagina();
-}
+    const fechaReg = rep.fecha_hora || rep.fecha_ingreso || rep.fecha || 'N/A';
+    
+    // SINCRO BD: monto, adelanto, deuda
+    const costoTotal = parseFloat(rep.monto) || 0;
+    const anticipo = parseFloat(rep.adelanto) || 0;
+    const restante = rep.deuda !== undefined && rep.deuda !== null ? parseFloat(rep.deuda) : (costoTotal - anticipo);
+    
+    const infoExtraContenido = rep.info_extra || rep.observaciones || 'Sin anotaciones adicionales en la recepción.';
+    
+    const codigoCompleto = rep.codigo_barras || rep.codigo || rep.folio || rep.id;
 
-btnMas.addEventListener('click', cargarPagina);
-
-function formatoFechaMx(iso){
-    if(!iso) return '<span style="color:#999">No registrada</span>';
-    const s = String(iso).replace(' ','T');
-    const d = new Date(s);
-    if(isNaN(d)) return iso;
-    return d.toLocaleString('es-MX',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-}
-
-// ========= AQUÍ ESTÁ LA FUNCIÓN CORREGIDA (CON FECHA DE INGRESO) =========
-function mostrarDetalles(row){
-    // Preparamos la ubicación
-    const ubicacionHtml = row.ubicacion 
-        ? `<span style="background:#0d6efd; color:white; padding:2px 6px; border-radius:4px;">${esc(row.ubicacion)}</span>` 
-        : '<span style="color:#999">Sin asignar</span>';
-
-    const detalles = `
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size: 14px;">
-            <div style="grid-column: span 2; background:#e9ecef; padding:5px 10px; border-radius:5px; margin-bottom:5px;">
-                <strong>📅 Fecha de Ingreso:</strong> ${formatoFechaMx(row.fecha_hora)}
-            </div>
-
-            <div>
-                <strong>Cliente:</strong><br>${esc(row.nombre_cliente)}
-            </div>
-            <div>
-                <strong>Teléfono:</strong><br>${esc(row.telefono)}
-            </div>
-            <div>
-                <strong>Atendió:</strong><br>${esc(row.usuario)}
-            </div>
-            <div>
-                <strong>Estado:</strong><br>${renderEstado(esc(row.estado))}
-            </div>
-        </div>
-        
-        <hr style="border-color: #eee; margin: 15px 0;">
-
-        <div style="font-size: 14px;">
-            <strong>Equipo:</strong> ${esc(row.tipo_reparacion)} ${esc(row.marca_celular)} ${esc(row.modelo)}<br>
-            <strong>Código barras:</strong> ${esc(row.codigo_barras)}<br>
-            <strong>Info Extra:</strong> ${esc(row.info_extra)}
-        </div>
-
-        <div style="background:#f8f9fa; padding:10px; border-radius:8px; margin-top:15px; border:1px solid #e9ecef;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                <strong>📍 Ubicación en Caja:</strong>
-                ${ubicacionHtml}
-            </div>
-            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                <strong>🚀 Entrega Estimada:</strong>
-                <span>${formatoFechaMx(row.fecha_estimada)}</span>
-            </div>
-            <div style="display:flex; justify-content:space-between;">
-                <strong>🏁 Fecha Entrega Real:</strong>
-                <span>${row.fecha_entrega ? formatoFechaMx(row.fecha_entrega) : '-'}</span>
+    detallesContenido.innerHTML = `
+        <div class="detail-section-card">
+            <div class="detail-section-title"><i class="fas fa-user"></i> Datos del Cliente</div>
+            <div class="detail-grid">
+                <div>
+                    <div class="detail-item-label">Nombre del Cliente</div>
+                    <div class="detail-item-value">${escapeHTML(rep.nombre_cliente)}</div>
+                </div>
+                <div>
+                    <div class="detail-item-label">Teléfono de Contacto</div>
+                    <div class="detail-item-value">${escapeHTML(rep.telefono)}</div>
+                </div>
             </div>
         </div>
 
-        <hr style="border-color: #eee; margin: 15px 0;">
+        <div class="detail-section-card">
+            <div class="detail-section-title"><i class="fas fa-mobile-alt"></i> Detalles de la Reparación</div>
+            <div style="margin-bottom: 12px;">
+                <div class="detail-item-label">Modelo del Equipo</div>
+                <div class="detail-item-value" style="color: #007aff; font-size: 16px;">${escapeHTML(rep.modelo)}</div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <div class="detail-item-label">Falla / Servicio Requerido</div>
+                <div class="detail-item-value">${escapeHTML(rep.tipo_reparacion)}</div>
+            </div>
+            <div class="detail-grid">
+                <div>
+                    <div class="detail-item-label">Fecha de Registro</div>
+                    <div class="detail-item-value">${escapeHTML(fechaReg)}</div>
+                </div>
+                <div>
+                    <div class="detail-item-label">Promesa de Entrega</div>
+                    <div class="detail-item-value">${escapeHTML(rep.fecha_estimada || 'N/A')}</div>
+                </div>
+            </div>
+        </div>
 
-        <div style="display:flex; justify-content:space-between; font-size:15px;">
-            <span>Monto Total:</span> <strong>$${esc(row.monto)}</strong>
+        <div class="detail-section-card" style="background: rgba(0, 122, 255, 0.05);">
+            <div class="detail-section-title" style="color: #007aff;"><i class="fas fa-dollar-sign"></i> Balance de la Orden</div>
+            <div class="detail-grid">
+                <div>
+                    <div class="detail-item-label">Costo Total</div>
+                    <div class="detail-item-value">$${costoTotal.toFixed(2)}</div>
+                </div>
+                <div>
+                    <div class="detail-item-label">Anticipo Dejado</div>
+                    <div class="detail-item-value" style="color: #34c759;">$${anticipo.toFixed(2)}</div>
+                </div>
+                <div>
+                    <div class="detail-item-label">Saldo Restante</div>
+                    <div class="detail-item-value" style="color: ${restante > 0 ? '#ff9500' : '#34c759'}; font-size: 16px;">
+                        $${restante.toFixed(2)}
+                    </div>
+                </div>
+            </div>
         </div>
-        <div style="display:flex; justify-content:space-between; font-size:15px; color:#28a745;">
-            <span>Abonado:</span> <strong>$${esc(row.adelanto)}</strong>
+
+        <div style="margin-top: 12px; margin-bottom: 20px; padding: 0 5px;">
+            <div class="detail-item-label">Información Extra de Recepción</div>
+            <p style="background: rgba(0,0,0,0.03); padding: 12px; border-radius: 12px; font-style: italic; margin: 5px 0 0 0; font-size: 13.5px; color:#555; white-space: pre-line;">
+                ${escapeHTML(infoExtraContenido)}
+            </p>
         </div>
-        <div style="display:flex; justify-content:space-between; font-size:16px; color:#dc3545; margin-top:5px; border-top:1px dashed #ccc; padding-top:5px;">
-            <span>Resta:</span> <strong>$${esc(row.deuda)}</strong>
+
+        <div class="detail-section-card" style="text-align: center; background: white; border: 1px solid rgba(0,0,0,0.04); margin-bottom: 20px;">
+            <div class="detail-section-title" style="justify-content: center; margin-bottom: 5px;"><i class="fas fa-barcode"></i> Etiqueta de Taller</div>
+            <div style="display: flex; justify-content: center; padding: 10px 0; overflow: visible;">
+                <svg id="modal-detail-barcode-svg" style="max-width: 100%; height: auto;"></svg>
+            </div>
+        </div>
+
+        <div style="margin-top: 15px; padding: 0 5px;">
+            <button class="glass-btn primary" style="width: 100%; height: 46px; justify-content: center; font-weight: 700;" onclick="document.getElementById('modalDetalles').style.display='none'">
+                <i class="fas fa-times-circle"></i> Cerrar Detalles
+            </button>
         </div>
     `;
+
+    modalDetalles.style.display = 'flex';
+
+    setTimeout(() => {
+        try {
+            const svgElement = document.getElementById("modal-detail-barcode-svg");
+            svgElement.style.maxWidth = "100%";
+            svgElement.style.height = "auto";
+
+            JsBarcode("#modal-detail-barcode-svg", String(codigoCompleto), {
+                format: "CODE128",
+                width: 1.6,
+                height: 55,
+                displayValue: true, 
+                text: String(codigoCompleto), 
+                fontSize: 15,
+                fontOptions: "bold",
+                textPosition: "bottom",
+                font: "Poppins",
+                margin: 5
+            });
+        } catch (err) {
+            console.error("Error al generar código de barras interno:", err);
+        }
+    }, 120); 
+}
+
+// ========= Modal de Código de Barras Independiente =========
+function mostrarCodigo(id) {
+    const rep = datos.find(x => x.id == id);
+    if (!rep) return;
+
+    const codigoCompleto = rep.codigo_barras || rep.codigo || rep.folio || rep.id;
     
-    detallesContenido.innerHTML = detalles;
-    modalDetalles.style.display = "flex";
-}
+    currentBarcode = String(codigoCompleto);
+    currentModelo = rep.modelo;
+    currentCliente = rep.nombre_cliente;
+    currentFalla = rep.tipo_reparacion;
 
-function cerrarModal(){ modalDetalles.style.display = "none"; }
-
-function imprimirTicket(idTransaccion){
-    window.location.href = '/local3M/generar_ticket_id.php?id_transaccion=' + encodeURIComponent(idTransaccion);
-}
-
-// ===== Modal Código de Barras =====
-function openBarcodeModal(){ barcodeModal.style.display = 'flex'; }
-function closeBarcodeModal(){ barcodeModal.style.display = 'none'; }
-
-// ==========================================
-// VARIABLES GLOBALES PARA LA ETIQUETA
-// ==========================================
-let currentModelo = '';
-let currentCliente = '';
-let currentFalla = '';
-
-async function mostrarCodigo(id, modelo = 'Equipo', cliente = '', falla = '') {
-    barcodeSpinner.style.display = 'block';
+    barcodeModal.style.display = 'flex';
+    barcodeSpinner.style.display = 'inline-block';
     barcodeWrap.style.display = 'none';
     barcodeError.style.display = 'none';
-    
-    // Guardamos los datos recibidos en las variables globales
-    currentModelo = modelo;
-    currentCliente = cliente;
-    currentFalla = falla;
 
-    if(btnPrintBarcode) btnPrintBarcode.disabled = true;
-    if(btnCopyBarcode) btnCopyBarcode.disabled = true;
+    btnPrintBarcode.disabled = true;
+    btnCopyBarcode.disabled = true;
 
-    document.getElementById('barcode-svg').innerHTML = '';
-    document.getElementById('barcode-text').textContent = '';
+    setTimeout(() => {
+        try {
+            const svgElement = document.getElementById("barcode-svg");
+            svgElement.style.maxWidth = "100%";
+            svgElement.style.height = "auto";
 
-    openBarcodeModal();
+            JsBarcode("#barcode-svg", currentBarcode, {
+                format: "CODE128",
+                width: 1.6,
+                height: 55,
+                displayValue: true, 
+                text: currentBarcode,
+                fontSize: 15,
+                fontOptions: "bold",
+                textPosition: "bottom",
+                font: "Poppins",
+                margin: 5
+            });
 
-    try {
-        const res = await fetch(`/local3M/api/get_codigo_reparacion.php?id=${encodeURIComponent(id)}`, { headers: { 'Accept': 'application/json' } });
-        const data = await res.json();
-        if (!res.ok || !data.success) throw new Error(data.error || 'No se pudo obtener el código.');
-
-        const code = data.codigo_barras;
-        if (!code) throw new Error('Esta reparación no tiene código de barras.');
-
-        currentBarcode = code;
-
-        JsBarcode("#barcode-svg", code, { 
-            format:"code128", 
-            width: 2, 
-            height: 80, 
-            displayValue: false, 
-            margin: 10 
-        });
-
-        document.getElementById('barcode-text').textContent = code;
-        barcodeSpinner.style.display = 'none';
-        barcodeWrap.style.display = 'block';
-        
-        if(btnPrintBarcode) btnPrintBarcode.disabled = false;
-        if(btnCopyBarcode) btnCopyBarcode.disabled = false;
-
-    } catch (err) {
-        barcodeSpinner.style.display = 'none';
-        barcodeError.textContent = err.message || 'Error inesperado.';
-        barcodeError.style.display = 'block';
-    }
-}
-
-if(btnCopyBarcode){
-    btnCopyBarcode.addEventListener('click', () => {
-        if(currentBarcode){
-            navigator.clipboard.writeText(currentBarcode);
-            const originalText = btnCopyBarcode.innerHTML;
-            btnCopyBarcode.innerHTML = '<i class="fas fa-check"></i> ¡Copiado!';
-            setTimeout(() => { btnCopyBarcode.innerHTML = originalText; }, 1500);
+            document.getElementById('barcode-text').innerText = ""; 
+            barcodeSpinner.style.display = 'none';
+            barcodeWrap.style.display = 'block';
+            btnPrintBarcode.disabled = false;
+            btnCopyBarcode.disabled = false;
+        } catch (err) {
+            console.error(err);
+            barcodeSpinner.style.display = 'none';
+            barcodeError.innerText = "Error al generar código alfanumérico";
+            barcodeError.style.display = 'block';
         }
-    });
+    }, 150);
 }
 
-if(btnPrintBarcode){
+// ========= Acciones del Código de Barras =========
+if (btnPrintBarcode) {
     btnPrintBarcode.addEventListener('click', () => {
-        if(currentBarcode){
-            // Usamos las variables globales que guardamos en mostrarCodigo()
+        if (currentBarcode) {
             const url = `/local3M/imprimir_etiqueta.php?codigo=${encodeURIComponent(currentBarcode)}` +
                         `&nombre=${encodeURIComponent(currentModelo)}` +
                         `&cliente=${encodeURIComponent(currentCliente)}` +
                         `&detalles=${encodeURIComponent(currentFalla)}`;
-            
             window.open(url, '_blank', 'width=400,height=500');
         }
     });
 }
-// Función para enviar una reparación pendiente de pago al carrito global
+
+if (btnCopyBarcode) {
+    btnCopyBarcode.addEventListener('click', () => {
+        if (currentBarcode) {
+            navigator.clipboard.writeText(currentBarcode).then(() => {
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Copiado al portapapeles', timer: 1500, showConfirmButton: false });
+            });
+        }
+    });
+}
+
+// ========= Función para mandar Reparaciones Listas al Carrito Global =========
 function enviarReparacionAlCarritoGlobal(idReparacion, modelo, costoTotal, saldoPendiente) {
     if (saldoPendiente <= 0) {
         Swal.fire('Aviso', 'Esta reparación ya está liquidada.', 'info');
@@ -435,14 +368,65 @@ function enviarReparacionAlCarritoGlobal(idReparacion, modelo, costoTotal, saldo
         tipo: 'reparacion',
         nombre: 'Entrega: ' + modelo,
         costo_total: parseFloat(costoTotal),
-        a_cobrar: parseFloat(saldoPendiente) // Esto es lo que se suma al total del carrito
+        a_cobrar: parseFloat(saldoPendiente)
     };
 
     if (typeof agregarAlCarritoGlobal === 'function') {
         agregarAlCarritoGlobal(itemGlobal);
-        Swal.fire({toast:true, position:'top-end', icon:'success', title:'Saldo enviado al carrito', timer:1500, showConfirmButton:false});
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Saldo enviado al carrito', timer: 1500, showConfirmButton: false });
     } else {
-        Swal.fire('Error', 'El carrito global no está conectado.', 'error');
+        Swal.fire('Error', 'El módulo del carrito de cobro global no está disponible.', 'error');
     }
 }
-cargarPagina();
+
+// ========= Eliminar Orden de Taller =========
+function eliminarReparacion(id) {
+    Swal.fire({
+        title: '¿Estás completamente seguro?',
+        text: "Esta acción eliminará permanentemente el registro del taller y no podrá recuperarse.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ff3b30',
+        cancelButtonColor: '#8e8e93',
+        confirmButtonText: 'Sí, borrar registro',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = `/local3M/api/eliminar_reparacion.php?id=${id}`;
+        }
+    });
+}
+
+// ========= Helpers de sanitización anti-XSS =========
+function escapeHTML(str) {
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/[&<>"']/g, function (m) {
+        switch (m) {
+            case '&': return '&amp;';
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '"': return '&quot;';
+            case "'": return '&#039;';
+            default: return m;
+        }
+    });
+}
+
+function escapeJS(str) {
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+}
+
+// ========= Cerrar Modales al Hacer Clic Fuera =========
+document.querySelectorAll('.glass-modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', function(e) {
+        if (e.target === this) {
+            this.style.display = 'none';
+        }
+    });
+});
+
+// Carga inicial al abrir el panel
+document.addEventListener('DOMContentLoaded', () => {
+    cargarPagina();
+});

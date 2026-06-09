@@ -1,120 +1,94 @@
 <?php
-// 1. Incluimos el header (seguridad, menú, etc.)
 include 'templates/header.php';
 
-// Verificamos si hay un mensaje (ej. de eliminación)
 $toastMessage = '';
-if (isset($_GET['msg'])) {
-    if ($_GET['msg'] === 'eliminado') {
-        $toastMessage = "Swal.fire({ icon:'success', title:'Eliminado', text:'La reparación fue eliminada correctamente', timer:2000, showConfirmButton:false });";
-    }
+if (isset($_GET['msg']) && $_GET['msg'] === 'eliminado') {
+    $toastMessage = "Swal.fire({ icon:'success', title:'Eliminado', text:'La reparación fue eliminada correctamente', timer:2000, showConfirmButton:false });";
 }
 ?>
 
-<!-- 
-    Estilos con versión forzada 
--->
-<link rel="stylesheet" href="/local3M/css/control.css?v=9999">
+<link rel="stylesheet" href="/local3M/css/control.css?v=<?php echo time(); ?>">
 
-<!-- Título de la Página -->
-<div class="page-title">
-    <h1>Control de Reparaciones</h1>
-    <p>Consulta, filtra y administra todas tus órdenes de trabajo.</p>
-</div>
-
-<!-- Controles de Búsqueda -->
-<div class="content-box search-box">
-    <div class="search-wrap">
-        <i class="fas fa-search"></i>
-        <input type="text" id="buscar" class="form-input" placeholder="Buscar por cliente, modelo, reparación o código de barras…">
-    </div>
-    <div class="search-buttons">
-        <button id="btnBuscar" class="form-button btn-primary"><i class="fas fa-search"></i> Buscar en Servidor</button>
-        <button id="btnLimpiar" class="form-button btn-secondary"><i class="fas fa-times"></i> Limpiar</button>
-    </div>
-</div>
-
-<!-- Contenedor de la Tabla -->
-<div class="content-box">
-    <div class="table-wrap">
-        <table class="repair-table control-table" id="tablaReparaciones">
-            <thead>
-                <tr>
-                    <th>Cliente</th>
-                    <th>Tipo Reparación</th>
-                    <th>Modelo</th>
-                    <th>Código</th>
-                    <th>Estado</th>
-                    <th class="td-actions">Acciones</th>
-                </tr>
-            </thead>
-            <tbody id="tablaReparacionesBody">
-                <!-- El contenido se cargará con JavaScript -->
-            </tbody>
-        </table>
+<div class="container glass-container">
+    <div class="glass-header">
+        <div>
+            <h1><i class="fas fa-tasks" style="color: #5856d6;"></i> Control de Reparaciones</h1>
+            <p>Consulta, filtra y administra todas tus órdenes de trabajo.</p>
+        </div>
     </div>
 
-    <!-- Feedback para el usuario -->
-    <div id="noResults" class="table-feedback" style="display:none;">
-        <i class="fas fa-info-circle"></i> No se encontraron reparaciones que coincidan.
+    <div class="glass-card glass-search-box">
+        <div class="glass-search-wrap">
+            <i class="fas fa-search"></i>
+            <input type="text" id="buscar" class="glass-input" placeholder="Buscar por cliente, modelo o código...">
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; flex: 1;">
+            <button id="btnBuscar" class="glass-btn primary" style="flex: 1;"><i class="fas fa-search"></i> Buscar</button>
+            <button id="btnLimpiar" class="glass-btn" style="flex: 1;"><i class="fas fa-eraser"></i> Limpiar</button>
+        </div>
     </div>
 
-    <div class="more-wrap">
-        <button id="btnMas" class="form-button btn-secondary">Mostrar más</button>
-        <div id="globalLoader" class="spinner" style="display:none;" aria-hidden="true"></div>
+    <div class="glass-card">
+        <div class="glass-table-wrapper">
+            <table class="glass-table">
+                <thead>
+                    <tr>
+                        <th>Folio</th>
+                        <th>Cliente</th>
+                        <th>Equipo</th>
+                        <th>Problema</th>
+                        <th>Estado</th>
+                        <th style="text-align: center;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaReparacionesBody">
+                    </tbody>
+            </table>
+        </div>
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <button id="btnMas" class="glass-btn" onclick="cargarPagina()">Cargar más resultados</button>
+            <div id="globalLoader" class="spinner" style="display:none; border-left-color: #007aff;"></div>
+        </div>
+        <p id="noResults" style="display:none; text-align:center; color:#86868b; margin-top:15px;">No se encontraron resultados.</p>
     </div>
 </div>
 
-
-<!-- MODALES -->
-<div id="modalDetalles" class="modal-overlay" style="display:none;">
-    <div class="modal-content">
-        <button class="modal-close" onclick="cerrarModal()">&times;</button>
-        <h2>Detalles de la Reparación</h2>
-        <div id="detallesContenido" class="modal-body"></div>
+<div id="modalDetalles" class="glass-modal-overlay" style="display: none;">
+    <div class="glass-modal-content">
+        <div class="detail-modal-header">
+            <h2><i class="fas fa-info-circle" style="color:#007aff;"></i> Orden de Trabajo</h2>
+            <span class="status status-progress" style="margin: 0; font-size: 12px;">Consulta General</span>
+        </div>
+        <div id="detallesContenido"></div>
     </div>
 </div>
 
-<div id="barcodeModal" class="modal-overlay" style="display:none;">
-    <div class="modal-content">
-        <button class="modal-close" onclick="closeBarcodeModal()">&times;</button>
-        <h2>Código de Barras</h2>
-        <div id="barcode-body" class="modal-body">
-            <div id="barcode-spinner" class="spinner" style="display:none;"></div>
-            <div id="barcode-wrap" style="display:none; text-align:center;">
-                <svg id="barcode-svg"></svg>
-                <div id="barcode-text"></div>
+<div id="barcodeModal" class="glass-modal-overlay" style="display: none;">
+    <div class="glass-modal-content" style="max-width: 400px; text-align: center; margin: auto;">
+        <h3 style="margin-top:0; color: #1d1d1f;">Código de Barras</h3>
+        
+        <div style="margin: 20px 0; background: white; padding: 20px; border-radius: 14px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);">
+            <div id="barcode-spinner" class="spinner" style="display:none; border-left-color: #007aff;"></div>
+            <div id="barcode-wrap" style="display:none;">
+                <svg id="barcode-svg" style="max-width: 100%;"></svg>
+                <div id="barcode-text" style="font-weight:bold; margin-top:10px; letter-spacing: 2px;"></div>
             </div>
-            <div id="barcode-error" class="form-error" style="display:none;"></div>
+            <div id="barcode-error" style="display:none; color: #ff3b30; font-weight: 600;"></div>
         </div>
-        <div class="modal-footer" style="display: flex; gap: 10px; justify-content: center;">
-            <button class="form-button btn-primary" id="btnPrintBarcode" style="background-color: #2ecc71;" disabled>
-                <i class="fas fa-print"></i> Imprimir Etiqueta
-            </button>
-            <button class="form-button btn-info" id="btnCopyBarcode" disabled>
-                <i class="fas fa-copy"></i> Copiar
-            </button>
-            <button class="form-button btn-secondary" onclick="closeBarcodeModal()">Cerrar</button>
+
+        <div style="display: flex; gap: 10px; flex-direction: column;">
+            <button id="btnPrintBarcode" class="glass-btn success" disabled><i class="fas fa-print"></i> Imprimir Etiqueta</button>
+            <button id="btnCopyBarcode" class="glass-btn info" disabled><i class="fas fa-copy"></i> Copiar</button>
+            <button class="glass-btn" onclick="document.getElementById('barcodeModal').style.display='none'">Cerrar</button>
         </div>
     </div>
 </div>
 
-<!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-<!-- 
-    LA SOLUCIÓN ESTÁ AQUÍ:
-    Cambiamos la versión a ?v=9999 para obligar al navegador a olvidar el archivo viejo.
--->
-<script src="/local3M/js/control.js?v=9999"></script>
-
-<!-- Script para mostrar mensajes (alertas PHP) -->
 <script>
     <?php echo $toastMessage; ?>
 </script>
-
-<?php
-// 3. Incluimos el footer
-include 'templates/footer.php';
-?>
+<script src="/local3M/js/control.js?v=<?php echo time(); ?>"></script>
+<?php include 'templates/footer.php'; ?>

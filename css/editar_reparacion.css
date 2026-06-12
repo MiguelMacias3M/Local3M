@@ -269,3 +269,66 @@
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(0, 122, 255, 0.15);
 }
+/* --- CHECKLIST DE CALIDAD (LIQUID GLASS) --- */
+.check-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: rgba(0,0,0,0.03);
+    padding: 14px 18px;
+    border-radius: 14px;
+    cursor: pointer;
+    border: 1px solid rgba(0,0,0,0.05);
+    transition: 0.3s ease;
+}
+
+.check-item:hover {
+    background: rgba(52, 199, 89, 0.08);
+    border-color: rgba(52, 199, 89, 0.3);
+    transform: translateX(5px);
+}
+
+.check-item input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+    accent-color: #34c759; /* Verde de éxito */
+    cursor: pointer;
+}
+
+.check-item span {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1d1d1f;
+}
+
+/* =====================================
+   MODALES LIQUID GLASS (CHECKLIST)
+   =====================================
+*/
+.glass-modal-overlay { 
+    position: fixed; 
+    top: 0; left: 0; 
+    width: 100%; height: 100%; 
+    background: rgba(0, 0, 0, 0.4); 
+    backdrop-filter: blur(15px); 
+    -webkit-backdrop-filter: blur(15px); 
+    z-index: 9999; 
+    display: flex;
+    justify-content: center; 
+    align-items: center; 
+    animation: fadeInModal 0.3s ease; 
+}
+
+.glass-modal-content { 
+    background: rgba(255, 255, 255, 0.85); 
+    backdrop-filter: blur(30px); 
+    border: 1px solid rgba(255, 255, 255, 0.9); 
+    border-radius: 28px; 
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15); 
+    width: 92%; 
+}
+
+@keyframes fadeInModal { 
+    from { opacity: 0; transform: scale(0.95); } 
+    to { opacity: 1; transform: scale(1); } 
+}

@@ -190,7 +190,6 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
                         foreach ($movs as $m) {
                             $fecha = date("d/m/Y h:i A", strtotime($m['fecha_cambio']));
                             echo "<tr>";
-                            // Inyección de Data-Label para Móviles
                             echo "<td data-label='Fecha'>$fecha</td>";
                             echo "<td data-label='Estado'><span class='status status-pending' style='font-size:12px;'>{$m['estado_nuevo']}</span></td>";
                             echo "<td data-label='Comentario'>{$m['comentario']}";
@@ -217,48 +216,67 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
     <div class="modal-dialog modal-lg" style="margin: 5% auto; max-width: 800px;">
         <div class="modal-content" style="background: rgba(255,255,255,0.9); backdrop-filter:blur(20px); border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.2); border:1px solid white;">
             <div class="modal-header" style="padding: 20px; border-bottom: 1px solid rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center;">
-                <h5 class="modal-title" style="margin: 0; font-weight:800; font-size:20px; color:#1d1d1f;"><i class="fas fa-box-open" style="color:#ff9500;"></i> Selecciona un Lugar (48 Espacios)</h5>
+                <h5 class="modal-title" style="margin: 0; font-weight:800; font-size:20px; color:#1d1d1f;"><i class="fas fa-box-open" style="color:#ff9500;"></i> Selecciona un Lugar</h5>
                 <button type="button" onclick="cerrarModalMapa()" style="background: rgba(255,59,48,0.1); border: none; color: #ff3b30; width:35px; height:35px; border-radius:50%; font-size: 1.2rem; cursor: pointer; display:flex; align-items:center; justify-content:center;"><i class="fas fa-times"></i></button>
             </div>
             <div class="modal-body text-center" style="padding: 20px;">
-                
                 <div style="display:flex; justify-content:center; gap:10px; margin-bottom: 20px; flex-wrap:wrap;">
                     <span style="background: rgba(52, 199, 89, 0.2); color: #155724; border:1px solid #34c759; padding: 6px 12px; border-radius: 8px; font-size:13px; font-weight:600;">Disponible</span>
                     <span style="background: rgba(255, 59, 48, 0.2); color: #ff3b30; border:1px solid #ff3b30; padding: 6px 12px; border-radius: 8px; font-size:13px; font-weight:600;">Ocupado</span>
                     <span style="background: #007aff; color: white; padding: 6px 12px; border-radius: 8px; font-size:13px; font-weight:600; border:1px solid #0056b3;">Seleccionado</span>
                 </div>
-
                 <div id="grid-caja" class="grid-container"></div>
-
             </div>
+        </div>
+    </div>
+</div>
+
+<div id="modalChecklist" class="glass-modal-overlay" style="display:none;">
+    <div class="glass-modal-content" style="max-width: 450px; padding: 30px;">
+        <h3 style="margin-top:0; color:#1d1d1f; font-weight:800; text-align:center;">
+            <i class="fas fa-clipboard-check" style="color:#34c759; font-size: 28px; margin-bottom:10px; display:block;"></i> 
+            Checklist de Calidad
+        </h3>
+        <p style="text-align:center; color:#86868b; font-size:14px; margin-bottom:25px;">Confirma que los siguientes componentes funcionan correctamente antes de finalizar.</p>
+        
+        <div class="checklist-container" style="display:flex; flex-direction:column; gap:12px; margin-bottom:25px;">
+            <label class="check-item"><input type="checkbox" class="checklist-check"> <span>Carga / Centro de carga</span></label>
+            <label class="check-item"><input type="checkbox" class="checklist-check"> <span>Señal / Wi-Fi / Bluetooth</span></label>
+            <label class="check-item"><input type="checkbox" class="checklist-check"> <span>Touch y Display (Imagen)</span></label>
+            <label class="check-item"><input type="checkbox" class="checklist-check"> <span>Cámaras (Frontal y Trasera)</span></label>
+            <label class="check-item"><input type="checkbox" class="checklist-check"> <span>Audio (Altavoz y Micrófono)</span></label>
+            <label class="check-item"><input type="checkbox" class="checklist-check"> <span>Botones (Encendido y Volumen)</span></label>
+        </div>
+
+        <div style="display:flex; gap:10px;">
+            <button type="button" class="glass-btn secondary" style="flex:1; justify-content:center;" onclick="cancelarChecklist()">Cancelar</button>
+            <button type="button" class="glass-btn success" style="flex:1; justify-content:center;" onclick="confirmarChecklist()"><i class="fas fa-check"></i> Todo en orden</button>
         </div>
     </div>
 </div>
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // Obtenemos el código de la base de datos de forma dinámica
         let codigoGuardado = "<?= htmlspecialchars($reparacion['codigo_barras'] ?? $reparacion['codigo'] ?? $reparacion['folio'] ?? $reparacion['id']) ?>";
         let contenedorDibujo = document.getElementById('barcode-svg');
 
         if(contenedorDibujo && codigoGuardado.trim() !== "") {
-            // Forzamos un micro-retraso para que la caja blanca se expanda antes de dibujar
             setTimeout(() => {
                 try {
                     JsBarcode("#barcode-svg", String(codigoGuardado), {
                         format: "CODE128",
-                        width: 1.2,            // Barras finas para que no se desborde
-                        height: 65,            // Altura equilibrada
-                        displayValue: true,    // 🚨 Activa los números
-                        text: String(codigoGuardado), // 🚨 Fuerza la inyección de letras y números
-                        fontSize: 28,          // Tamaño legible
+                        width: 1.2,
+                        height: 65,
+                        displayValue: true,
+                        text: String(codigoGuardado),
+                        fontSize: 28,
                         fontOptions: "bold",
                         textPosition: "bottom",
                         font: "Poppins",
                         margin: 3
                     });
                 } catch(e) {
-                    console.error("Error pintando código en vista de edición: ", e);
+                    console.error("Error pintando código:", e);
                 }
             }, 100);
         }
@@ -267,7 +285,7 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
 <script>
     const REPARACION_ID = <?= $id ?>;
     const TICKET_URL = "<?= $ticketUrl ?>";
-    const CODIGO_BARRAS = "<?= $reparacion['codigo_barras'] ?>";
+    const CODIGO_BARRAS = "<?= $reparacion['codigo_barras'] ?? '' ?>";
 </script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script> 

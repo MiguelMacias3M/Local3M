@@ -97,7 +97,7 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
                         <label>Estado</label>
                         <select class="form-input" name="estado" id="selectEstado">
                             <?php
-                            $estados = ['En espera', 'En revision', 'Diagnosticado', 'En preparacion', 'En progreso', 'Reparado', 'Entregado', 'Cancelado', 'No se pudo reparar'];
+                            $estados = ['En espera', 'En revision', 'Diagnosticado','En espera de pieza', 'En preparacion', 'En progreso', 'Reparado', 'Entregado', 'Cancelado', 'No se pudo reparar'];
                             foreach ($estados as $est) {
                                 $sel = ($reparacion['estado'] == $est) ? 'selected' : '';
                                 echo "<option value='$est' $sel>$est</option>";

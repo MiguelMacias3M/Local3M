@@ -112,7 +112,7 @@ $esAdmin = (isset($_SESSION['rol']) && strtolower($_SESSION['rol']) === 'admin')
                 <div class="module-sub">
                     <a href="/local3M/caja.php" class="sub-btn"><i class="fas fa-cash-register" style="color:#1d1d1f;"></i> Caja</a>
                     <?php if ($esAdmin): ?>
-                        <a href="/local3M/gastos.php" class="sub-btn"><i class="fas fa-receipt" style="color:#ff3b30;"></i> Gastos</a>
+                        <a href="/local3M/gastos.php" class="sub-btn"><i class="fas fa-receipt" style="color:#ff3b30;"></i> Control de gastos</a>
                     <?php endif; ?>
                 </div>
             </div>

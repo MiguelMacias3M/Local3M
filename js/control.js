@@ -87,7 +87,6 @@ function renderizarFilas(lista) {
         else if (est.includes('progreso')) estadoClass = 'status-progress';
         else if (est.includes('reparado')) estadoClass = 'status-ready';
 
-        // SINCRO BD: monto, adelanto, deuda
         const costoTotal = parseFloat(rep.monto) || 0;
         const totalAbonado = parseFloat(rep.adelanto) || 0; 
         const saldoPendiente = rep.deuda !== undefined && rep.deuda !== null ? parseFloat(rep.deuda) : (costoTotal - totalAbonado);
@@ -107,7 +106,7 @@ function renderizarFilas(lista) {
             <td data-label="Estado"><span class="status ${estadoClass}">${escapeHTML(rep.estado)}</span></td>
             <td data-label="Acciones" style="text-align: center;">
                 <div style="display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: center;">
-                    <button class="glass-btn" style="height:36px; padding:0 12px; font-size:13px;" onclick="verDetalles(${rep.id})" title="Ver Detalles y Código">
+                    <button class="glass-btn" style="height:36px; padding:0 12px; font-size:13px; background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.25); color: #1d1d1f;" onclick="verDetalles(${rep.id})" title="Ver Detalles y Código">
                         <i class="fas fa-eye"></i>
                     </button>
                     <button class="glass-btn info" style="height:36px; padding:0 12px; font-size:13px;" onclick="mostrarCodigo(${rep.id})" title="Imprimir/Copiar Código de Barras">
@@ -116,11 +115,6 @@ function renderizarFilas(lista) {
                     <a href="/local3M/editar_reparacion.php?id=${rep.id}" class="glass-btn primary" style="height:36px; padding:0 12px; font-size:13px; text-decoration:none;" title="Editar / Actualizar">
                         <i class="fas fa-edit"></i>
                     </a>
-                    ${saldoPendiente > 0 && est.includes('reparado') ? `
-                        <button class="glass-btn success" style="height:36px; padding:0 12px; font-size:13px;" onclick="enviarReparacionAlCarritoGlobal(${rep.id}, '${escapeJS(rep.modelo)}', ${costoTotal}, ${saldoPendiente})" title="Cobrar Entrega">
-                            <i class="fas fa-cash-register"></i>
-                        </button>
-                    ` : ''}
                     <button class="glass-btn" style="height:36px; padding:0 12px; font-size:13px; background: rgba(255,59,48,0.1); color:#ff3b30; border-color:rgba(255,59,48,0.2);" onclick="eliminarReparacion(${rep.id})" title="Eliminar">
                         <i class="fas fa-trash-alt"></i>
                     </button>
@@ -356,7 +350,7 @@ if (btnCopyBarcode) {
     });
 }
 
-// ========= Función para mandar Reparaciones Listas al Carrito Global =========
+// ========= Función (Deshabilitada de la UI pero guardada) =========
 function enviarReparacionAlCarritoGlobal(idReparacion, modelo, costoTotal, saldoPendiente) {
     if (saldoPendiente <= 0) {
         Swal.fire('Aviso', 'Esta reparación ya está liquidada.', 'info');

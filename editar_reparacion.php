@@ -135,12 +135,15 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
                     </div>
 
                     <div class="form-group" style="margin-top: 20px; border-top: 1px dashed rgba(0,0,0,0.1); padding-top: 15px;">
-                        <label style="color: #007aff; cursor:pointer;">
-                            <i class="fas fa-camera"></i> <strong>Adjuntar Evidencia Fotográfica</strong>
+                        <label for="evidencia_input" class="custom-file-upload">
+                            <i class="fas fa-cloud-upload-alt" style="font-size: 18px;"></i> 
+                            <span>Toca para Adjuntar Evidencia Fotográfica</span>
                         </label>
-                        <input type="file" id="evidencia_input" accept="image/*" class="glass-input" onchange="previsualizarFoto()" style="background:transparent; border:none; padding:0;">
-                        <div id="preview-container" style="display:none; margin-top:10px; text-align:center; background:white; padding:10px; border-radius:12px; border:1px solid #eee;">
-                            <img id="img-preview" src="" style="max-height: 150px; border-radius: 8px;">
+                        
+                        <input type="file" id="evidencia_input" accept="image/*" onchange="previsualizarFoto()" style="display: none;">
+                        
+                        <div id="preview-container" style="display:none; margin-top:15px; text-align:center; background:white; padding:10px; border-radius:12px; border:1px solid rgba(0,0,0,0.05);">
+                            <img id="img-preview" src="" style="max-height: 180px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
                         </div>
                     </div>
                 </div>

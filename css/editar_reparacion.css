@@ -242,3 +242,30 @@
         text-transform: uppercase; font-size: 11px; text-align: left; flex: 1; 
     }
 }
+
+/* --- BOTÓN DE SUBIR ARCHIVO PERSONALIZADO --- */
+.custom-file-upload {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: rgba(0, 122, 255, 0.05); /* Fondo azul cristalino */
+    border: 2px dashed rgba(0, 122, 255, 0.4); /* Borde punteado moderno */
+    border-radius: 14px;
+    padding: 16px 20px;
+    cursor: pointer;
+    color: #007aff;
+    font-weight: 700;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.custom-file-upload:hover {
+    background: rgba(0, 122, 255, 0.15);
+    border-color: #007aff;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 122, 255, 0.15);
+}

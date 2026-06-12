@@ -1,9 +1,15 @@
 /* =====================================
-   ESTILOS PARA EDITAR_REPARACION.PHP
+   LIQUID GLASS - EDITAR REPARACIÓN
    =====================================
 */
 
-/* --- 1. GRID PRINCIPAL --- */
+/* --- 1. CONTENEDORES PRINCIPALES --- */
+.glass-container { 
+    padding: 20px; 
+    animation: fadeIn 0.5s ease; 
+    color: #1d1d1f; 
+}
+
 .edit-grid {
     display: grid;
     grid-template-columns: 3fr 1fr; /* Columna ancha para form, estrecha para código */
@@ -11,333 +17,228 @@
     align-items: start;
 }
 
-/* --- 2. SECCIONES DEL FORMULARIO (TARJETAS) --- */
-.form-section {
-    background: #fff;
-    padding: 2rem;
-    border-radius: 12px;
-    border: 1px solid #e0e0e0;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+/* Tarjetas de Cristal */
+.glass-card {
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 24px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    padding: 25px;
+    margin-bottom: 25px;
 }
 
-.form-section h3 {
+.glass-card h3 {
     margin-top: 0;
-    color: #0056b3; /* Azul fuerte */
+    color: #1d1d1f;
     font-size: 1.2rem;
-    font-weight: 700;
-    border-bottom: 2px solid #f0f0f0;
-    padding-bottom: 10px;
+    font-weight: 800;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    padding-bottom: 15px;
     margin-bottom: 20px;
     display: flex;
     align-items: center;
     gap: 10px;
 }
+.glass-card h3 i { color: #007aff; }
 
-/* --- 3. INPUTS Y LABELS --- */
-.form-group { 
-    margin-bottom: 1.2rem; 
-}
-
+/* --- 2. INPUTS LIQUID GLASS --- */
+.form-group { margin-bottom: 1.2rem; }
 .form-group label { 
     display: block; 
     margin-bottom: 8px; 
     font-weight: 600; 
-    color: #495057; 
-    font-size: 0.95rem;
+    font-size: 13px; 
+    color: #86868b; 
+    text-transform: uppercase;
 }
 
-.form-input {
+.glass-input {
     width: 100%;
-    padding: 12px;
-    border: 2px solid #dee2e6; /* Borde más visible */
-    border-radius: 8px;
-    font-size: 1rem;
-    box-sizing: border-box; /* Importante para que el padding no rompa el ancho */
-    transition: border-color 0.3s, box-shadow 0.3s;
-    color: #212529;
-    background-color: #fff;
+    padding: 14px 16px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 14px;
+    font-size: 15px;
+    color: #1d1d1f;
+    outline: none;
+    box-sizing: border-box;
+    transition: 0.3s;
 }
 
-.form-input:focus { 
-    border-color: #0056b3; 
-    outline: none; 
-    box-shadow: 0 0 0 4px rgba(0, 86, 179, 0.1);
+.glass-input:focus { 
+    background: rgba(255, 255, 255, 0.9); 
+    border-color: #007aff; 
+    box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.15); 
 }
 
-.form-input[readonly] { 
-    background-color: #e9ecef; 
-    color: #6c757d; 
-    border-color: #ced4da;
-    cursor: not-allowed;
+.glass-input[readonly] { 
+    background-color: rgba(0,0,0,0.03); 
+    color: #86868b; 
+    cursor: not-allowed; 
 }
 
-/* Layouts internos del formulario */
-.row-2-col { 
-    display: grid; 
-    grid-template-columns: 1fr 1fr; 
-    gap: 1.5rem; 
-}
+.row-2-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+.row-3-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; }
 
-.row-3-col { 
-    display: grid; 
-    grid-template-columns: 1fr 1fr 1fr; 
-    gap: 1.5rem; 
-}
-
-/* --- 4. CAJA DE ABONO --- */
+/* Caja de abonos */
 .abono-box {
     display: flex;
     gap: 15px;
-    background: #f0f9ff; /* Fondo azul muy claro */
+    background: rgba(0, 122, 255, 0.05);
     padding: 20px;
-    border-radius: 10px;
-    align-items: flex-end; /* Alinea botón con input */
-    border: 1px solid #b6d4fe;
+    border-radius: 16px;
+    align-items: flex-end;
+    border: 1px dashed rgba(0, 122, 255, 0.3);
     margin-top: 1rem;
 }
+.abono-box .glass-input { margin-bottom: 0; background: white; }
 
-.abono-box .form-input { 
-    margin-bottom: 0; 
+/* --- 3. BOTONES CRISTALINOS --- */
+.glass-btn { 
+    background: rgba(255, 255, 255, 0.5); 
+    backdrop-filter: blur(10px); 
+    border: 1px solid rgba(255, 255, 255, 0.8); 
+    border-radius: 14px; 
+    padding: 0 20px; 
+    height: 48px; 
+    font-weight: 600; 
+    font-size: 14px; 
+    color: #1d1d1f; 
+    cursor: pointer; 
+    transition: all 0.3s; 
+    display: inline-flex; 
+    align-items: center; 
+    justify-content: center; 
+    gap: 8px; 
+    /* 🚨 ESTA LÍNEA ES LA MAGIA: Obliga a <a> y <button> a medir exactamente lo mismo */
+    box-sizing: border-box; 
 }
+.glass-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }ss-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
 
+.glass-btn.primary { background: rgba(0, 122, 255, 0.9); color: white; border-color: rgba(0, 122, 255, 0.4); }
+.glass-btn.success { background: rgba(52, 199, 89, 0.9); color: white; border-color: rgba(52, 199, 89, 0.4); }
+.glass-btn.warning { background: rgba(255, 149, 0, 0.9); color: white; border-color: rgba(255, 149, 0, 0.4); }
+.glass-btn.info { background: rgba(88, 86, 214, 0.9); color: white; border-color: rgba(88, 86, 214, 0.4); }
+.glass-btn.secondary { background: rgba(142, 142, 147, 0.9); color: white; border-color: rgba(142, 142, 147, 0.4); }
 
-/* --- 5. BOTONES (ESTILO FUERTE) --- */
-
-/* Contenedor de botones del pie de página */
-.action-buttons-container {
+/* CONTENEDOR BOTONES (ACCIÓN RESPONSIVA) */
+.glass-action-bar {
     display: flex;
-    gap: 15px;
     flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
     margin-top: 2rem;
     padding-top: 2rem;
-    border-top: 1px solid #dee2e6;
-    align-items: center;
+    border-top: 1px solid rgba(0,0,0,0.08);
+}
+.glass-action-bar .glass-btn {
+    flex: 1; /* Esto hace que todos los botones se estiren igual */
+    min-width: 160px;
 }
 
-/* Estilo Base del Botón */
-.form-button {
-    padding: 12px 24px;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    font-weight: 700; /* Negrita */
-    text-transform: uppercase; /* Mayúsculas */
-    letter-spacing: 0.5px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    transition: all 0.2s ease-in-out;
-    text-decoration: none;
-    line-height: 1;
-    min-height: 48px; /* Altura consistente */
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1); /* Sombra suave */
-}
-
-.form-button:active {
-    transform: translateY(2px);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-}
-
-/* Botón Guardar (Azul Primario) */
-.btn-primary {
-    background-color: #0056b3;
-    color: white;
-}
-.btn-primary:hover {
-    background-color: #004494;
-    box-shadow: 0 6px 12px rgba(0, 86, 179, 0.25);
-}
-
-/* Botón Entregar (Verde Éxito) */
-.btn-success {
-    background-color: #198754;
-    color: white;
-}
-.btn-success:hover {
-    background-color: #157347;
-    box-shadow: 0 6px 12px rgba(25, 135, 84, 0.25);
-}
-
-/* Botón Imprimir (Amarillo Advertencia) */
-.btn-warning {
-    background-color: #ffc107;
-    color: #212529; /* Texto oscuro */
-}
-.btn-warning:hover {
-    background-color: #ffca2c;
-    box-shadow: 0 6px 12px rgba(255, 193, 7, 0.25);
-}
-
-/* Botón Agregar Abono (Cyan Info) */
-.btn-info {
-    background-color: #0dcaf0;
-    color: #000; /* Texto oscuro */
-    font-weight: 800;
-}
-.btn-info:hover {
-    background-color: #31d2f2;
-    box-shadow: 0 4px 8px rgba(13, 202, 240, 0.25);
-}
-
-/* Botón Volver / Copiar (Gris Secundario) */
-.btn-secondary {
-    background-color: #6c757d;
-    color: white;
-}
-.btn-secondary:hover {
-    background-color: #5c636a;
-    box-shadow: 0 4px 8px rgba(108, 117, 125, 0.25);
-}
-
-/* Botones pequeños (para el sidebar) */
-.btn-sm {
-    min-height: 36px;
-    padding: 8px 16px;
-    font-size: 0.8rem;
-}
-
-
-/* --- 6. SIDEBAR (CÓDIGO DE BARRAS) --- */
+/* --- 4. CÓDIGO DE BARRAS LATERAL --- */
 .barcode-card {
-    background: #fff;
+    background: rgba(255,255,255,0.8);
     padding: 2rem;
-    border-radius: 12px;
-    border: 1px solid #e0e0e0;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.9);
     text-align: center;
     position: sticky;
-    top: 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    top: 90px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.06);
 }
-
-.barcode-card h4 {
-    margin-top: 0;
-    color: #333;
-    font-weight: 700;
-    margin-bottom: 1.5rem;
-}
-
 .barcode-display {
-    background: #fff;
-    padding: 10px;
-    border: 1px dashed #ccc;
-    border-radius: 8px;
-    margin-bottom: 1.5rem;
+    background: white;
+    /* 🚨 Aumentamos el padding inferior a 25px para que quepan los números */
+    padding: 15px 15px 25px 15px; 
+    border-radius: 12px;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.03);
+    overflow: visible;
+}
+.barcode-display svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+/* --- 5. TABLA HISTORIAL LIQUID GLASS --- */
+.glass-table-wrapper { 
+    border-radius: 16px; 
+    overflow-x: auto; 
+    border: 1px solid rgba(255, 255, 255, 0.5); 
+    background: rgba(255, 255, 255, 0.3); 
+}
+.glass-table { width: 100%; border-collapse: collapse; min-width: 800px; }
+.glass-table th { 
+    background: rgba(255, 255, 255, 0.5); padding: 16px; text-align: left; 
+    font-weight: 600; font-size: 13px; color: #86868b; text-transform: uppercase; 
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05); 
+}
+.glass-table td { 
+    padding: 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.4); 
+    font-size: 14px; font-weight: 500; vertical-align: middle; 
 }
 
-.barcode-display svg { 
-    max-width: 100%; 
-    height: auto; 
-}
-
-.barcode-text { 
-    font-family: 'Courier New', monospace; 
-    font-size: 1.1rem; 
-    margin-top: 10px; 
-    font-weight: 900; 
-    letter-spacing: 2px;
-    color: #000;
-}
-
-.barcode-actions { 
-    display: flex; 
-    gap: 10px; 
-    justify-content: center; 
-}
-
-
-/* --- 7. RESPONSIVO --- */
-@media (max-width: 992px) {
-    .edit-grid { 
-        grid-template-columns: 1fr; /* Una sola columna en tablets/móviles */
-    } 
-    
-    /* En móvil, el código de barras pasa abajo */
-    .barcode-card { 
-        position: static; 
-        margin-top: 2rem; 
-    }
-}
-
-@media (max-width: 768px) {
-    .row-3-col, .row-2-col { 
-        grid-template-columns: 1fr; /* Inputs uno debajo del otro */
-        gap: 1rem; 
-    }
-    
-    .action-buttons-container { 
-        flex-direction: column; 
-        width: 100%; 
-    }
-    
-    .form-button { 
-        width: 100%; /* Botones ocupan todo el ancho */
-    }
-    
-    .abono-box { 
-        flex-direction: column; 
-    }
-    
-    .abono-box .form-input,
-    .abono-box .form-button { 
-        width: 100%; 
-    }
-}
-/* =========================================
-   CORRECCIÓN COLOR HISTORIAL
-   ========================================= */
-.history-section .status {
-    color: #333 !important;       /* Letra oscura (Gris casi negro) */
-    background-color: #e9ecef;    /* Fondo gris muy claro */
-    border: 1px solid #dcdcdc;    /* Un borde sutil */
-    font-weight: 600;
-}
-/* ... tus estilos anteriores ... */
-
-/* ESTILOS MAPA CAJA */
+/* --- 6. MAPA DE CAJA --- */
 .grid-container {
     display: grid;
-    grid-template-columns: repeat(12, 1fr); /* 12 Columnas */
+    grid-template-columns: repeat(12, 1fr);
     gap: 8px;
     max-width: 100%;
     margin: 0 auto;
     padding: 10px;
 }
-
 .lugar-box {
     aspect-ratio: 1 / 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 0.8rem;
-    border-radius: 4px;
-    cursor: pointer;
-    border: 1px solid #ccc;
-    background-color: #d4edda;
-    color: #155724;
-    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold; font-size: 0.8rem; border-radius: 8px;
+    cursor: pointer; background: rgba(52, 199, 89, 0.2); color: #155724; border: 1px solid #34c759;
+    transition: 0.2s;
+}
+.lugar-box.ocupado { background: rgba(255, 59, 48, 0.2); color: #ff3b30; border-color: #ff3b30; cursor: not-allowed; opacity: 0.6; }
+.lugar-box.seleccionado { background: #007aff; color: white; border: 2px solid #0056b3; transform: scale(1.15); z-index: 3; }
+
+/* =====================================
+   📱 RESPONSIVO ESTRICTO
+   =====================================
+*/
+@media (max-width: 992px) {
+    .edit-grid { grid-template-columns: 1fr; }
+    .barcode-card { position: static; margin-top: 1rem; }
 }
 
-.lugar-box:hover {
-    transform: scale(1.1);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    z-index: 2;
-}
+@media (max-width: 768px) {
+    .row-3-col, .row-2-col { grid-template-columns: 1fr; gap: 1rem; }
+    
+    /* 🚨 CORRECCIÓN BOTONES (Se estiran al 100% y se centran) */
+    .glass-action-bar { 
+        flex-direction: column; 
+        align-items: stretch; /* Obliga a los hijos a ocupar el ancho total */
+        gap: 12px;
+    }
+    .glass-action-bar .glass-btn { 
+        width: 100%; 
+        min-width: 100%;
+    }
+    
+    .abono-box { flex-direction: column; align-items: stretch; }
+    .abono-box .glass-btn { width: 100%; }
 
-.lugar-box.ocupado {
-    background-color: #f8d7da;
-    color: #721c24;
-    cursor: not-allowed;
-    opacity: 0.6;
-}
-
-.lugar-box.seleccionado {
-    background-color: #0d6efd;
-    color: white;
-    border: 2px solid #002a80;
-    transform: scale(1.15);
-    z-index: 3;
+    /* 🚨 CORRECCIÓN TABLA HISTORIAL MÓVIL */
+    .glass-table { min-width: 100%; }
+    .glass-table, .glass-table tbody, .glass-table tr, .glass-table td { display: block; width: 100%; box-sizing: border-box; }
+    .glass-table thead { display: none; }
+    
+    .glass-table tr { 
+        margin-bottom: 15px; background: rgba(255, 255, 255, 0.5); 
+        border-radius: 16px; border: 1px solid rgba(255,255,255,0.8); 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 10px; 
+    }
+    .glass-table td { 
+        display: flex; justify-content: space-between; align-items: center; 
+        text-align: right; border-bottom: 1px solid rgba(0,0,0,0.05); padding: 12px 10px; 
+    }
+    .glass-table td:last-child { border-bottom: none; justify-content: flex-end; gap: 10px; }
+    
+    .glass-table td::before { 
+        content: attr(data-label); font-weight: 700; color: #86868b; 
+        text-transform: uppercase; font-size: 11px; text-align: left; flex: 1; 
+    }
 }

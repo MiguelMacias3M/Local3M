@@ -1,8 +1,10 @@
+/* =========================================
+ * LÓGICA DE CONTROL DE CAJA Y GASTOS
+ * Versión Liquid Glass + Resumen Financiero
+ * ========================================= */
+
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. PRIMERO CORREGIMOS LA FECHA
     inicializarFecha();
-    
-    // 2. Cargamos categorías
     actualizarCategorias(); 
     
     const inputFoto = document.getElementById('inputFoto');
@@ -22,12 +24,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// --- FUNCIÓN: CORREGIR FECHA A MÉXICO ---
 function inicializarFecha() {
     const filtroFecha = document.getElementById('filtroFecha');
     if (!filtroFecha) return;
 
-    // Forzar fecha actual de CDMX
     const fechaMexico = new Date().toLocaleDateString('en-CA', {
         timeZone: 'America/Mexico_City',
         year: 'numeric',
@@ -36,9 +36,6 @@ function inicializarFecha() {
     });
 
     filtroFecha.value = fechaMexico;
-    // console.log("📅 Fecha ajustada a:", fechaMexico);
-
-    // Cargar movimientos una vez puesta la fecha correcta
     cargarMovimientos();
 }
 
@@ -78,12 +75,17 @@ function cargarMovimientos() {
     const tipo = document.getElementById('filtroTipo').value;
     const tbody = document.getElementById('lista-movimientos');
     
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted"><i class="fas fa-spinner fa-spin fa-2x"></i><br><br><span style="font-weight: 500;">Cargando movimientos...</span></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding:40px;"><i class="fas fa-spinner fa-spin fa-2x"></i><br><br>Cargando...</td></tr>';
 
     fetch(`api/gastos.php?action=listar&fecha=${fecha}&tipo=${tipo}&_t=${Date.now()}`)
         .then(res => res.json())
         .then(data => {
             tbody.innerHTML = '';
+            
+            // Variables para el Dashboard Superior
+            let totalIngresos = 0;
+            let totalGastos = 0;
+
             if (data.success && data.data && data.data.length > 0) {
                 data.data.forEach(m => {
                     const valIngreso = parseFloat(m.ingreso)||0;
@@ -95,40 +97,34 @@ function cargarMovimientos() {
 
                     const monto = esEntrada ? valIngreso : valEgreso;
                     
-                    // Colores de los montos
+                    // Sumamos para los totales (ignoramos cierres neutros si no afectan el balance diario real)
+                    if(!esNeutro) {
+                        if(esEntrada) totalIngresos += monto;
+                        else totalGastos += monto;
+                    }
+
                     let signo = esEntrada ? '+' : '-';
-                    let colorMonto = esEntrada ? '#28a745' : '#dc3545'; 
-                    let bgMonto = esEntrada ? 'rgba(40, 167, 69, 0.1)' : 'rgba(220, 53, 69, 0.1)';
+                    let colorMonto = esEntrada ? '#34c759' : '#ff3b30'; 
+                    let bgMonto = esEntrada ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 59, 48, 0.1)';
                     
                     if (esNeutro) {
                         signo = '•'; 
-                        colorMonto = '#6c757d'; 
-                        bgMonto = 'rgba(108, 117, 125, 0.1)';
+                        colorMonto = '#86868b'; 
+                        bgMonto = 'rgba(134, 134, 139, 0.1)';
                     }
 
-                    // Badge de Origen
                     let origenBadge = m.origen === 'CAJA' 
-                        ? '<span style="font-size:0.65em; background:#f8f9fa; padding:3px 6px; border-radius:4px; color:#6c757d; border:1px solid #dee2e6; letter-spacing: 0.5px; text-transform: uppercase;"><i class="fas fa-store"></i> Mostrador</span>' 
-                        : '<span style="font-size:0.65em; background:#e3f2fd; padding:3px 6px; border-radius:4px; color:#0d47a1; border:1px solid #bbdefb; letter-spacing: 0.5px; text-transform: uppercase;"><i class="fas fa-laptop-code"></i> Admin</span>';
+                        ? '<span style="font-size:11px; background:rgba(0,122,255,0.1); padding:3px 6px; border-radius:4px; color:#007aff; font-weight:600;"><i class="fas fa-store"></i> MOSTRADOR</span>' 
+                        : '<span style="font-size:11px; background:rgba(255,149,0,0.1); padding:3px 6px; border-radius:4px; color:#ff9500; font-weight:600;"><i class="fas fa-laptop-code"></i> ADMIN</span>';
 
-                    // ==========================================
-                    // ETIQUETAS DE TIPO (MORADO SUTIL)
-                    // ==========================================
-                    let claseBadge = 'badge-gasto'; 
+                    let claseBadge = 'status-pending'; 
                     let textoTipo = m.tipo;
-                    let estiloBadge = 'padding: 5px 10px; border-radius: 6px; font-size: 0.8em; letter-spacing: 0.5px;';
-
-                    if (esEntrada) claseBadge = 'badge-ingreso';
-                    if (tipoUpper === 'VENTA') claseBadge = 'badge-primary'; 
                     
-                    // Aquí asignamos el MORADO SUTIL (Fondo transparente 12%, borde suave y letra fuerte)
-                    if (tipoUpper === 'REPARACION') { 
-                        claseBadge = ''; 
-                        estiloBadge += ' background-color: rgba(111, 66, 193, 0.12); color: #6f42c1; font-weight: 600; border: 1px solid rgba(111, 66, 193, 0.2);'; 
-                    } 
-                    else if (tipoUpper === 'CIERRE') { claseBadge = 'badge-dark'; textoTipo = 'Cierre Caja'; }
-                    else if (tipoUpper === 'RETIRO') { claseBadge = 'badge-secondary'; }
-                    // ==========================================
+                    if (esEntrada) claseBadge = 'status-ready';
+                    if (tipoUpper === 'VENTA') claseBadge = 'status-delivered'; 
+                    if (tipoUpper === 'REPARACION') { claseBadge = 'status-in-progress'; } 
+                    else if (tipoUpper === 'CIERRE') { claseBadge = 'status-pending'; textoTipo = 'Cierre Caja'; }
+                    else if (tipoUpper === 'RETIRO') { claseBadge = 'status-pending'; }
 
                     let fechaLimpia = '--/--/----';
                     let horaLimpia = '--:--';
@@ -143,65 +139,60 @@ function cargarMovimientos() {
 
                     let btnFoto = '';
                     if (m.foto) {
-                        btnFoto = `<a href="uploads/${m.foto}" target="_blank" class="btn-icon" style="background-color:#17a2b8; color:white; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; text-decoration: none; transition: 0.2s;" title="Ver Evidencia"><i class="fas fa-image"></i></a>`;
+                        btnFoto = `<a href="uploads/${m.foto}" target="_blank" class="btn-icon" style="background:rgba(0,122,255,0.1); color:#007aff;" title="Ver Evidencia"><i class="fas fa-image"></i></a>`;
                     }
 
                     const tr = document.createElement('tr');
-                    tr.style.transition = "background-color 0.2s";
-                    tr.onmouseover = function() { this.style.backgroundColor = '#f8f9fa'; }
-                    tr.onmouseout = function() { this.style.backgroundColor = 'transparent'; }
-
                     tr.innerHTML = `
-                        <td style="vertical-align: middle;">
-                            <span style="background: #f1f3f5; padding: 4px 8px; border-radius: 6px; font-family: monospace; font-size: 0.85em; color: #495057; border: 1px solid #e9ecef;">${m.id_transaccion || m.id}</span>
-                        </td>
-                        <td class="text-center" style="vertical-align: middle;">
-                            <div style="margin-bottom: 6px;"><span class="badge-tipo ${claseBadge}" style="${estiloBadge}">${textoTipo}</span></div>
+                        <td data-label="ID"><span style="font-family: monospace; font-size: 13px; color: #86868b;">${m.id_transaccion || m.id}</span></td>
+                        <td data-label="Tipo/Origen">
+                            <div style="margin-bottom: 4px;"><span class="status ${claseBadge}">${textoTipo}</span></div>
                             <div>${origenBadge}</div>
                         </td>
-                        <td style="vertical-align: middle; color: #343a40; font-weight: 500; font-size: 0.95em;">
-                            ${m.descripcion}
-                        </td>
-                        <td class="text-right" style="vertical-align: middle;">
-                            <span style="background: ${bgMonto}; color: ${colorMonto}; padding: 6px 12px; border-radius: 8px; font-weight: bold; font-size: 0.95em; display: inline-block; min-width: 90px; text-align: center; letter-spacing: 0.5px;">
+                        <td data-label="Descripción" style="font-weight: 500; color: #1d1d1f;">${m.descripcion}</td>
+                        <td data-label="Monto" style="text-align: right;">
+                            <span style="background: ${bgMonto}; color: ${colorMonto}; padding: 6px 12px; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block;">
                                 ${signo} $${formatoDinero(monto)}
                             </span>
                         </td>
-                        <td style="vertical-align: middle;">
-                            <span style="background: #f8f9fa; color: #6c757d; padding: 5px 10px; border-radius: 20px; font-size: 0.85em; border: 1px solid #dee2e6; white-space: nowrap;">
-                                <i class="fas fa-tag" style="margin-right: 4px; opacity: 0.6;"></i> ${m.categoria || 'Sin Categoría'}
-                            </span>
+                        <td data-label="Categoría"><span style="font-size: 13px; color: #86868b;"><i class="fas fa-tag"></i> ${m.categoria || 'S/C'}</span></td>
+                        <td data-label="Fecha">
+                            <div style="font-size: 13px; color: #1d1d1f; font-weight: 500;">${fechaLimpia}</div>
+                            <div style="font-size: 12px; color: #86868b;">${horaLimpia} hrs</div>
                         </td>
-                        <td style="vertical-align: middle; white-space: nowrap;">
-                            <div style="font-size: 0.85em; color: #495057; font-weight: 600;"><i class="far fa-calendar-alt" style="margin-right:5px; color:#adb5bd;"></i>${fechaLimpia}</div>
-                            <div style="font-size: 0.8em; color: #868e96; margin-top: 3px;"><i class="far fa-clock" style="margin-right:5px; color:#adb5bd;"></i>${horaLimpia} hrs</div>
-                        </td>
-                        <td style="vertical-align: middle;">
-                            <span style="background: #e9ecef; color: #495057; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600; display: inline-flex; align-items: center; white-space: nowrap;">
-                                <i class="fas fa-user-circle" style="font-size: 1.2em; margin-right: 6px; color: #adb5bd;"></i> ${m.usuario || 'Sistema'}
-                            </span>
-                        </td>
-                        <td class="text-center" style="vertical-align: middle;">
-                            <div style="display: flex; gap: 6px; justify-content: center;">
+                        <td data-label="Usuario"><span style="font-size: 13px; font-weight: 600;"><i class="fas fa-user-circle"></i> ${m.usuario || 'Sistema'}</span></td>
+                        <td data-label="Acciones" style="text-align: center;">
+                            <div style="display: flex; gap: 5px; justify-content: center;">
                                 ${btnFoto}
-                                <button class="btn-icon btn-primary" onclick="editarMovimiento(${m.id})" title="Editar" style="width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; border: none; transition: 0.2s;"><i class="fas fa-edit"></i></button>
-                                <button class="btn-icon btn-danger" onclick="eliminarMovimiento(${m.id})" title="Eliminar" style="width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; border: none; transition: 0.2s;"><i class="fas fa-trash-alt"></i></button>
+                                <button class="btn-icon" style="background:rgba(255,149,0,0.1); color:#ff9500;" onclick="editarMovimiento(${m.id})" title="Editar"><i class="fas fa-edit"></i></button>
+                                <button class="btn-icon" style="background:rgba(255,59,48,0.1); color:#ff3b30;" onclick="eliminarMovimiento(${m.id})" title="Eliminar"><i class="fas fa-trash-alt"></i></button>
                             </div>
                         </td>
                     `;
                     tbody.appendChild(tr);
                 });
             } else {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center p-5 text-muted" style="font-size: 1.1em;"><i class="fas fa-folder-open fa-3x mb-3" style="color: #dee2e6; display:block;"></i> No hay movimientos registrados en esta fecha.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 40px; color: #86868b;">No hay movimientos registrados.</td></tr>';
             }
+
+            // Actualizar Tarjetas de Resumen
+            let balanceFinal = totalIngresos - totalGastos;
+            document.getElementById('resumen-ingresos').textContent = '$' + formatoDinero(totalIngresos);
+            document.getElementById('resumen-gastos').textContent = '$' + formatoDinero(totalGastos);
+            document.getElementById('resumen-balance').textContent = '$' + formatoDinero(balanceFinal);
+            
+            // Colorear el balance (Verde si es positivo, Rojo si es negativo)
+            const balanceEl = document.getElementById('resumen-balance');
+            if(balanceFinal >= 0) { balanceEl.style.color = '#007aff'; } 
+            else { balanceEl.style.color = '#ff3b30'; }
+
         })
         .catch(err => {
             console.error(err);
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger p-4"><i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>Error al cargar los datos. Revisa tu conexión.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger p-4">Error al cargar datos.</td></tr>';
         });
 }
 
-// --- EDICIÓN ---
 function editarMovimiento(id) {
     Swal.fire({
         title: 'Modo Edición',
@@ -210,7 +201,7 @@ function editarMovimiento(id) {
         inputAttributes: { autocapitalize: 'off', placeholder: '••••••' },
         showCancelButton: true,
         confirmButtonText: 'Acceder',
-        confirmButtonColor: '#007bff',
+        confirmButtonColor: '#007aff',
         preConfirm: (llave) => {
             if (!llave) Swal.showValidationMessage('Escribe la contraseña');
             return llave;
@@ -234,10 +225,7 @@ function editarMovimiento(id) {
 }
 
 function abrirModalEdicion(movimiento) {
-    document.getElementById('modalTitle').textContent = 'Editar Movimiento';
-    const btnGuardar = document.querySelector('#formGasto button[type="submit"]');
-    if(btnGuardar) btnGuardar.textContent = 'Actualizar Cambios';
-    
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit" style="color:#007aff;"></i> Editar Movimiento';
     document.getElementById('inputId').value = movimiento.id;
     
     const inputTipo = document.getElementById('inputTipo');
@@ -258,14 +246,8 @@ function abrirModalEdicion(movimiento) {
         inputFecha.value = movimiento.fecha.replace(' ', 'T').slice(0, 16);
     }
 
-    // ==========================================
-    // CAMPO DE USUARIO (MODO EDICIÓN)
-    // Carga el usuario original de la BD para que lo actualices manualmente
-    // ==========================================
     const inputUsuario = document.getElementById('inputUsuario');
-    if(inputUsuario) {
-        inputUsuario.value = movimiento.usuario || '';
-    }
+    if(inputUsuario) { inputUsuario.value = movimiento.usuario || ''; }
 
     const preview = document.getElementById('previewContainer');
     const img = document.getElementById('imgPreview');
@@ -276,7 +258,6 @@ function abrirModalEdicion(movimiento) {
     document.getElementById('modalNuevo').style.display = 'flex';
 }
 
-// --- ELIMINACIÓN ---
 function eliminarMovimiento(id) {
     Swal.fire({
         title: 'Eliminar Registro',
@@ -284,7 +265,7 @@ function eliminarMovimiento(id) {
         input: 'password',
         showCancelButton: true,
         confirmButtonText: 'Eliminar Definitivamente',
-        confirmButtonColor: '#d33',
+        confirmButtonColor: '#ff3b30',
         preConfirm: (llave) => { if (!llave) Swal.showValidationMessage('Requerido'); return llave; }
     }).then((result) => {
         if (result.isConfirmed) {
@@ -296,7 +277,10 @@ function eliminarMovimiento(id) {
             fetch('api/gastos.php', { method: 'POST', body: fd })
                 .then(res => res.json())
                 .then(data => {
-                    if(data.success) { Swal.fire('Eliminado', '', 'success'); cargarMovimientos(); }
+                    if(data.success) { 
+                        Swal.fire({toast:true, position:'top-end', icon:'success', title:'Eliminado', showConfirmButton:false, timer:1500});
+                        cargarMovimientos(); 
+                    }
                     else Swal.fire('Error', data.error, 'error');
                 })
                 .catch(err => Swal.fire('Error', 'Fallo de conexión', 'error'));
@@ -304,7 +288,6 @@ function eliminarMovimiento(id) {
     });
 }
 
-// --- FORMULARIO ---
 const form = document.getElementById('formGasto');
 if(form) {
     form.addEventListener('submit', (e) => {
@@ -316,7 +299,11 @@ if(form) {
         fetch('api/gastos.php', { method: 'POST', body: formData })
         .then(res => res.json())
         .then(data => {
-            if(data.success) { Swal.fire('Éxito', '', 'success'); cerrarModal(); cargarMovimientos(); }
+            if(data.success) { 
+                Swal.fire({toast:true, position:'top-end', icon:'success', title:'Guardado', showConfirmButton:false, timer:1500});
+                cerrarModal(); 
+                cargarMovimientos(); 
+            }
             else Swal.fire('Error', data.error, 'error');
         })
         .catch(err => Swal.fire('Error', 'Fallo de conexión', 'error'));
@@ -326,11 +313,8 @@ if(form) {
 function abrirModalNuevo() {
     form.reset();
     document.getElementById('inputId').value = '';
-    document.getElementById('modalTitle').textContent = 'Registrar Movimiento';
-    const btnGuardar = document.querySelector('#formGasto button[type="submit"]');
-    if(btnGuardar) btnGuardar.textContent = 'Guardar';
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-exchange-alt" style="color:#007aff;"></i> Registrar Movimiento';
     document.getElementById('previewContainer').style.display = 'none';
-    
     document.getElementById('inputTipo').value = 'GASTO';
     actualizarCategorias();
     
@@ -341,35 +325,18 @@ function abrirModalNuevo() {
         inputFecha.value = now.toISOString().slice(0, 16);
     }
 
-    // ==========================================
-    // CAMPO DE USUARIO (MODO NUEVO)
-    // Sugiere el nombre de sesión, pero es libre de borrarse
-    // ==========================================
     const inputUsuario = document.getElementById('inputUsuario');
-    if(inputUsuario) {
-        inputUsuario.value = (typeof USUARIO_SESION !== 'undefined') ? USUARIO_SESION : '';
-    }
+    if(inputUsuario) { inputUsuario.value = (typeof USUARIO_SESION !== 'undefined') ? USUARIO_SESION : ''; }
 
     document.getElementById('modalNuevo').style.display = 'flex';
 }
 
 function cerrarModal() { document.getElementById('modalNuevo').style.display = 'none'; }
 function formatoDinero(amount) { return parseFloat(amount).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'); }
-// ==========================================
-// EXPORTAR EXCEL MENSUAL
-// ==========================================
+
 function exportarMesExcel() {
     const mesInput = document.getElementById('mesExportar').value;
-    if (!mesInput) {
-        Swal.fire('Atención', 'Selecciona un mes primero', 'warning');
-        return;
-    }
-
-    // El input devuelve formato "YYYY-MM" (Ej. 2026-02)
+    if (!mesInput) { Swal.fire('Atención', 'Selecciona un mes primero', 'warning'); return; }
     const partes = mesInput.split('-');
-    const anio = partes[0];
-    const mes = partes[1];
-
-    // Redirigir al archivo PHP que forzará la descarga del CSV
-    window.location.href = `api/gastos.php?action=exportar_mes&mes=${mes}&anio=${anio}`;
+    window.location.href = `api/gastos.php?action=exportar_mes&mes=${partes[1]}&anio=${partes[0]}`;
 }

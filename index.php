@@ -21,7 +21,7 @@
                 <li><a href="#inicio">Inicio</a></li>
                 <li><a href="#servicios">Servicios</a></li>
                 <li><a href="#nosotros">Nosotros</a></li>
-                <li><a href="#rastreo">Rastrear Equipo</a></li>
+                <li><a href="#rastreo">Estado de la reparacion</a></li>
                 <li><a href="#contacto">Contacto</a></li>
                 <li><a href="login.php" class="btn-login"><i class="fas fa-lock"></i> Taller</a></li>
             </ul>
@@ -98,7 +98,7 @@
         <div class="container">
             <div class="glass-card tracking-card text-center" style="margin: 0 auto;">
                 <h2 class="section-title" style="text-align: center; margin-bottom: 10px;">
-                    <i class="fas fa-search-location" style="color: #007aff;"></i> Rastrear mi Equipo
+                    <i class="fas fa-search-location" style="color: #007aff;"></i> Revisar el estado de tu reparación
                 </h2>
                 <p style="text-align: center; color: #86868b; margin-bottom: 25px;">Ingresa el folio de tu orden y los últimos 4 dígitos de tu número celular para conocer el estado de tu reparación de forma segura.</p>
                 

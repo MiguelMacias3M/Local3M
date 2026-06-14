@@ -93,7 +93,7 @@
         </div>
     </section>
 
-    <!-- SECCIÓN: RASTREO DE EQUIPO (MovidA ANTES DE CONTACTO) -->
+    <!-- SECCIÓN: RASTREO DE EQUIPO -->
     <section id="rastreo" class="section" style="padding-bottom: 20px;">
         <div class="container">
             <div class="glass-card tracking-card text-center" style="margin: 0 auto;">
@@ -156,12 +156,12 @@
                             <i class="fab fa-facebook-f"></i>
                         </a>
                         
-                        <!-- Botón de Instagram (Por si luego lo activas, de momento no hace nada) -->
+                        <!-- Botón de Instagram -->
                         <a href="#" class="social-btn" title="Síguenos en Instagram">
                             <i class="fab fa-instagram"></i>
                         </a>
                         
-                        <!-- Botón de WhatsApp con mensaje automático -->
+                        <!-- Botón de WhatsApp -->
                         <a href="https://wa.me/524494912164?text=Hola,%20vengo%20de%20su%20página%20web%20y%20me%20gustaría%20información%20sobre%20una%20reparación." target="_blank" class="social-btn whatsapp" title="Escríbenos por WhatsApp">
                             <i class="fab fa-whatsapp"></i>
                         </a>
@@ -189,6 +189,31 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        // --- LECTOR DE CÓDIGO QR (AUTO-LLENADO) ---
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const folioDesdeQR = urlParams.get('folio');
+            
+            if (folioDesdeQR) {
+                const inputFolio = document.getElementById('folio_rastreo');
+                if (inputFolio) {
+                    inputFolio.value = folioDesdeQR;
+                    // Movemos la pantalla suavemente hacia la sección de rastreo
+                    document.getElementById('rastreo').scrollIntoView({ behavior: 'smooth' });
+                    
+                    // Opcional: Pequeña alerta para avisarle al cliente
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'info',
+                        title: 'Folio detectado. Ingresa los 4 dígitos de tu celular para consultar.',
+                        showConfirmButton: false,
+                        timer: 4000
+                    });
+                }
+            }
+        });
+
         // --- MENÚ MÓVIL ---
         const mobileMenu = document.getElementById('mobile-menu');
         const navLinks = document.querySelector('.nav-links');

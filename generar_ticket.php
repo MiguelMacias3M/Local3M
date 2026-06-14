@@ -45,8 +45,7 @@ try {
         $fecha_format = $dateObj->format('d/m/Y h:i A');
     } catch (Exception $e) {}
 
-    // 3. Lógica para Fecha Estimada General (Header)
-    // Buscamos la fecha más lejana de todas las reparaciones para mostrar cuándo estará lista la orden completa.
+    // 3. Lógica para Fecha Estimada General
     $fecha_maxima_ts = null;
     foreach ($items as $item) {
         if (!empty($item['fecha_estimada'])) {
@@ -59,9 +58,13 @@ try {
     
     $texto_entrega = "";
     if ($fecha_maxima_ts) {
-        // Formato ejemplo: 10/02/2026 05:30 PM
         $texto_entrega = date('d/m/Y h:i A', $fecha_maxima_ts);
     }
+
+    // 4. URL DE TU PÁGINA PARA EL CÓDIGO QR
+    // Asegúrate de cambiar esto por la URL real de tu página pública (ej: "https://misitio.com/index.php")
+    // Al escanear, el cliente irá a esta dirección y su navegador leerá el ?folio=...
+    $baseUrlPaginaWeb = "http://localhost/Local3M/index.php"; 
 
 } catch (PDOException $e) {
     die("Error: " . $e->getMessage());
@@ -73,15 +76,20 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ticket #<?php echo $codigo_barras; ?></title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
     <style>
+        /* 🚨 AJUSTE PARA IMPRESORA TÉRMICA 80mm 🚨 */
         @page {
             margin: 0; 
-            size: 54.5mm auto; 
+            size: 76mm auto; /* 76mm de ancho imprimible real para rollos de 80mm */
         }
 
         body {
             font-family: Arial, sans-serif; 
-            font-size: 13px;
+            font-size: 14px; /* Un poco más grande para mejor lectura en 80mm */
             margin: 0;
             padding: 0;
             background-color: #fff;
@@ -89,10 +97,10 @@ try {
         }
 
         .ticket {
-            width: 54.5mm; 
-            max-width: 54.5mm;
+            width: 72mm; /* Dejamos un margen seguro de 4mm */
+            max-width: 72mm;
             margin: 0 auto; 
-            padding: 2px 0; 
+            padding: 5px 0; 
             box-sizing: border-box;
             overflow: hidden; 
         }
@@ -105,38 +113,38 @@ try {
 
         /* Encabezado */
         .logo { 
-            font-size: 24px; 
+            font-size: 32px; /* Más grande en 80mm */
             font-weight: 900; 
             margin-bottom: 2px;
             letter-spacing: -1px;
             text-transform: uppercase;
         }
-        .subtitle { font-size: 10px; letter-spacing: 3px; margin-bottom: 8px; display: block;}
-        .ticket-title { font-size: 14px; font-weight: bold; border-bottom: 2px solid #000; display: inline-block; margin-bottom: 5px; }
+        .subtitle { font-size: 12px; letter-spacing: 4px; margin-bottom: 10px; display: block;}
+        .ticket-title { font-size: 16px; font-weight: bold; border-bottom: 2px solid #000; display: inline-block; margin-bottom: 8px; }
 
         .divider { 
             border-top: 1px dashed #000; 
-            margin: 6px 0; 
+            margin: 8px 0; 
             width: 100%;
         }
 
         /* Tablas */
         .info-table, .items-table, .totals-table { 
             width: 100%; 
-            font-size: 12px; 
+            font-size: 14px; 
             border-collapse: collapse; 
         }
         
-        .info-table td { padding: 1px 0; }
-        .items-table td { padding: 2px 0; }
-        .totals-table td { padding: 2px 0; font-size: 13px; }
+        .info-table td { padding: 2px 0; }
+        .items-table td { padding: 3px 0; }
+        .totals-table td { padding: 3px 0; font-size: 15px; }
 
         /* Footer */
         .footer-text { 
-            font-size: 11px; 
+            font-size: 12px; 
             text-align: center; 
-            margin-top: 10px; 
-            line-height: 1.2;
+            margin-top: 15px; 
+            line-height: 1.3;
         }
 
         /* Botones (No imprimir) */
@@ -145,7 +153,7 @@ try {
             padding: 20px;
             background: #f0f0f0;
             border-bottom: 1px solid #ccc;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
         .btn {
             padding: 10px 20px;
@@ -159,9 +167,17 @@ try {
         .btn-print { background: #000; }
         .btn-close { background: #dc3545; }
 
+        /* Contenedor del QR */
+        #qrcode-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
+
         @media print {
             body { margin: 0; padding: 0; }
-            .ticket { width: 54.5mm; margin: 0 auto; } 
+            .ticket { width: 72mm; margin: 0 auto; } 
             .no-print { display: none; }
             * { color: #000 !important; }
         }
@@ -186,7 +202,7 @@ try {
         <table class="info-table">
             <tr>
                 <td class="bold">Folio:</td>
-                <td class="right bold" style="font-size:14px;"><?php echo strtoupper($codigo_barras); ?></td>
+                <td class="right bold" style="font-size:16px;"><?php echo strtoupper($codigo_barras); ?></td>
             </tr>
             <tr>
                 <td>Fecha:</td>
@@ -199,8 +215,8 @@ try {
             
             <?php if (!empty($texto_entrega)): ?>
             <tr>
-                <td class="bold">Entrega estimada:</td>
-                <td class="right bold"><?php echo $texto_entrega; ?></td>
+                <td class="bold" style="padding-top: 5px;">Entrega estimada:</td>
+                <td class="right bold" style="padding-top: 5px;"><?php echo $texto_entrega; ?></td>
             </tr>
             <?php endif; ?>
 
@@ -208,8 +224,8 @@ try {
 
         <div class="divider"></div>
 
-        <div class="bold" style="font-size:13px;">CLIENTE:</div>
-        <div style="font-size:13px; margin-bottom:2px;"><?php echo htmlspecialchars($cliente); ?></div>
+        <div class="bold" style="font-size:14px;">CLIENTE:</div>
+        <div style="font-size:14px; margin-bottom:4px;"><?php echo htmlspecialchars($cliente); ?></div>
         <div>Tel: <?php echo htmlspecialchars($telefono); ?></div>
 
         <div class="divider"></div>
@@ -223,19 +239,19 @@ try {
             $total_adelanto += $item['adelanto'];
             $deuda_item = $item['monto'] - $item['adelanto'];
         ?>
-            <div style="margin-bottom: 6px;">
-                <div class="bold" style="font-size:13px;">
+            <div style="margin-bottom: 8px;">
+                <div class="bold" style="font-size:14px;">
                     <?php echo $i++; ?>. <?php echo htmlspecialchars($item['tipo_reparacion']); ?>
                 </div>
-                <div>
+                <div style="font-size: 13px;">
                     <?php echo htmlspecialchars($item['marca_celular'] . " " . $item['modelo']); ?>
                 </div>
                 
                 <?php if(!empty($item['info_extra']) && $item['info_extra'] !== 'Ninguna'): ?>
-                    <div style="font-style:italic; font-size:11px;">(<?php echo htmlspecialchars($item['info_extra']); ?>)</div>
+                    <div style="font-style:italic; font-size:12px; color: #333;">(<?php echo htmlspecialchars($item['info_extra']); ?>)</div>
                 <?php endif; ?>
 
-                <table class="items-table" style="margin-top:2px;">
+                <table class="items-table" style="margin-top:4px;">
                     <tr>
                         <td>Costo:</td>
                         <td class="right">$<?php echo number_format($item['monto'], 2); ?></td>
@@ -244,13 +260,13 @@ try {
                         <td>Abono:</td>
                         <td class="right">-$<?php echo number_format($item['adelanto'], 2); ?></td>
                     </tr>
-                    <tr style="font-weight:bold;">
+                    <tr style="font-weight:bold; font-size: 15px;">
                         <td>Resta:</td>
                         <td class="right">$<?php echo number_format($deuda_item, 2); ?></td>
                     </tr>
                 </table>
             </div>
-            <?php if ($i <= count($items)): ?><div style="border-top:1px dotted #ccc; margin:4px 0;"></div><?php endif; ?>
+            <?php if ($i <= count($items)): ?><div style="border-top:1px dotted #ccc; margin:6px 0;"></div><?php endif; ?>
         <?php endforeach; ?>
 
         <div class="divider"></div>
@@ -267,7 +283,7 @@ try {
                     <td>ABONADO:</td>
                     <td class="right">-$<?php echo number_format($total_adelanto, 2); ?></td>
                 </tr>
-                <tr style="font-size:16px;">
+                <tr style="font-size:18px;">
                     <td>RESTA:</td>
                     <td class="right">$<?php echo number_format($total_final, 2); ?></td>
                 </tr>
@@ -278,7 +294,7 @@ try {
         <div class="footer-text">
             <strong>CONDICIONES DE SERVICIO</strong><br>
             1. Garantía válida solo con este ticket.<br>
-            2. Después de 30 días no nos hacemos responsables por su equipo.<br>
+            2. Después de 30 días no nos hacemos responsables por equipos olvidados.<br>
             3. No hay garantía en equipos mojados.<br>
             <br>
             <strong>¡Gracias por su confianza!</strong>
@@ -287,36 +303,65 @@ try {
         <div class="center" style="margin-top:15px; overflow:hidden; width:100%;">
             <svg id="barcode" style="max-width: 100%; height: auto;"></svg>
         </div>
-        
-        <div class="center" style="font-size:12px; font-weight:bold; letter-spacing:1px; margin-top:2px;">
+        <div class="center" style="font-size:14px; font-weight:bold; letter-spacing:1px; margin-top:2px; margin-bottom: 15px;">
             <?php echo strtoupper($codigo_barras); ?>
         </div>
+
+        <div class="divider"></div>
         
-        <div class="center" style="margin-top:10px; font-size:11px;">
+        <div class="center" style="margin-top: 10px;">
+            <div style="font-size: 11px; font-weight: bold; margin-bottom: 5px;">ESCANEA PARA VER EL ESTADO:</div>
+            <div id="qrcode-container"></div>
+        </div>
+
+        <div class="center" style="margin-top:15px; font-size:12px;">
             <strong>WhatsApp:</strong> 449 491 2164<br>
             Lunes a Sábado 09:00 am - 09:00 pm
         </div>
-        <div class="center" style="margin-top:5px;">--- 3M TECHNOLOGY ---</div>
+        <div class="center" style="margin-top:5px; margin-bottom: 10px;">--- 3M TECHNOLOGY ---</div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script>
-        try {
-            JsBarcode("#barcode", "<?php echo $codigo_barras; ?>", {
-                format: "CODE128",
-                width: 1.2,
-                height: 60,
-                displayValue: false, 
-                margin: 0,
-                flat: true 
+        window.onload = function() {
+            let codigoBarras = "<?php echo trim(preg_replace('/\s+/', '', $codigo_barras)); ?>";
+            
+            // 1. Dibujar Código de Barras (MÁS ANCHO Y ALTO PARA LECTOR LÁSER)
+            if (codigoBarras !== "") {
+                try {
+                    JsBarcode("#barcode", codigoBarras, {
+                        format: "CODE128",
+                        width: 1.8,  // Más ancho para que el láser lo lea mejor (antes 1.2 o 1.5)
+                        height: 70,  // Más alto (antes 40 o 60)
+                        displayValue: false,
+                        margin: 0
+                    });
+                } catch (error) {
+                    console.error("Error al dibujar el código de barras:", error);
+                }
+            }
+
+            // 2. Generar Código QR
+            // Construimos la URL agregando el ?folio=...
+            let urlRastreo = "<?php echo $baseUrlPaginaWeb; ?>?folio=" + encodeURIComponent(codigoBarras);
+            
+            new QRCode(document.getElementById("qrcode-container"), {
+                text: urlRastreo,
+                width: 100, // Tamaño del QR en píxeles
+                height: 100,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.L
             });
-        } catch (e) {}
+
+            // 3. Imprimir automáticamente (comentado temporalmente para que puedas ver el resultado en pantalla)
+            // setTimeout(function() {
+            //     window.print();
+            //     setTimeout(function() { window.close(); }, 1000);
+            // }, 500); 
+        };
 
         function cerrarTicket() {
             window.close();
-            setTimeout(function() {
-                window.location.href = '/local3M/control.php';
-            }, 300);
         }
     </script>
 </body>

@@ -64,7 +64,7 @@ try {
     // 4. URL DE TU PÁGINA PARA EL CÓDIGO QR
     // Asegúrate de cambiar esto por la URL real de tu página pública (ej: "https://misitio.com/index.php")
     // Al escanear, el cliente irá a esta dirección y su navegador leerá el ?folio=...
-    $baseUrlPaginaWeb = "http://localhost/Local3M/index.php"; 
+    $baseUrlPaginaWeb = "https://3mtechnologyoficial.com/local3M/index.php"; 
 
 } catch (PDOException $e) {
     die("Error: " . $e->getMessage());

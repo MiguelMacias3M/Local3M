@@ -390,9 +390,9 @@ function eliminarReparacion(id) {
     Swal.fire({
         title: 'Eliminar Registro',
         text: 'Ingresa la Llave Maestra:',
-        input: 'password',
+        input: 'text',
         inputAttributes: { autocapitalize: 'off', placeholder: '••••••' },
-        icon: 'warning',
+        customClass: { input: 'password-mask' },
         showCancelButton: true,
         confirmButtonColor: '#ff3b30',
         cancelButtonColor: '#8e8e93',

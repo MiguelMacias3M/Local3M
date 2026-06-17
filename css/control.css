@@ -265,3 +265,8 @@
 
 /* 9. No se pudo reparar (Rojo Oscuro) */
 .est-no-reparado { background: rgba(200, 0, 0, 0.15); color: #cc0000; border: 1px solid rgba(200, 0, 0, 0.2); }
+
+/* Ocultar el texto de la Llave Maestra sin alertar a Chrome */
+.password-mask {
+    -webkit-text-security: disc;
+}

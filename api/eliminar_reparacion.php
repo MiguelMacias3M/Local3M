@@ -21,12 +21,12 @@ if (!$id) {
 }
 
 try {
-    // 🚨 AQUÍ EL CAMBIO: Validar usando tu variable exacta $PASSWORD_MAESTRA
-    if (!isset($PASSWORD_MAESTRA)) {
+    // 🚨 AQUÍ EL CAMBIO: Validar usando la variable correcta $MASTER_PASSWORD
+    if (!isset($MASTER_PASSWORD)) {
         throw new Exception("Error interno: Llave Maestra no configurada en la conexión.");
     }
     
-    if ($llave !== $PASSWORD_MAESTRA) {
+    if ($llave !== $MASTER_PASSWORD) {
         echo json_encode(['success' => false, 'error' => 'La Llave Maestra es incorrecta.']);
         exit();
     }

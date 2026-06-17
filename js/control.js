@@ -407,7 +407,7 @@ function eliminarReparacion(id) {
             // Preparamos los datos para enviarlos por POST
             const fd = new FormData();
             fd.append('id', id);
-            fd.append('llave_maestra', result.value);
+            fd.append('$MASTER_PASSWORD', result.value);
 
             // Enviamos la petición oculta a la API
             fetch('/local3M/api/eliminar_reparacion.php', { 

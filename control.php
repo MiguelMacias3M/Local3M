@@ -33,7 +33,6 @@ if (isset($_GET['msg']) && $_GET['msg'] === 'eliminado') {
             <table class="glass-table">
                 <thead>
                     <tr>
-                        <th>Folio</th>
                         <th>Cliente</th>
                         <th>Equipo</th>
                         <th>Problema</th>

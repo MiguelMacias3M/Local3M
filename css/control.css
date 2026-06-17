@@ -224,3 +224,44 @@
         flex: 1; 
     }
 }
+/* =========================================
+   LIQUID GLASS - ETIQUETAS DE ESTADOS
+   ========================================= */
+.badge-estado {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+    white-space: nowrap;
+    text-align: center;
+}
+
+/* 1. En espera (Naranja Suave) */
+.est-espera { background: rgba(255, 149, 0, 0.15); color: #ff9500; border: 1px solid rgba(255, 149, 0, 0.2); }
+
+/* 2. En revision (Cian) */
+.est-revision { background: rgba(90, 200, 250, 0.15); color: #007bb5; border: 1px solid rgba(90, 200, 250, 0.2); }
+
+/* 3. Diagnosticado (Morado) */
+.est-diagnosticado { background: rgba(175, 82, 222, 0.15); color: #af52de; border: 1px solid rgba(175, 82, 222, 0.2); }
+
+/* 4. En preparacion (Azul Claro) */
+.est-preparacion { background: rgba(50, 173, 230, 0.15); color: #0088cc; border: 1px solid rgba(50, 173, 230, 0.2); }
+
+/* 5. En progreso (Azul Fuerte/Primario) */
+.est-progreso { background: rgba(0, 122, 255, 0.15); color: #007aff; border: 1px solid rgba(0, 122, 255, 0.2); }
+
+/* 6. Reparado (Verde Éxito) */
+.est-reparado { background: rgba(52, 199, 89, 0.15); color: #28a745; border: 1px solid rgba(52, 199, 89, 0.2); }
+
+/* 7. Entregado (Gris Oscuro/Neutral) */
+.est-entregado { background: rgb(0, 199, 50); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.2); }
+
+/* 8. Cancelado (Rojo Suave) */
+.est-cancelado { background: rgba(255, 59, 48, 0.15); color: #ff3b30; border: 1px solid rgba(255, 59, 48, 0.2); }
+
+/* 9. No se pudo reparar (Rojo Oscuro) */
+.est-no-reparado { background: rgba(200, 0, 0, 0.15); color: #cc0000; border: 1px solid rgba(200, 0, 0, 0.2); }

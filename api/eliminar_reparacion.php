@@ -1,54 +1,43 @@
 <?php
 session_start();
+header('Content-Type: application/json; charset=utf-8');
 
-// 1. Configuración
-header('Content-Type: application/json');
-ini_set('display_errors', 0);
-error_reporting(0);
-
-// --- CONTRASEÑA DE ADMINISTRADOR (ESTÁTICA) ---
-$PASSWORD_MAESTRA = "1234"; 
-// -----------------------------------------------
-
-// 2. Seguridad de sesión
-if (!isset($_SESSION['nombre'])) {
+// Validar que el usuario sea administrador
+if (!isset($_SESSION['rol']) || strtolower($_SESSION['rol']) !== 'admin') {
     echo json_encode(['success' => false, 'error' => 'No autorizado']);
     exit();
 }
 
-include '../config/conexion.php';
+require_once '../config/conexion.php';
 
-// 3. Leer datos JSON
-$data = json_decode(file_get_contents('php://input'), true);
-$id = $data['id'] ?? null;
-$password = $data['password'] ?? '';
+// Recibir datos por POST
+$id = $_POST['id'] ?? null;
+$llave = $_POST['llave_maestra'] ?? '';
 
-// 4. Validaciones
+// Verificar que venga el ID
 if (!$id) {
     echo json_encode(['success' => false, 'error' => 'ID no especificado']);
     exit();
 }
 
-// 5. VERIFICAR CONTRASEÑA
-if ($password !== $PASSWORD_MAESTRA) {
-    // Simulamos un pequeño retraso para evitar ataques de fuerza bruta rápidos
-    sleep(1); 
-    echo json_encode(['success' => false, 'error' => 'Contraseña incorrecta']);
-    exit();
-}
-
 try {
-    // 6. Eliminar
+    // 🚨 AQUÍ EL CAMBIO: Validar usando tu variable exacta $PASSWORD_MAESTRA
+    if (!isset($PASSWORD_MAESTRA)) {
+        throw new Exception("Error interno: Llave Maestra no configurada en la conexión.");
+    }
+    
+    if ($llave !== $PASSWORD_MAESTRA) {
+        echo json_encode(['success' => false, 'error' => 'La Llave Maestra es incorrecta.']);
+        exit();
+    }
+
+    // Proceder a eliminar de la base de datos
     $stmt = $conn->prepare("DELETE FROM reparaciones WHERE id = :id");
     $stmt->execute([':id' => $id]);
 
-    if ($stmt->rowCount() > 0) {
-        echo json_encode(['success' => true]);
-    } else {
-        echo json_encode(['success' => false, 'error' => 'No se encontró la reparación o ya fue eliminada']);
-    }
+    echo json_encode(['success' => true]);
 
-} catch (PDOException $e) {
+} catch (Exception $e) {
     echo json_encode(['success' => false, 'error' => 'Error de BD: ' . $e->getMessage()]);
 }
 ?>

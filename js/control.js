@@ -25,13 +25,29 @@ const btnLimpiar = document.getElementById('btnLimpiar');
 const modalDetalles = document.getElementById('modalDetalles');
 const detallesContenido = document.getElementById('detallesContenido');
 
-// Elementos Modal Código de Barras Independiente
 const barcodeModal = document.getElementById('barcodeModal');
 const barcodeSpinner = document.getElementById('barcode-spinner');
 const barcodeWrap = document.getElementById('barcode-wrap');
 const barcodeError = document.getElementById('barcode-error');
 const btnPrintBarcode = document.getElementById('btnPrintBarcode');
 const btnCopyBarcode = document.getElementById('btnCopyBarcode');
+
+// --- FUNCIÓN PARA COLORES DE ESTADOS ---
+function obtenerClaseEstado(estado) {
+    let est = estado ? estado.trim() : '';
+    switch (est) {
+        case 'En espera':          return 'est-espera';
+        case 'En revision':        return 'est-revision';
+        case 'Diagnosticado':      return 'est-diagnosticado';
+        case 'En preparacion':     return 'est-preparacion';
+        case 'En progreso':        return 'est-progreso';
+        case 'Reparado':           return 'est-reparado';
+        case 'Entregado':          return 'est-entregado';
+        case 'Cancelado':          return 'est-cancelado';
+        case 'No se pudo reparar': return 'est-no-reparado';
+        default:                   return 'est-espera'; 
+    }
+}
 
 // ========= Carga paginada =========
 async function cargarPagina() {
@@ -76,34 +92,29 @@ async function cargarPagina() {
 }
 
 // ========= Renderizar Filas de la Tabla =========
+// ========= Renderizar Filas de la Tabla =========
 function renderizarFilas(lista) {
     lista.forEach(rep => {
         const tr = document.createElement('tr');
         
-        let estadoClass = 'status-unknown';
-        const est = (rep.estado || '').toLowerCase();
-        if (est.includes('espera')) estadoClass = 'status-wait';
-        else if (est.includes('revision') || est.includes('diagnosticado')) estadoClass = 'status-pending';
-        else if (est.includes('progreso')) estadoClass = 'status-progress';
-        else if (est.includes('reparado')) estadoClass = 'status-ready';
+        const claseEstado = obtenerClaseEstado(rep.estado);
 
         const costoTotal = parseFloat(rep.monto) || 0;
         const totalAbonado = parseFloat(rep.adelanto) || 0; 
         const saldoPendiente = rep.deuda !== undefined && rep.deuda !== null ? parseFloat(rep.deuda) : (costoTotal - totalAbonado);
 
-        const codigoVisual = rep.codigo_barras || rep.codigo || rep.folio || rep.id;
+        const marcaYModelo = `${rep.marca_celular || ''} ${rep.modelo}`.trim();
 
         tr.innerHTML = `
-            <td data-label="Folio"><strong>${escapeHTML(codigoVisual)}</strong></td>
             <td data-label="Cliente">
                 <div style="font-weight:600;">${escapeHTML(rep.nombre_cliente)}</div>
                 <div style="font-size:12px; color:#86868b;">${escapeHTML(rep.telefono)}</div>
             </td>
             <td data-label="Equipo">
-                <div style="font-weight:600; color:#007aff;">${escapeHTML(rep.modelo)}</div>
+                <div style="font-weight:600; color:#007aff;">${escapeHTML(marcaYModelo)}</div>
             </td>
             <td data-label="Problema">${escapeHTML(rep.tipo_reparacion)}</td>
-            <td data-label="Estado"><span class="status ${estadoClass}">${escapeHTML(rep.estado)}</span></td>
+            <td data-label="Estado"><span class="badge-estado ${claseEstado}">${escapeHTML(rep.estado)}</span></td>
             <td data-label="Acciones" style="text-align: center;">
                 <div style="display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: center;">
                     <button class="glass-btn" style="height:36px; padding:0 12px; font-size:13px; background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.25); color: #1d1d1f;" onclick="verDetalles(${rep.id})" title="Ver Detalles y Código">
@@ -154,21 +165,22 @@ if (btnLimpiar) {
     });
 }
 
-// ========= Ventana Amigable de Detalles de Orden (Liquid Glass) =========
+// ========= Ventana Amigable de Detalles de Orden =========
 function verDetalles(id) {
     const rep = datos.find(x => x.id == id);
     if (!rep) return;
 
     const fechaReg = rep.fecha_hora || rep.fecha_ingreso || rep.fecha || 'N/A';
     
-    // SINCRO BD: monto, adelanto, deuda
     const costoTotal = parseFloat(rep.monto) || 0;
     const anticipo = parseFloat(rep.adelanto) || 0;
     const restante = rep.deuda !== undefined && rep.deuda !== null ? parseFloat(rep.deuda) : (costoTotal - anticipo);
     
     const infoExtraContenido = rep.info_extra || rep.observaciones || 'Sin anotaciones adicionales en la recepción.';
-    
     const codigoCompleto = rep.codigo_barras || rep.codigo || rep.folio || rep.id;
+    
+    // 🚨 AÑADIMOS LA MARCA AQUÍ PARA EL MODAL DE DETALLES
+    const marcaYModelo = `${rep.marca_celular || ''} ${rep.modelo}`.trim();
 
     detallesContenido.innerHTML = `
         <div class="detail-section-card">
@@ -188,8 +200,8 @@ function verDetalles(id) {
         <div class="detail-section-card">
             <div class="detail-section-title"><i class="fas fa-mobile-alt"></i> Detalles de la Reparación</div>
             <div style="margin-bottom: 12px;">
-                <div class="detail-item-label">Modelo del Equipo</div>
-                <div class="detail-item-value" style="color: #007aff; font-size: 16px;">${escapeHTML(rep.modelo)}</div>
+                <div class="detail-item-label">Equipo</div>
+                <div class="detail-item-value" style="color: #007aff; font-size: 16px;">${escapeHTML(marcaYModelo)}</div>
             </div>
             <div style="margin-bottom: 12px;">
                 <div class="detail-item-label">Falla / Servicio Requerido</div>
@@ -282,7 +294,8 @@ function mostrarCodigo(id) {
     const codigoCompleto = rep.codigo_barras || rep.codigo || rep.folio || rep.id;
     
     currentBarcode = String(codigoCompleto);
-    currentModelo = rep.modelo;
+    // 🚨 AÑADIMOS LA MARCA PARA LA IMPRESIÓN DE LA ETIQUETA RÁPIDA
+    currentModelo = `${rep.marca_celular || ''} ${rep.modelo}`.trim();
     currentCliente = rep.nombre_cliente;
     currentFalla = rep.tipo_reparacion;
 
@@ -350,7 +363,6 @@ if (btnCopyBarcode) {
     });
 }
 
-// ========= Función (Deshabilitada de la UI pero guardada) =========
 function enviarReparacionAlCarritoGlobal(idReparacion, modelo, costoTotal, saldoPendiente) {
     if (saldoPendiente <= 0) {
         Swal.fire('Aviso', 'Esta reparación ya está liquidada.', 'info');
@@ -373,25 +385,66 @@ function enviarReparacionAlCarritoGlobal(idReparacion, modelo, costoTotal, saldo
     }
 }
 
-// ========= Eliminar Orden de Taller =========
+// ========= Eliminar Orden de Taller (CON LLAVE MAESTRA) =========
 function eliminarReparacion(id) {
     Swal.fire({
-        title: '¿Estás completamente seguro?',
-        text: "Esta acción eliminará permanentemente el registro del taller y no podrá recuperarse.",
+        title: 'Eliminar Registro',
+        text: 'Ingresa la Llave Maestra:',
+        input: 'password',
+        inputAttributes: { autocapitalize: 'off', placeholder: '••••••' },
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#ff3b30',
         cancelButtonColor: '#8e8e93',
         confirmButtonText: 'Sí, borrar registro',
-        cancelButtonText: 'Cancelar'
+        cancelButtonText: 'Cancelar',
+        preConfirm: (llave) => {
+            if (!llave) Swal.showValidationMessage('La contraseña es requerida');
+            return llave;
+        }
     }).then((result) => {
         if (result.isConfirmed) {
-            window.location.href = `/local3M/api/eliminar_reparacion.php?id=${id}`;
+            // Preparamos los datos para enviarlos por POST
+            const fd = new FormData();
+            fd.append('id', id);
+            fd.append('llave_maestra', result.value);
+
+            // Enviamos la petición oculta a la API
+            fetch('/local3M/api/eliminar_reparacion.php', { 
+                method: 'POST', 
+                body: fd 
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    Swal.fire({
+                        toast: true, 
+                        position: 'top-end', 
+                        icon: 'success', 
+                        title: 'Reparación eliminada', 
+                        timer: 1500, 
+                        showConfirmButton: false
+                    });
+                    
+                    // Recargamos la tabla limpiamente
+                    setTimeout(() => {
+                        tbody.innerHTML = '';
+                        offset = 0;
+                        datos = [];
+                        finDeLista = false;
+                        cargarPagina();
+                    }, 1500);
+                } else {
+                    Swal.fire('Acceso Denegado', data.error || 'Llave incorrecta', 'error');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                Swal.fire('Error', 'Fallo de conexión con el servidor', 'error');
+            });
         }
     });
 }
-
-// ========= Helpers de sanitización anti-XSS =========
 function escapeHTML(str) {
     if (str === null || str === undefined) return '';
     return String(str).replace(/[&<>"']/g, function (m) {
@@ -411,7 +464,6 @@ function escapeJS(str) {
     return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
 }
 
-// ========= Cerrar Modales al Hacer Clic Fuera =========
 document.querySelectorAll('.glass-modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', function(e) {
         if (e.target === this) {
@@ -420,7 +472,6 @@ document.querySelectorAll('.glass-modal-overlay').forEach(overlay => {
     });
 });
 
-// Carga inicial al abrir el panel
 document.addEventListener('DOMContentLoaded', () => {
     cargarPagina();
 });

@@ -14,7 +14,7 @@ function validarCampos(esParaCarrito) {
         const adelanto = document.getElementById('adelanto').value.trim();
 
         if (!tipoReparacion || !marcaCelular || !modelo || !monto || !adelanto) {
-            Swal.fire('Campos de Equipo Vacíos', 'Por favor, complete todos los campos del equipo.', 'warning');
+            Swal.fire({icon: 'warning', title: 'Faltan Datos', text: 'Por favor, complete todos los campos obligatorios del equipo.'});
             return false;
         }
     } else {
@@ -22,11 +22,11 @@ function validarCampos(esParaCarrito) {
         const telefono = document.getElementById('telefono').value.trim();
         
         if (!nombreCliente || !telefono) {
-            Swal.fire('Campos de Cliente Vacíos', 'Por favor, complete el nombre y teléfono del cliente.', 'warning');
+            Swal.fire({icon: 'warning', title: 'Faltan Datos', text: 'Por favor, complete el nombre y teléfono del cliente.'});
             return false;
         }
         if (telefono.length !== 10) {
-            Swal.fire('Teléfono Incorrecto', 'El número de teléfono debe tener exactamente 10 dígitos.', 'warning');
+            Swal.fire({icon: 'warning', title: 'Teléfono Inválido', text: 'El número de teléfono debe tener exactamente 10 dígitos numéricos.'});
             return false;
         }
     }
@@ -36,19 +36,14 @@ function validarCampos(esParaCarrito) {
 function agregarAlCarrito() {
     if (!validarCampos(true)) return;
 
-    // ... (código existente donde obtienes las variables) ...
     const tipoReparacion = document.getElementById('tipo_reparacion').value;
     const marcaCelular = document.getElementById('marca_celular').value;
     const modelo = document.getElementById('modelo').value;
     const monto = parseInt(document.getElementById('monto').value) || 0;
     const adelanto = parseInt(document.getElementById('adelanto').value) || 0;
     const deuda = Math.max(monto - adelanto, 0);
-    
-    // 1. Obtener la fecha (Esto ya lo tenías)
     const fechaEstimada = document.getElementById('fecha_estimada').value;
 
-    // 2. ERROR ACTUAL: Estás creando 'const item' pero luego usas 'const reparacion' sin la fecha.
-    // CORRECCIÓN: Agrega 'fechaEstimada' al objeto 'reparacion'.
     const reparacion = { 
         tipoReparacion, 
         marcaCelular, 
@@ -56,23 +51,19 @@ function agregarAlCarrito() {
         monto, 
         adelanto, 
         deuda,
-        fechaEstimada: fechaEstimada // <--- AGREGA ESTA LÍNEA
+        fechaEstimada: fechaEstimada
     };
 
     carrito.push(reparacion);
     
     mostrarCarrito();
     limpiarCamposEquipo();
-    
-    // 3. Limpiar el campo de fecha también
-    document.getElementById('fecha_estimada').value = '';
 }
 
 function mostrarCarrito() {
     const listaCarrito = document.getElementById('lista-carrito');
     const btnRegistrar = document.getElementById('btn-registrar');
     const totalDeudaElement = document.getElementById('total-deuda');
-    const contenedorTotal = document.getElementById('contenedor-total');
 
     listaCarrito.innerHTML = '';
     let totalMonto = 0;
@@ -80,23 +71,32 @@ function mostrarCarrito() {
     let totalDeuda = 0;
 
     if (carrito.length === 0) {
-        listaCarrito.innerHTML = '<li>El carrito está vacío.</li>';
+        listaCarrito.innerHTML = '<li class="empty-cart"><i class="fas fa-box-open" style="font-size: 30px; display: block; margin-bottom: 10px; color: #c7c7cc;"></i>Aún no hay equipos agregados.</li>';
         btnRegistrar.disabled = true;
-        totalDeudaElement.textContent = '$0';
+        totalDeudaElement.textContent = '$0.00';
     } else {
-        carrito.forEach((reparacion, index) => {
-            totalMonto += reparacion.monto;
-            totalAdelanto += reparacion.adelanto;
-
+        carrito.forEach((rep, index) => {
+            totalMonto += rep.monto;
+            totalAdelanto += rep.adelanto;
+            
+            // Tarjeta Liquid Glass para cada item del carrito
             listaCarrito.innerHTML += `
-                <li>
-                    <button class="delete-btn" onclick="eliminarDelCarrito(${index})">&times;</button>
-                    <strong>${reparacion.tipoReparacion}</strong>
-                    <div class="carrito-item-detalle">
-                        ${reparacion.marcaCelular} ${reparacion.modelo}<br>
-                        Monto: $${reparacion.monto} | 
-                        Adelanto: $${reparacion.adelanto} | 
-                        Deuda: $${reparacion.deuda}
+                <li class="glass-cart-item">
+                    <div style="flex: 1;">
+                        <h4 style="margin: 0 0 4px 0; color: #1d1d1f; font-size: 15px;"><i class="fas fa-wrench" style="color:#007aff; margin-right:5px;"></i>${rep.tipoReparacion}</h4>
+                        <div style="font-size: 13px; color: #86868b; margin-bottom: 8px;">
+                            ${rep.marcaCelular} ${rep.modelo}
+                        </div>
+                        <div style="display: flex; gap: 8px; font-size: 11px; flex-wrap: wrap;">
+                            <span class="badge-blue">Costo: $${rep.monto}</span>
+                            <span class="badge-green">Abono: $${rep.adelanto}</span>
+                            <span class="${rep.deuda > 0 ? 'badge-red' : 'badge-green'}">Resta: $${rep.deuda}</span>
+                        </div>
+                    </div>
+                    <div style="margin-left: 10px;">
+                        <button class="btn-icon" style="background: rgba(255,59,48,0.1); color: #ff3b30;" onclick="eliminarDelCarrito(${index})" title="Quitar equipo">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
                     </div>
                 </li>
             `;
@@ -104,8 +104,7 @@ function mostrarCarrito() {
 
         totalDeuda = totalMonto - totalAdelanto;
         btnRegistrar.disabled = false;
-        
-        contenedorTotal.innerHTML = `<strong id="total-label">Deuda Total:</strong> <span id="total-deuda">$${totalDeuda}</span>`;
+        totalDeudaElement.textContent = '$' + totalDeuda.toFixed(2);
     }
 }
 
@@ -116,7 +115,7 @@ function eliminarDelCarrito(index) {
 
 function enviarCarrito() {
     if (carrito.length === 0) {
-        Swal.fire('Carrito Vacío', 'Debe agregar al menos una reparación.', 'warning');
+        Swal.fire('Carrito Vacío', 'Debe agregar al menos una reparación a la orden.', 'warning');
         return;
     }
     if (!validarCampos(false)) return;
@@ -127,7 +126,7 @@ function enviarCarrito() {
 
     const btn = document.getElementById('btn-registrar');
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando Orden...';
 
     const payload = {
         usuario: USUARIO_SESION, 
@@ -146,27 +145,22 @@ function enviarCarrito() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            
-            // 1. Verificar si hay algún adelanto que debamos cobrar
             let hayAdelantos = false;
             
-            // Usamos un retraso escalonado por si hay múltiples equipos con adelanto
             carrito.forEach((rep, index) => {
                 if (rep.adelanto > 0) {
                     hayAdelantos = true;
-                    // Buscar el ID real generado en la base de datos (lo mandaremos desde PHP)
                     let idReal = data.ids_generados ? data.ids_generados[index] : data.id_transaccion;
 
                     const itemGlobal = {
-                        id: idReal, // El ID de la reparación en BD
+                        id: idReal,
                         tipo: 'reparacion',
-                        accion_reparacion: 'nuevo_adelanto', // ETIQUETA SECRETA
+                        accion_reparacion: 'nuevo_adelanto',
                         nombre: 'Adelanto: ' + rep.tipoReparacion + ' ' + rep.modelo,
                         costo_total: rep.monto,
                         a_cobrar: rep.adelanto
                     };
 
-                    // Mandamos al carrito global con un pequeño retraso
                     setTimeout(() => {
                         if (typeof agregarAlCarritoGlobal === 'function') {
                             agregarAlCarritoGlobal(itemGlobal);
@@ -175,7 +169,6 @@ function enviarCarrito() {
                 }
             });
 
-            // 2. Comportamiento según si hay dinero de por medio o no
             if (hayAdelantos) {
                 Swal.fire({
                     title: '¡Orden Registrada!',
@@ -185,19 +178,17 @@ function enviarCarrito() {
                     showConfirmButton: false
                 }).then(() => {
                     vaciarCarritoYUI();
-                    // Refrescamos la página para resetear el id_transaccion
                     setTimeout(() => location.reload(), 500);
                 });
             } else {
-                // Si no hay adelantos, solo imprimimos el ticket de recepción normal
                 Swal.fire({
                     title: 'Registro Exitoso',
-                    text: 'Las reparaciones han sido registradas sin adelanto.',
+                    text: 'Los equipos han sido registrados.',
                     icon: 'success',
                     showCancelButton: true,
                     confirmButtonText: 'Aceptar (Nueva Orden)',
                     cancelButtonText: 'Imprimir Ticket',
-                    cancelButtonColor: '#ffc107'
+                    cancelButtonColor: '#ff9500'
                 }).then((result) => {
                     if (result.isConfirmed) {
                         vaciarCarritoYUI();
@@ -211,32 +202,27 @@ function enviarCarrito() {
         } else {
             Swal.fire('Error', 'Hubo un problema al registrar: ' + (data.error || 'Error desconocido'), 'error');
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-check-circle"></i> Registrar Orden';
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirmar y Registrar Orden';
         }
     })
     .catch(error => {
         console.error('Error en fetch:', error);
         Swal.fire('Error de Conexión', 'No se pudo conectar con el servidor.', 'error');
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-check-circle"></i> Registrar Orden';
+        btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirmar y Registrar Orden';
     });
 }
-// Función corregida para abrir el ticket
+
 function imprimirUltimaYLimpiar(idTransaccion) {
     if (idTransaccion) {
-        // Abrimos el ticket con el ID específico de la transacción
-        // Fíjate que aquí NO usamos ?ts=, usamos ?id_transaccion=
         window.open('/local3M/generar_ticket.php?id_transaccion=' + encodeURIComponent(idTransaccion), '_blank');
     } else {
-        // Respaldo por si acaso
         if (typeof ID_TRANSACCION !== 'undefined') {
              window.open('/local3M/generar_ticket.php?id_transaccion=' + encodeURIComponent(ID_TRANSACCION), '_blank');
         } else {
             Swal.fire('Error', 'No se pudo obtener el folio del ticket.', 'error');
         }
     }
-
-    // Limpiamos y recargamos la página después de un momento
     setTimeout(() => {
         vaciarCarritoYUI();
         location.reload();
@@ -249,7 +235,7 @@ function vaciarCarritoYUI() {
     limpiarTodosCampos();
     const btn = document.getElementById('btn-registrar');
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-check-circle"></i> Registrar Orden';
+    btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirmar y Registrar Orden';
 }
 
 function calcularDeuda() {
@@ -274,4 +260,5 @@ function limpiarCamposEquipo() {
     document.getElementById('monto').value = '0';
     document.getElementById('adelanto').value = '0';
     document.getElementById('deuda').value = '0';
+    document.getElementById('fecha_estimada').value = '';
 }

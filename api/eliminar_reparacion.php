@@ -21,12 +21,15 @@ if (!$id) {
 }
 
 try {
-    // 🚨 AQUÍ EL CAMBIO: Validar usando la variable correcta $MASTER_PASSWORD
     if (!isset($MASTER_PASSWORD)) {
         throw new Exception("Error interno: Llave Maestra no configurada en la conexión.");
     }
     
-    if ($llave !== $MASTER_PASSWORD) {
+    // 🚨 EL TRUCO NINJA: Limpiamos espacios invisibles de ambas contraseñas
+    $llaveLimpia = trim($llave);
+    $masterLimpia = trim($MASTER_PASSWORD);
+
+    if ($llaveLimpia !== $masterLimpia) {
         echo json_encode(['success' => false, 'error' => 'La Llave Maestra es incorrecta.']);
         exit();
     }

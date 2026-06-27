@@ -139,6 +139,20 @@ $es_reparacion = (!empty($tipo_reparacion));
         setTimeout(function() {
             window.print();
         }, 500);
+
+        
     </script>
+    <script>
+    // Se ejecuta tan pronto como la ventanita carga
+    window.onload = function() {
+        // Lanza el cuadro de diálogo de la impresora Xprinter
+        window.print();
+    };
+
+    // MAGIA: Se ejecuta inmediatamente DESPUÉS de que imprimes (o cancelas)
+    window.onafterprint = function() {
+        window.close(); // Cierra la pestaña/ventana automáticamente
+    };
+</script>
 </body>
 </html>

@@ -42,7 +42,6 @@ async function cargarMercancia(criterioBusqueda = '') {
                 return;
             }
             
-            // Diccionario semántico de mapeo visual (Iconos y paletas Liquid Glass)
             const mapeoVisualRefacciones = {
                 'pantalla':        { icono: 'fa-mobile-alt', color: '#007aff', fondo: 'rgba(0, 122, 255, 0.12)' },
                 'batería':         { icono: 'fa-battery-full', color: '#34c759', fondo: 'rgba(52, 199, 89, 0.12)' },
@@ -58,7 +57,15 @@ async function cargarMercancia(criterioBusqueda = '') {
             conversionJson.data.forEach(itemStock => {
                 const filaFisica = document.createElement('tr');
                 
-                // Normalización de texto para búsqueda en diccionario
+                // MAGIA UX: Hacer toda la fila clickleable
+                filaFisica.onclick = function(evento) {
+                    // Si el clic fue DENTRO de un botón (eliminar, imprimir, sumar stock), NO abras el modal
+                    if(evento.target.closest('button')) return; 
+                    
+                    // Si el clic fue en el texto o espacio vacío, abre el modo edición
+                    editarMercancia(itemStock.id);
+                };
+
                 const tipoNormalizado = (itemStock.tipo_repuesto || 'Otro').toLowerCase().trim();
                 const estiloVisual = mapeoVisualRefacciones[tipoNormalizado] || { icono: 'fa-tools', color: '#8e8e93', fondo: 'rgba(142, 142, 147, 0.12)' };
 
@@ -105,7 +112,6 @@ async function cargarMercancia(criterioBusqueda = '') {
                     <td data-label="Acciones" class="text-right">
                         <div class="row-actions-container" style="display: flex; gap: 6px; justify-content: flex-end;">
                             <button type="button" class="control-action-btn print-action" style="width: 34px; height: 34px; border-radius: 8px; border: none; background: rgba(0,122,255,0.1); color: #007aff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onclick="imprimirEtiquetaRefaccion('${itemStock.codigo_barras}', '${itemStock.tipo_repuesto} ${itemStock.marca} ${itemStock.modelo}')" title="Imprimir Etiqueta Xprinter"><i class="fas fa-print"></i></button>
-                            <button type="button" class="control-action-btn edit-action" style="width: 34px; height: 34px; border-radius: 8px; border: none; background: rgba(255,149,0,0.1); color: #ff9500; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onclick="editarMercancia(${itemStock.id})" title="Editar Ficha Técnica"><i class="fas fa-edit"></i></button>
                             <button type="button" class="control-action-btn delete-action" style="width: 34px; height: 34px; border-radius: 8px; border: none; background: rgba(255,59,48,0.1); color: #ff3b30; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onclick="eliminarMercancia(${itemStock.id})" title="Eliminar Registro"><i class="fas fa-trash-alt"></i></button>
                         </div>
                     </td>

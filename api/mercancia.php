@@ -2,17 +2,14 @@
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 
-// --- DEBUG: 0 en producción, 1 si necesitas ver errores ---
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
-// 1. Verificar sesión
 if (!isset($_SESSION['nombre'])) {
     echo json_encode(['success' => false, 'error' => 'No autorizado']);
     exit();
 }
 
-// 2. Verificar conexión
 if (!file_exists('../config/conexion.php')) {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'Error: Falta config/conexion.php']);
@@ -21,13 +18,8 @@ if (!file_exists('../config/conexion.php')) {
 
 include '../config/conexion.php';
 
-// 3. FORZAR UTF-8 EN LA BASE DE DATOS
 if (isset($conn)) {
-    try {
-        $conn->exec("SET NAMES 'utf8'");
-    } catch (Exception $e) {
-        // Ignoramos fallo de set names
-    }
+    try { $conn->exec("SET NAMES 'utf8'"); } catch (Exception $e) {}
 }
 
 $action = $_GET['action'] ?? ($_POST['action'] ?? null);
@@ -37,12 +29,12 @@ try {
     if ($action === 'listar') {
         $q = $_GET['q'] ?? '';
         
-        // CORRECCIÓN SQL: Usamos '?' tres veces en lugar de repetir ':q'
-        // Esto evita el error SQLSTATE[HY093]
+        // Se agregó la búsqueda por el nuevo campo "tipo_repuesto"
         $sql = "SELECT m.*, u.ubicacion 
                 FROM mercancia m
                 LEFT JOIN ubicacion_stock u ON m.id_ubicacion = u.id
                 WHERE 
+                    LOWER(m.tipo_repuesto) LIKE ? OR
                     LOWER(m.marca) LIKE ? OR 
                     LOWER(m.modelo) LIKE ? OR 
                     LOWER(m.codigo_barras) LIKE ?
@@ -50,16 +42,14 @@ try {
         
         $stmt = $conn->prepare($sql);
         $term = "%" . strtolower($q) . "%";
-        // Pasamos el término 3 veces, una por cada signo de interrogación
-        $stmt->execute([$term, $term, $term]);
+        // Ahora pasamos 4 parámetros porque hay 4 signos de interrogación
+        $stmt->execute([$term, $term, $term, $term]);
         
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // --- BLINDAJE JSON (PARA PHP ANTIGUO Y ACENTOS) ---
         if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
             echo json_encode(['success' => true, 'data' => $data], JSON_INVALID_UTF8_SUBSTITUTE);
         } else {
-            // Fallback manual
             array_walk_recursive($data, function(&$item) {
                 if (is_string($item) && !mb_detect_encoding($item, 'UTF-8', true)) {
                     $item = utf8_encode($item); 
@@ -73,19 +63,19 @@ try {
     // --- 2. GUARDAR (CREAR O EDITAR) ---
     if ($action === 'guardar') {
         $id = $_POST['id'] ?? '';
-        $marca = trim($_POST['marca']);
-        $modelo = trim($_POST['modelo']);
-        $cantidad = (int)$_POST['cantidad'];
-        $compatibilidad = trim($_POST['compatibilidad']);
-        $costo = (float)$_POST['costo'];
-        $ubicacionTexto = trim($_POST['ubicacion']);
-        $codigo = trim($_POST['codigo_barras']);
+        $tipo_repuesto = trim($_POST['tipo_repuesto'] ?? 'Pantalla'); // NUEVO CAMPO
+        $marca = trim($_POST['marca'] ?? '');
+        $modelo = trim($_POST['modelo'] ?? '');
+        $cantidad = (int)($_POST['cantidad'] ?? 0);
+        $compatibilidad = trim($_POST['compatibilidad'] ?? '');
+        $costo = (float)($_POST['costo'] ?? 0);
+        $ubicacionTexto = trim($_POST['ubicacion'] ?? '');
+        $codigo = trim($_POST['codigo_barras'] ?? '');
 
-        if (empty($marca) || empty($modelo)) {
-            throw new Exception('Marca y Modelo son obligatorios');
+        if (empty($marca) || empty($modelo) || empty($tipo_repuesto)) {
+            throw new Exception('Tipo, Marca y Modelo son obligatorios');
         }
 
-        // Manejo de Ubicación (Buscar o Crear)
         $id_ubicacion = null;
         if (!empty($ubicacionTexto)) {
             $stmtUb = $conn->prepare("SELECT id FROM ubicacion_stock WHERE ubicacion = ?");
@@ -101,25 +91,24 @@ try {
             }
         }
 
-        // Generar código si está vacío (Prefijo MER)
         if (empty($codigo)) {
             $codigo = 'MER' . date('ymd') . rand(100, 999);
         }
 
         if (!empty($id)) {
-            // EDITAR
+            // EDITAR (Añadido tipo_repuesto)
             $sql = "UPDATE mercancia SET 
-                    marca = ?, modelo = ?, cantidad = ?, compatibilidad = ?, 
+                    tipo_repuesto = ?, marca = ?, modelo = ?, cantidad = ?, compatibilidad = ?, 
                     costo = ?, id_ubicacion = ?, codigo_barras = ?
                     WHERE id = ?";
             $stmt = $conn->prepare($sql);
-            $stmt->execute([$marca, $modelo, $cantidad, $compatibilidad, $costo, $id_ubicacion, $codigo, $id]);
+            $stmt->execute([$tipo_repuesto, $marca, $modelo, $cantidad, $compatibilidad, $costo, $id_ubicacion, $codigo, $id]);
         } else {
-            // NUEVO
-            $sql = "INSERT INTO mercancia (marca, modelo, cantidad, compatibilidad, costo, id_ubicacion, codigo_barras) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?)";
+            // NUEVO (Añadido tipo_repuesto)
+            $sql = "INSERT INTO mercancia (tipo_repuesto, marca, modelo, cantidad, compatibilidad, costo, id_ubicacion, codigo_barras) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $conn->prepare($sql);
-            $stmt->execute([$marca, $modelo, $cantidad, $compatibilidad, $costo, $id_ubicacion, $codigo]);
+            $stmt->execute([$tipo_repuesto, $marca, $modelo, $cantidad, $compatibilidad, $costo, $id_ubicacion, $codigo]);
         }
 
         echo json_encode(['success' => true]);
@@ -159,7 +148,6 @@ try {
         $stmt->execute([$id]);
         $data = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        // Aplicamos el mismo blindaje UTF-8 aquí
         if ($data) {
             if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
                 echo json_encode(['success' => true, 'data' => $data], JSON_INVALID_UTF8_SUBSTITUTE);

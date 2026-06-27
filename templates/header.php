@@ -36,6 +36,7 @@ $esAdmin = (isset($_SESSION['rol']) && strtolower($_SESSION['rol']) === 'admin')
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3M TECHNOLOGY - Panel</title> 
     
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/local3M/css/panel.css">
     <link rel="stylesheet" href="/local3M/css/header.css">

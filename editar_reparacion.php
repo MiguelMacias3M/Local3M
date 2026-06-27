@@ -157,12 +157,17 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
             </form>
         </div>
 
-        <div class="edit-sidebar">
+       <div class="edit-sidebar">
             <div class="barcode-card">
                 <h4 style="margin-top:0; color:#1d1d1f; font-weight:800;"><i class="fas fa-barcode"></i> Código de Barras</h4>
                 <div class="barcode-display">
                     <svg id="barcode-svg"></svg>
                 </div>
+                
+                <button type="button" class="glass-btn info" style="width: 100%; margin-top: 15px;" onclick="imprimirEtiquetaReparacion()">
+                    <i class="fas fa-tags"></i> Imprimir Etiqueta
+                </button>
+                
             </div>
         </div>
     </div>

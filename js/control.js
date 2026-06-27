@@ -93,10 +93,27 @@ async function cargarPagina() {
 
 // ========= Renderizar Filas de la Tabla =========
 // ========= Renderizar Filas de la Tabla =========
+// ========= Renderizar Filas de la Tabla =========
 function renderizarFilas(lista) {
     lista.forEach(rep => {
         const tr = document.createElement('tr');
         
+        // =================================================================
+        // 🪄 MAGIA UX: HACER TODA LA FILA CLICKLEABLE (CONTROL)
+        // =================================================================
+        tr.onclick = function(evento) {
+            // Si el clic fue en un botón, enlace (a) o el modal mismo, lo ignoramos
+            if(evento.target.closest('button') || evento.target.closest('a') || evento.target.closest('input')) {
+                return;
+            }
+            
+            // Redirigir a la pantalla de edición usando tu variable rep.id
+            window.location.href = `/local3M/editar_reparacion.php?id=${rep.id}`;
+            
+            // (Ojo: Si en el futuro decides crear un modal para control igual que en mercancía, 
+            // solo borras el window.location de arriba y pones: abrirModalEdicion(rep.id); )
+        };
+
         const claseEstado = obtenerClaseEstado(rep.estado);
 
         const costoTotal = parseFloat(rep.monto) || 0;
@@ -105,6 +122,7 @@ function renderizarFilas(lista) {
 
         const marcaYModelo = `${rep.marca_celular || ''} ${rep.modelo}`.trim();
 
+        // Estructura HTML (Ya viene SIN el botón de editar para que quede limpio)
         tr.innerHTML = `
             <td data-label="Cliente">
                 <div style="font-weight:600;">${escapeHTML(rep.nombre_cliente)}</div>
@@ -123,9 +141,6 @@ function renderizarFilas(lista) {
                     <button class="glass-btn info" style="height:36px; padding:0 12px; font-size:13px;" onclick="mostrarCodigo(${rep.id})" title="Imprimir/Copiar Código de Barras">
                         <i class="fas fa-barcode"></i>
                     </button>
-                    <a href="/local3M/editar_reparacion.php?id=${rep.id}" class="glass-btn primary" style="height:36px; padding:0 12px; font-size:13px; text-decoration:none;" title="Editar / Actualizar">
-                        <i class="fas fa-edit"></i>
-                    </a>
                     <button class="glass-btn" style="height:36px; padding:0 12px; font-size:13px; background: rgba(255,59,48,0.1); color:#ff3b30; border-color:rgba(255,59,48,0.2);" onclick="eliminarReparacion(${rep.id})" title="Eliminar">
                         <i class="fas fa-trash-alt"></i>
                     </button>
@@ -135,7 +150,6 @@ function renderizarFilas(lista) {
         tbody.appendChild(tr);
     });
 }
-
 // ========= Filtrado y Búsqueda =========
 function ejecutarBusqueda() {
     busqueda = inputBuscar.value.trim();
@@ -166,6 +180,7 @@ if (btnLimpiar) {
 }
 
 // ========= Ventana Amigable de Detalles de Orden =========
+// ========= Ventana Amigable de Detalles de Orden =========
 function verDetalles(id) {
     const rep = datos.find(x => x.id == id);
     if (!rep) return;
@@ -179,8 +194,10 @@ function verDetalles(id) {
     const infoExtraContenido = rep.info_extra || rep.observaciones || 'Sin anotaciones adicionales en la recepción.';
     const codigoCompleto = rep.codigo_barras || rep.codigo || rep.folio || rep.id;
     
-    // 🚨 AÑADIMOS LA MARCA AQUÍ PARA EL MODAL DE DETALLES
     const marcaYModelo = `${rep.marca_celular || ''} ${rep.modelo}`.trim();
+    
+    // Asumimos que tu base de datos tiene un campo llamado 'ubicacion'
+    const ubicacionEquipo = rep.ubicacion || 'Sin asignar';
 
     detallesContenido.innerHTML = `
         <div class="detail-section-card">
@@ -203,10 +220,20 @@ function verDetalles(id) {
                 <div class="detail-item-label">Equipo</div>
                 <div class="detail-item-value" style="color: #007aff; font-size: 16px;">${escapeHTML(marcaYModelo)}</div>
             </div>
-            <div style="margin-bottom: 12px;">
-                <div class="detail-item-label">Falla / Servicio Requerido</div>
-                <div class="detail-item-value">${escapeHTML(rep.tipo_reparacion)}</div>
+            
+            <div class="detail-grid" style="margin-bottom: 12px;">
+                <div>
+                    <div class="detail-item-label">Falla / Servicio Requerido</div>
+                    <div class="detail-item-value">${escapeHTML(rep.tipo_reparacion)}</div>
+                </div>
+                <div>
+                    <div class="detail-item-label">Ubicación (Caja/Estante)</div>
+                    <div class="detail-item-value" style="color: #5856d6; font-weight: 600;">
+                        <i class="fas fa-box" style="margin-right: 5px; color: #8e8e93;"></i> ${escapeHTML(ubicacionEquipo)}
+                    </div>
+                </div>
             </div>
+
             <div class="detail-grid">
                 <div>
                     <div class="detail-item-label">Fecha de Registro</div>
@@ -285,7 +312,6 @@ function verDetalles(id) {
         }
     }, 120); 
 }
-
 // ========= Modal de Código de Barras Independiente =========
 function mostrarCodigo(id) {
     const rep = datos.find(x => x.id == id);

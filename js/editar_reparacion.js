@@ -360,3 +360,33 @@ window.finalizarChecklist = function() {
         infoExtraInput.value = infoExtraInput.value ? infoExtraInput.value + ' | [Checklist OK]' : '[Checklist OK]';
     }
 };
+
+// ==========================================
+// FUNCIÓN PARA IMPRIMIR ETIQUETA DIRECTA
+// ==========================================
+window.imprimirEtiquetaReparacion = function() {
+    // Tomamos el código existente o usamos el ID como respaldo
+    const codigo = CODIGO_BARRAS || REPARACION_ID; 
+    
+    // Leemos los datos actuales de los inputs por si los acabas de modificar
+    const cliente = document.getElementById('nombre_cliente').value || 'Sin nombre';
+    const marca = document.getElementById('marca_celular').value || '';
+    const modelo = document.getElementById('modelo').value || '';
+    const equipo = (marca + ' ' + modelo).trim() || 'Equipo';
+    const falla = document.getElementById('tipo_reparacion').value || 'Revisión';
+
+    if (!codigo) {
+        Swal.fire('Error', 'No hay un código válido para imprimir.', 'error');
+        return;
+    }
+
+    // Armamos la URL exacta como la usa control.js
+    const url = `/local3M/imprimir_etiqueta.php?codigo=${encodeURIComponent(codigo)}` +
+                `&nombre=${encodeURIComponent(equipo)}` +
+                `&cliente=${encodeURIComponent(cliente)}` +
+                `&detalles=${encodeURIComponent(falla)}`;
+                
+    // Abrimos la ventanita de impresión
+    window.open(url, '_blank', 'width=450,height=550,scrollbars=no,resizable=no');
+};
+

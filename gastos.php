@@ -19,12 +19,16 @@ if (!isset($_SESSION['rol']) || strtolower($_SESSION['rol']) !== 'admin') {
             <p style="color: #86868b; margin: 5px 0 0 0; font-size: 14px;">Administración detallada de entradas, salidas y comprobantes.</p>
         </div>
         <div style="display: flex; gap: 10px;">
-            <div style="display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.7); padding: 5px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
-                <input type="month" id="mesExportar" class="glass-input" style="padding: 6px 12px; margin: 0; min-height: auto; width: 140px; font-size: 13px;" value="<?php echo date('Y-m'); ?>">
-                <button class="glass-btn success" style="padding: 6px 12px; margin: 0; font-size: 13px;" onclick="exportarMesExcel()" title="Descargar Excel del mes">
-                    <i class="fas fa-file-excel"></i> Descargar balance mensual
+            <div class="export-group-glass">
+                <div class="export-input-wrapper" title="Seleccionar Mes">
+                    <i class="far fa-calendar-alt"></i>
+                    <input type="month" id="mesExportar" class="glass-month-input" value="<?php echo date('Y-m'); ?>">
+                </div>
+                <button class="glass-btn success export-btn" onclick="exportarMesExcel()">
+                    <i class="fas fa-file-excel"></i> Descargar Balance
                 </button>
             </div>
+            
             <button class="glass-btn primary" onclick="abrirModalNuevo()">
                 <i class="fas fa-plus-circle"></i> Nuevo Registro
             </button>
@@ -46,45 +50,49 @@ if (!isset($_SESSION['rol']) || strtolower($_SESSION['rol']) !== 'admin') {
         </div>
     </div>
 
-    <div class="glass-card" style="padding: 15px 25px; margin-bottom: 25px; display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
-        <div style="flex: 1; min-width: 200px;">
-            <label style="font-size: 13px; font-weight: 600; color: #86868b; margin-bottom: 5px; display: block;">Filtrar por Fecha</label>
-            <input type="date" id="filtroFecha" class="glass-input" value="<?php echo date('Y-m-d'); ?>" style="margin:0;">
+    <div class="glass-card" style="padding: 0; overflow: hidden; margin-bottom: 25px; display: flex; flex-direction: column;">
+        
+        <div style="padding: 20px 25px; border-bottom: 1px solid rgba(0,0,0,0.06); background: rgba(250, 250, 252, 0.5); display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 200px;">
+                <label style="font-size: 13px; font-weight: 600; color: #86868b; margin-bottom: 5px; display: block;">Filtrar por Fecha</label>
+                <input type="date" id="filtroFecha" class="glass-input" value="<?php echo date('Y-m-d'); ?>" style="margin:0; background: white;">
+            </div>
+            <div style="flex: 1; min-width: 200px;">
+                <label style="font-size: 13px; font-weight: 600; color: #86868b; margin-bottom: 5px; display: block;">Tipo de Movimiento</label>
+                <select id="filtroTipo" class="glass-input" style="margin:0; background: white;">
+                    <option value="">Todos (Ingresos y Gastos)</option>
+                    <option value="INGRESO">Solo Ingresos</option>
+                    <option value="GASTO">Solo Gastos</option>
+                </select>
+            </div>
+            <div style="flex: 0 0 auto;">
+                <button class="glass-btn info" style="margin:0; height: 48px;" onclick="cargarMovimientos()">
+                    <i class="fas fa-search"></i> Buscar
+                </button>
+            </div>
         </div>
-        <div style="flex: 1; min-width: 200px;">
-            <label style="font-size: 13px; font-weight: 600; color: #86868b; margin-bottom: 5px; display: block;">Tipo de Movimiento</label>
-            <select id="filtroTipo" class="glass-input" style="margin:0;">
-                <option value="">Todos (Ingresos y Gastos)</option>
-                <option value="INGRESO">Solo Ingresos</option>
-                <option value="GASTO">Solo Gastos</option>
-            </select>
-        </div>
-        <div style="flex: 0 0 auto;">
-            <button class="glass-btn info" style="margin:0; height: 48px;" onclick="cargarMovimientos()">
-                <i class="fas fa-search"></i> Buscar
-            </button>
-        </div>
-    </div>
 
-    <div class="glass-table-wrapper">
-       <table class="glass-table" id="tablaGastos">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Tipo / Origen</th>
-                    <th>Descripción</th>
-                    <th style="text-align: right;">Monto</th>
-                    <th>Categoría</th>
-                    <th>Fecha</th>
-                    <th>Usuario</th>
-                    <th style="text-align: center;">Acciones</th>
-                </tr>
-            </thead>
-            <tbody id="lista-movimientos">
-                </tbody>
-        </table>
+        <div class="glass-table-wrapper" style="border: none; border-radius: 0; box-shadow: none; background: transparent; padding: 0;">
+           <table class="glass-table" id="tablaGastos">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tipo / Origen</th>
+                        <th>Descripción</th>
+                        <th style="text-align: right;">Monto</th>
+                        <th>Categoría</th>
+                        <th>Fecha</th>
+                        <th>Usuario</th>
+                        <th style="text-align: center;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="lista-movimientos">
+                    </tbody>
+            </table>
+        </div>
+        
     </div>
-</div>
+    </div>
 
 <div id="modalNuevo" class="glass-modal-overlay" style="display:none;">
     <div class="glass-modal-content" style="max-width: 600px; padding: 30px;">

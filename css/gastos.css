@@ -317,3 +317,30 @@ body {
         margin-bottom: 5px;
     }
 }
+
+/* 📱 CORRECCIÓN: Botones de Exportar y Nuevo Registro en iPhone */
+    .page-title {
+        align-items: stretch !important;
+    }
+    
+    /* Convierte el contenedor de botones a columna */
+    .page-title > div:last-child {
+        flex-direction: column !important;
+        width: 100%;
+        margin-top: 15px;
+    }
+    
+    /* Hace que el recuadro verde de exportar ocupe todo el ancho */
+    .page-title > div:last-child > div {
+        width: 100%;
+        justify-content: space-between;
+        box-sizing: border-box;
+    }
+    
+    /* El botón azul de Nuevo Registro se estira al 100% y se hace más alto para touch */
+    .page-title > div:last-child .glass-btn.primary {
+        width: 100%;
+        height: 50px;
+        margin-top: 5px;
+        box-sizing: border-box;
+    }

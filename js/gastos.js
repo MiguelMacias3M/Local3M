@@ -45,7 +45,6 @@ const catsIngresos = ['Ingreso Extra', 'Inversión', 'Devolución Proveedor', 'O
 function actualizarCategorias(categoriaExtra = null) {
     const inputTipo = document.getElementById('inputTipo');
     const select = document.getElementById('inputCategoria');
-    
     if(!inputTipo || !select) return;
 
     const tipo = inputTipo.value;
@@ -61,15 +60,35 @@ function actualizarCategorias(categoriaExtra = null) {
 
     if (categoriaExtra && !lista.includes(categoriaExtra)) {
         const opt = document.createElement('option');
-        opt.value = categoriaExtra;
-        opt.textContent = categoriaExtra + ' (Origen Caja)';
-        select.appendChild(opt);
-        select.value = categoriaExtra;
+        opt.value = categoriaExtra; opt.textContent = categoriaExtra + ' (Origen Caja)';
+        select.appendChild(opt); select.value = categoriaExtra;
     } else if (lista.includes(valorPrevio)) {
         select.value = valorPrevio;
     }
+
+    // Disparamos la validación para ver si mostramos la caja de proveedores
+    verificarMostrarProveedor();
 }
 
+// ==========================================
+// NUEVA FUNCIÓN: MOSTRAR PROVEEDOR SOLO SI APLICA
+// ==========================================
+function verificarMostrarProveedor() {
+    const categoriaSeleccionada = document.getElementById('inputCategoria').value;
+    const cajaProv = document.getElementById('cajaProveedor');
+
+    if (cajaProv) {
+        // Solo mostramos la caja si la categoría exacta es "Proveedores"
+        if (categoriaSeleccionada === 'Proveedores') {
+            cajaProv.style.display = 'block';
+            cargarListaProveedores(); // Llamamos a la BD para traer la lista
+        } else {
+            cajaProv.style.display = 'none';
+            const inputProv = document.getElementById('inputProveedor');
+            if (inputProv) inputProv.value = ''; // Limpiamos el valor oculto
+        }
+    }
+}
 function cargarMovimientos() {
     const fecha = document.getElementById('filtroFecha').value;
     const tipo = document.getElementById('filtroTipo').value;
@@ -258,6 +277,44 @@ function abrirModalEdicion(movimiento) {
     document.getElementById('modalNuevo').style.display = 'flex';
 }
 
+function actualizarCategorias(categoriaExtra = null) {
+    const inputTipo = document.getElementById('inputTipo');
+    const select = document.getElementById('inputCategoria');
+    if(!inputTipo || !select) return;
+
+    const tipo = inputTipo.value;
+    const valorPrevio = select.value;
+    
+    select.innerHTML = '';
+    const lista = tipo === 'GASTO' ? catsGastos : catsIngresos;
+    
+    lista.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c; opt.textContent = c; select.appendChild(opt);
+    });
+
+    if (categoriaExtra && !lista.includes(categoriaExtra)) {
+        const opt = document.createElement('option');
+        opt.value = categoriaExtra; opt.textContent = categoriaExtra + ' (Origen Caja)';
+        select.appendChild(opt); select.value = categoriaExtra;
+    } else if (lista.includes(valorPrevio)) {
+        select.value = valorPrevio;
+    }
+
+    // ==========================================
+    // NUEVO: CONTROL DE CAJA DE PROVEEDORES
+    // ==========================================
+    const cajaProv = document.getElementById('cajaProveedor');
+    if (cajaProv) {
+        if (tipo === 'GASTO') {
+            cajaProv.style.display = 'block';
+            cargarListaProveedores(); // Llamamos a la BD para traer los proveedores
+        } else {
+            cajaProv.style.display = 'none';
+            document.getElementById('inputProveedor').value = '';
+        }
+    }
+}
 function eliminarMovimiento(id) {
     Swal.fire({
         title: 'Eliminar Registro',
@@ -315,8 +372,17 @@ function abrirModalNuevo() {
     document.getElementById('inputId').value = '';
     document.getElementById('modalTitle').innerHTML = '<i class="fas fa-exchange-alt" style="color:#007aff;"></i> Registrar Movimiento';
     document.getElementById('previewContainer').style.display = 'none';
+    
+    // Forzamos el tipo a GASTO
     document.getElementById('inputTipo').value = 'GASTO';
+    
+    // Llenamos el select de categorías
     actualizarCategorias();
+    
+    // MAGIA ANTI-BUG: Obligamos a que se seleccione "Alimentos" por defecto
+    // y disparamos la verificación para que la caja del proveedor se oculte SÍ o SÍ.
+    document.getElementById('inputCategoria').value = 'Alimentos';
+    verificarMostrarProveedor();
     
     const inputFecha = document.getElementById('inputFechaMovimiento');
     if (inputFecha) {
@@ -331,12 +397,121 @@ function abrirModalNuevo() {
     document.getElementById('modalNuevo').style.display = 'flex';
 }
 
-function cerrarModal() { document.getElementById('modalNuevo').style.display = 'none'; }
-function formatoDinero(amount) { return parseFloat(amount).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'); }
+// -----------------------------------------------------
 
-function exportarMesExcel() {
-    const mesInput = document.getElementById('mesExportar').value;
-    if (!mesInput) { Swal.fire('Atención', 'Selecciona un mes primero', 'warning'); return; }
-    const partes = mesInput.split('-');
-    window.location.href = `api/gastos.php?action=exportar_mes&mes=${partes[1]}&anio=${partes[0]}`;
+function nuevoProveedorRapido() {
+    Swal.fire({
+        title: 'Alta de Proveedor',
+        // HTML rediseñado para que parezca un formulario Liquid Glass real
+        html: `
+            <div style="text-align: left; margin-top: 15px;">
+                <label style="font-size: 12px; font-weight: 600; color: #86868b; text-transform: uppercase;">Empresa / Marca <span style="color:#ff3b30">*</span></label>
+                <input id="swal-prov-empresa" class="glass-input" style="margin-bottom: 15px; width: 100%; box-sizing: border-box;" placeholder="Ej: FixMobile, Steren...">
+                
+                <label style="font-size: 12px; font-weight: 600; color: #86868b; text-transform: uppercase;">Nombre del Contacto</label>
+                <input id="swal-prov-contacto" class="glass-input" style="margin-bottom: 15px; width: 100%; box-sizing: border-box;" placeholder="Opcional">
+                
+                <label style="font-size: 12px; font-weight: 600; color: #86868b; text-transform: uppercase;">Teléfono / WhatsApp</label>
+                <input id="swal-prov-tel" type="tel" class="glass-input" style="width: 100%; box-sizing: border-box;" placeholder="10 dígitos" maxlength="10" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);">
+            </div>
+        `,
+        // Inyectamos tus clases CSS nativas
+        customClass: {
+            popup: 'glass-swal-popup',
+            confirmButton: 'glass-btn success',
+            cancelButton: 'glass-btn secondary',
+            actions: 'swal-glass-actions'
+        },
+        buttonsStyling: false, // Apagamos los botones feos por defecto de SweetAlert
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-save"></i> Guardar',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+            const empresa = document.getElementById('swal-prov-empresa').value;
+            if (!empresa) { Swal.showValidationMessage('La empresa es obligatoria'); }
+            return { 
+                empresa: empresa, 
+                contacto: document.getElementById('swal-prov-contacto').value,
+                telefono: document.getElementById('swal-prov-tel').value
+            }
+        }
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            const fd = new FormData();
+            fd.append('action', 'guardar');
+            fd.append('empresa', result.value.empresa);
+            fd.append('contacto', result.value.contacto);
+            fd.append('telefono', result.value.telefono);
+            
+            try {
+                const res = await fetch('api/proveedores.php', { method: 'POST', body: fd });
+                const data = await res.json();
+                
+                if (data.success) {
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Proveedor agregado', timer: 1500, showConfirmButton: false });
+                    await cargarListaProveedores(); 
+                    document.getElementById('inputProveedor').value = data.id; 
+                } else {
+                    Swal.fire('Error', data.error, 'error');
+                    document.getElementById('inputProveedor').value = ''; 
+                }
+            } catch (err) {
+                Swal.fire('Error', 'Fallo de conexión', 'error');
+                document.getElementById('inputProveedor').value = ''; 
+            }
+        } else {
+            document.getElementById('inputProveedor').value = '';
+        }
+    });
+}
+
+// ==========================================
+// CONTROL DE PROVEEDORES INTEGRADO
+// ==========================================
+
+// 1. Cargar la lista e inyectar la opción "+ Nuevo" al final
+async function cargarListaProveedores() {
+    try {
+        const res = await fetch('api/proveedores.php?action=listar');
+        const data = await res.json();
+        const select = document.getElementById('inputProveedor');
+        const valorActual = select.value;
+        
+        // Opción por defecto
+        select.innerHTML = '<option value="">Ninguno / No aplica</option>';
+        
+        // Cargar los proveedores de la BD
+        if (data.success && data.data) {
+            data.data.forEach(prov => {
+                select.innerHTML += `<option value="${prov.id}">${prov.empresa}</option>`;
+            });
+        }
+        
+        // LA MAGIA: Inyectar la opción de crear uno nuevo al final de la lista
+        select.innerHTML += `<option value="NUEVO" style="color: #007aff; font-weight: bold;">+ Dar de alta nuevo proveedor...</option>`;
+        
+        // Respetar lo que el usuario tenía seleccionado (si no era "NUEVO")
+        if (valorActual && valorActual !== 'NUEVO') {
+            select.value = valorActual;
+        }
+    } catch (e) {
+        console.error("Error al cargar proveedores", e);
+    }
+}
+
+// 2. Escuchar si el usuario selecciona la opción especial
+function verificarNuevoProveedor(selectElement) {
+    if (selectElement.value === 'NUEVO') {
+        // Lanzamos el SweetAlert
+        nuevoProveedorRapido();
+    }
+}
+
+// 3. El modal flotante de SweetAlert
+// ==========================================
+// UTILIDADES COMPLEMENTARIAS
+// ==========================================
+function formatoDinero(amount) { 
+    return parseFloat(amount).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'); 
 }

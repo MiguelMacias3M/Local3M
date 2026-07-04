@@ -438,3 +438,62 @@ body {
         margin-top: 5px;
         box-sizing: border-box;
     }
+    /* =====================================
+   FIX: SWEETALERT SIEMPRE AL FRENTE
+   =====================================
+*/
+.swal2-container {
+    z-index: 999999 !important;
+}
+
+/* ==========================================================================
+   ESTILOS LIQUID GLASS PARA SWEETALERT (MODAL PROVEEDORES)
+   ========================================================================== */
+.glass-swal-popup {
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(25px) !important;
+    -webkit-backdrop-filter: blur(25px) !important;
+    border: 1px solid rgba(255, 255, 255, 1) !important;
+    border-radius: 24px !important;
+    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.25) !important;
+    padding: 25px 30px !important;
+}
+
+/* Título de SweetAlert ajustado a nuestra tipografía */
+.glass-swal-popup .swal2-title {
+    font-family: 'Poppins', sans-serif !important;
+    font-weight: 800 !important;
+    color: #1d1d1f !important;
+}
+
+/* Contenedor de botones flexible */
+.swal-glass-actions {
+    margin-top: 25px !important;
+    display: flex !important;
+    gap: 15px !important;
+    justify-content: center !important;
+    width: 100% !important;
+}
+
+/* Obligamos a los botones a medir lo mismo */
+.swal-glass-actions .glass-btn {
+    flex: 1 !important;
+    margin: 0 !important;
+}
+
+/* 📱 Responsivo estricto para SweetAlert en celulares */
+@media (max-width: 600px) {
+    .glass-swal-popup {
+        padding: 20px 15px !important;
+        width: 90% !important;
+    }
+    
+    .swal-glass-actions {
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+    
+    .swal-glass-actions .glass-btn {
+        width: 100% !important;
+    }
+}

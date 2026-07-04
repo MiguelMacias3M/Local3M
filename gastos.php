@@ -115,8 +115,15 @@ if (!isset($_SESSION['rol']) || strtolower($_SESSION['rol']) !== 'admin') {
                 </div>
                 <div>
                     <label style="font-size: 13px; font-weight: 600; color: #86868b; display: block; margin-bottom: 5px;">Categoría</label>
-                    <select name="categoria" id="inputCategoria" class="glass-input" style="margin:0;"></select>
+                    <select name="categoria" id="inputCategoria" class="glass-input" style="margin:0;" onchange="verificarMostrarProveedor()"></select>
                 </div>
+            </div>
+            <div id="cajaProveedor" style="display: none; margin-bottom: 15px;">
+                <label style="font-size: 13px; font-weight: 600; color: #86868b; display: block; margin-bottom: 5px;">
+                    <i class="fas fa-truck-loading" style="color:#007aff;"></i> Proveedor Asociado (Opcional)
+                </label>
+                <select name="id_proveedor" id="inputProveedor" class="glass-input" style="margin:0;" onchange="verificarNuevoProveedor(this)">
+                    </select>
             </div>
 
             <div class="row-2-col" style="margin-bottom: 15px;">

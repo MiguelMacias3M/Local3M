@@ -102,23 +102,34 @@ try {
     // ==========================================
 // ==========================================
 // ==========================================
-    // 3. GUARDAR (CON FECHA Y USUARIO PERSONALIZADOS)
+   // ==========================================
+    // 3. GUARDAR (CON FECHA, USUARIO, FOTO Y PROVEEDOR)
     // ==========================================
     if ($action === 'guardar') {
         $id = $_POST['id'] ?? '';
-        $tipo = $_POST['tipo']; 
-        $categoria = $_POST['categoria'];
-        $descripcion = trim($_POST['descripcion']);
-        $monto = (float)$_POST['monto'];
+        $tipo = $_POST['tipo'] ?? ''; 
+        $categoria = $_POST['categoria'] ?? '';
+        $descripcion = trim($_POST['descripcion'] ?? '');
+        $monto = (float)($_POST['monto'] ?? 0);
         
-        // --- RECIBIMOS FECHA Y USUARIO ---
+        // --- RECIBIMOS FECHA, USUARIO Y PROVEEDOR ---
         $fecha_input = $_POST['fecha_movimiento'] ?? date('Y-m-d H:i:s');
         $fecha_guardar = date('Y-m-d H:i:s', strtotime($fecha_input));
-        $usuario_mov = trim($_POST['usuario'] ?? $_SESSION['nombre']);
-        // ---------------------------------
+        $usuario_mov = trim($_POST['usuario'] ?? $_SESSION['nombre'] ?? 'Sistema');
+        
+        // Atrapamos el proveedor (Si viene vacío, lo dejamos como NULL)
+        $id_proveedor = !empty($_POST['id_proveedor']) ? $_POST['id_proveedor'] : null;
 
-        if (empty($descripcion) || $monto <= 0) throw new Exception("Datos incompletos");
+        // 1. VALIDACIÓN ANTES DE GUARDAR O SUBIR FOTOS
+        if (empty($descripcion) || $monto <= 0) {
+            throw new Exception("Datos incompletos o monto inválido");
+        }
 
+        // 2. SEPARAMOS INGRESO O EGRESO
+        $ingreso = ($tipo === 'INGRESO') ? $monto : 0;
+        $egreso = ($tipo === 'GASTO' || $tipo === 'RETIRO') ? $monto : 0;
+
+        // 3. MANEJO DE LA FOTO / COMPROBANTE
         $nombreFoto = null;
         if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
             $ext = strtolower(pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION));
@@ -133,11 +144,22 @@ try {
             move_uploaded_file($_FILES['foto']['tmp_name'], $uploadDir . $nombreFoto);
         }
 
-        $ingreso = ($tipo === 'INGRESO') ? $monto : 0;
-        $egreso = ($tipo === 'INGRESO') ? 0 : $monto;
+        // 4. GUARDAR EN BASE DE DATOS
+        if (empty($id)) {
+            // --- MODO: NUEVO REGISTRO (INSERT) ---
+            $idTx = substr($tipo, 0, 3) . date('ymdHi') . rand(10,99);
 
-        if (!empty($id)) {
-            // --- MODO: EDITAR ---
+            $sql = "INSERT INTO caja_movimientos 
+                    (id_transaccion, tipo, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, fecha, categoria, foto, origen, id_proveedor) 
+                    VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, 'GASTOS', ?)";
+            
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$idTx, $tipo, $descripcion, $monto, $ingreso, $egreso, $usuario_mov, $fecha_guardar, $categoria, $nombreFoto, $id_proveedor]);
+            
+        } else {
+            // --- MODO: EDITAR REGISTRO (UPDATE) ---
+            
+            // Borrar foto vieja si se está subiendo una nueva
             if ($nombreFoto) {
                 $stmtOld = $conn->prepare("SELECT foto FROM caja_movimientos WHERE id = ?");
                 $stmtOld->execute([$id]);
@@ -147,12 +169,15 @@ try {
                 }
             }
 
-            // Agregamos "usuario=?" a la actualización
-            $sql = "UPDATE caja_movimientos SET tipo=?, descripcion=?, monto_unitario=?, ingreso=?, egreso=?, categoria=?, fecha=?, usuario=? ";
-            $params = [$tipo, $descripcion, $monto, $ingreso, $egreso, $categoria, $fecha_guardar, $usuario_mov];
+            // Actualizamos la información
+            $sql = "UPDATE caja_movimientos SET 
+                    tipo=?, descripcion=?, monto_unitario=?, ingreso=?, egreso=?, categoria=?, fecha=?, usuario=?, id_proveedor=? ";
+            
+            $params = [$tipo, $descripcion, $monto, $ingreso, $egreso, $categoria, $fecha_guardar, $usuario_mov, $id_proveedor];
 
+            // Si hay foto nueva, la agregamos a la actualización
             if ($nombreFoto) {
-                $sql .= ", foto=?";
+                $sql .= ", foto=? ";
                 $params[] = $nombreFoto;
             }
 
@@ -160,17 +185,6 @@ try {
             $params[] = $id;
 
             $conn->prepare($sql)->execute($params);
-
-        } else {
-            // --- MODO: NUEVO ---
-            $idTx = substr($tipo, 0, 3) . date('ymdHi') . rand(10,99);
-
-            $sql = "INSERT INTO caja_movimientos 
-                    (id_transaccion, tipo, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, fecha, categoria, foto, origen) 
-                    VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, 'GASTOS')";
-            
-            $stmt = $conn->prepare($sql);
-            $stmt->execute([$idTx, $tipo, $descripcion, $monto, $ingreso, $egreso, $usuario_mov, $fecha_guardar, $categoria, $nombreFoto]);
         }
 
         echo json_encode(['success' => true]);
@@ -206,18 +220,19 @@ try {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
-// ==========================================
+
     // EXPORTAR REPORTE MENSUAL A EXCEL (CSV)
     // ==========================================
     if ($action === 'exportar_mes') {
         $mes = (int)($_GET['mes'] ?? date('m'));
         $anio = (int)($_GET['anio'] ?? date('Y'));
 
-        // Consultamos TODO lo de ese mes (Caja y Gastos)
-        $sql = "SELECT fecha, tipo, categoria, descripcion, ingreso, egreso, origen, usuario 
-                FROM caja_movimientos 
-                WHERE MONTH(fecha) = :mes AND YEAR(fecha) = :anio 
-                ORDER BY fecha ASC";
+        // Consultamos TODO lo de ese mes (Caja y Gastos) Y LO UNIMOS CON PROVEEDORES
+        $sql = "SELECT c.fecha, c.tipo, c.categoria, c.descripcion, c.ingreso, c.egreso, c.origen, c.usuario, p.empresa AS nombre_proveedor 
+                FROM caja_movimientos c 
+                LEFT JOIN proveedores p ON c.id_proveedor = p.id
+                WHERE MONTH(c.fecha) = :mes AND YEAR(c.fecha) = :anio 
+                ORDER BY c.fecha ASC";
         $stmt = $conn->prepare($sql);
         $stmt->execute([':mes' => $mes, ':anio' => $anio]);
         $movs = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -233,12 +248,12 @@ try {
         // Esta línea asegura que Excel lea bien los acentos (UTF-8 BOM)
         fputs($output, $bom =(chr(0xEF) . chr(0xBB) . chr(0xBF)));
         
-        // Cabeceras de la tabla
-        fputcsv($output, ['Fecha', 'Hora', 'Origen', 'Tipo', 'Categoría', 'Descripción', 'Usuario', 'Ingreso', 'Egreso/Salida']);
+        // Cabeceras de la tabla (AGREGADA LA COLUMNA 'PROVEEDOR')
+        fputcsv($output, ['Fecha', 'Hora', 'Origen', 'Tipo', 'Categoría', 'Proveedor', 'Descripción', 'Usuario', 'Ingreso', 'Egreso/Salida']);
 
         $totIngreso = 0;
         $totEgreso = 0;
-        $totRetiros = 0; // NUEVO: Variable para separar los retiros
+        $totRetiros = 0; // Variable para separar los retiros
 
         foreach ($movs as $m) {
             $fechaObj = strtotime($m['fecha']);
@@ -250,6 +265,9 @@ try {
             $tipo = strtoupper($m['tipo'] ?? '');
             $cat = $m['categoria'] ?? '';
             $desc = $m['descripcion'] ?? '';
+            
+            // OBTENEMOS EL PROVEEDOR
+            $proveedor = !empty($m['nombre_proveedor']) ? $m['nombre_proveedor'] : 'N/A';
             
             $totIngreso += $ing;
 
@@ -271,20 +289,21 @@ try {
             $strIng = $ing > 0 ? '$' . number_format($ing, 2) : '-';
             $strEgr = $egr > 0 ? '$' . number_format($egr, 2) : '-';
 
+            // AGREGAMOS $proveedor AL ARRAY (Debe coincidir con el orden de las cabeceras)
             fputcsv($output, [
-                $f, $h, $origen, $m['tipo'], $m['categoria'], $m['descripcion'], $m['usuario'], $strIng, $strEgr
+                $f, $h, $origen, $m['tipo'], $m['categoria'], $proveedor, $m['descripcion'], $m['usuario'], $strIng, $strEgr
             ]);
         }
 
         // Dejar una fila en blanco antes de los totales
         fputcsv($output, []);
         
-        // Imprimir Totales Finales organizados
-        fputcsv($output, ['RESUMEN FINANCIERO DEL MES', '', '', '', '', '', '', '', '']);
-        fputcsv($output, ['Total de Ingresos Brutos:', '$' . number_format($totIngreso, 2), '', '', '', '', '', '', '']);
-        fputcsv($output, ['Gastos Operativos (Reales):', '$' . number_format($totEgreso, 2), '', '', '', '', '', '', '']);
-        fputcsv($output, ['Retiros de Ganancia/Caja:', '$' . number_format($totRetiros, 2), '', '', '', '', '', '', '']);
-        fputcsv($output, ['UTILIDAD NETA (Ganancia Limpia):', '$' . number_format($totIngreso - $totEgreso, 2), '', '', '', '', '', '', '']);
+        // Imprimir Totales Finales organizados (Se agregó una coma vacía extra '' para emparejar las 10 columnas)
+        fputcsv($output, ['RESUMEN FINANCIERO DEL MES', '', '', '', '', '', '', '', '', '']);
+        fputcsv($output, ['Total de Ingresos Brutos:', '$' . number_format($totIngreso, 2), '', '', '', '', '', '', '', '']);
+        fputcsv($output, ['Gastos Operativos (Reales):', '$' . number_format($totEgreso, 2), '', '', '', '', '', '', '', '']);
+        fputcsv($output, ['Retiros de Ganancia/Caja:', '$' . number_format($totRetiros, 2), '', '', '', '', '', '', '', '']);
+        fputcsv($output, ['UTILIDAD NETA (Ganancia Limpia):', '$' . number_format($totIngreso - $totEgreso, 2), '', '', '', '', '', '', '', '']);
 
         fclose($output);
         exit();

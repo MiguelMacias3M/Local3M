@@ -29,7 +29,7 @@ try {
     if ($action === 'listar') {
         $q = $_GET['q'] ?? '';
         
-        // Se agregó la búsqueda por el nuevo campo "tipo_repuesto"
+        // Se agregaron los campos de compatibilidad y ubicación a la búsqueda
         $sql = "SELECT m.*, u.ubicacion 
                 FROM mercancia m
                 LEFT JOIN ubicacion_stock u ON m.id_ubicacion = u.id
@@ -37,13 +37,16 @@ try {
                     LOWER(m.tipo_repuesto) LIKE ? OR
                     LOWER(m.marca) LIKE ? OR 
                     LOWER(m.modelo) LIKE ? OR 
-                    LOWER(m.codigo_barras) LIKE ?
+                    LOWER(m.codigo_barras) LIKE ? OR
+                    LOWER(m.compatibilidad) LIKE ? OR
+                    LOWER(u.ubicacion) LIKE ?
                 ORDER BY m.marca, m.modelo LIMIT 100";
         
         $stmt = $conn->prepare($sql);
         $term = "%" . strtolower($q) . "%";
-        // Ahora pasamos 4 parámetros porque hay 4 signos de interrogación
-        $stmt->execute([$term, $term, $term, $term]);
+        
+        // Ahora pasamos 6 parámetros porque hay 6 signos de interrogación en el WHERE
+        $stmt->execute([$term, $term, $term, $term, $term, $term]);
         
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         

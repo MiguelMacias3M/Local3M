@@ -12,10 +12,11 @@ const form = document.getElementById('formProducto');
 const tbody = document.getElementById('tablaProductosBody');
 const inputBuscar = document.getElementById('buscar');
 
-// Búsqueda en tiempo real
-inputBuscar.addEventListener('input', () => {
-    cargarProductos(inputBuscar.value);
-});
+if(inputBuscar) {
+    inputBuscar.addEventListener('input', () => {
+        cargarProductos(inputBuscar.value);
+    });
+}
 
 async function cargarProductos(query = '') {
     try {
@@ -25,54 +26,58 @@ async function cargarProductos(query = '') {
         tbody.innerHTML = '';
         if (json.success) {
             if (json.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center">No hay productos.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:#86868b;">No se encontraron productos.</td></tr>';
                 return;
             }
             json.data.forEach(p => {
-                const stockClass = p.cantidad_piezas < 5 ? 'stock-low' : 'stock-ok';
+                const stockClass = p.cantidad_piezas < 5 ? 'badge-red' : 'badge-green';
                 const tr = document.createElement('tr');
                 
-                // ==========================================
-                // LECTURA EXACTA COMO EN LA FUNCIÓN EDITAR
-                // ==========================================
-                // Leemos 'id_ubicacion' igual que lo haces abajo en tu código
+                // Hacemos que toda la fila abra el modal de editar
+                tr.onclick = () => editarProducto(p.id_productos);
+                tr.style.cursor = 'pointer'; // Cursor de manita
+                
                 let rawUbi = p.id_ubicacion || p.ubicacion || ''; 
                 let textoUbi = String(rawUbi).trim();
-
-                let ubicacionTexto = '<span style="color: #ccc; font-style: italic;">Sin asignar</span>';
+                let ubicacionTexto = '<span style="color: #c7c7cc; font-style: italic;">Sin asignar</span>';
                 
-                // Si sí tiene texto y no es un nulo raro, lo mostramos
                 if (textoUbi !== '' && textoUbi !== 'null' && textoUbi !== 'undefined') {
-                    ubicacionTexto = textoUbi;
+                    ubicacionTexto = `<span style="font-weight:500; color:#48484a;">${textoUbi}</span>`;
                 }
 
+                // Quitamos el botón de editar y agregamos event.stopPropagation() a los demás
+                // para que al hacer clic en Eliminar o Imprimir, no se abra el modal de editar.
                 tr.innerHTML = `
                     <td>
-                        <strong style="color: #2c3e50;">${p.nombre_producto}</strong>
+                        <strong style="color: #1d1d1f; font-size: 15px;">${p.nombre_producto}</strong>
                     </td>
-                    <td><code style="background:#f1f1f1; padding:3px 6px; border-radius:4px; color: #e83e8c;">${p.codigo_barras || '--'}</code></td>
+                    <td><span class="badge-code">${p.codigo_barras || '--'}</span></td>
                     
-                    <td style="font-weight: 500; color: #666;">
-                        <i class="fas fa-map-marker-alt" style="margin-right: 5px; color: #adb5bd; font-size: 0.9em;"></i>${ubicacionTexto}
+                    <td>
+                        <i class="fas fa-map-marker-alt" style="margin-right: 6px; color: #007aff; opacity:0.7;"></i>${ubicacionTexto}
                     </td>
 
-                    <td><strong>$${parseFloat(p.precio_producto).toFixed(2)}</strong></td>
-                    <td><span class="stock-badge ${stockClass}">${p.cantidad_piezas}</span></td>
+                    <td style="color: #007aff; font-weight: 700; font-size: 16px;">
+                        $${parseFloat(p.precio_producto).toFixed(2)}
+                    </td>
+                    
+                    <td><span class="${stockClass}">${p.cantidad_piezas} unds.</span></td>
+                    
                     <td class="text-right" style="white-space: nowrap;">
-                        <button class="btn-action" style="background-color: #17a2b8; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer;" onclick="imprimirEtiqueta('${p.codigo_barras}', '${p.nombre_producto}')" title="Imprimir Etiqueta"><i class="fas fa-print"></i></button>
-                        <button class="btn-action btn-edit" onclick="editarProducto(${p.id_productos})"><i class="fas fa-edit"></i></button>
-                        <button class="btn-action btn-delete" onclick="eliminarProducto(${p.id_productos})"><i class="fas fa-trash"></i></button>
+                        <button class="btn-icon print" onclick="event.stopPropagation(); imprimirEtiqueta('${p.codigo_barras}', '${p.nombre_producto}')" title="Imprimir Etiqueta">
+                            <i class="fas fa-print"></i>
+                        </button>
+                        <button class="btn-icon delete" onclick="event.stopPropagation(); eliminarProducto(${p.id_productos})" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
         }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("Error al cargar productos:", e); }
 }
 
-// ==========================================
-// FUNCIÓN PARA IMPRIMIR HOJA DE CONTEO
-// ==========================================
 function imprimirInventario() {
     window.open('/local3M/imprimir_inventario.php', '_blank');
 }
@@ -95,6 +100,7 @@ function abrirModal() {
     if(contenedor) contenedor.style.display = 'none';
     
     modal.style.display = 'flex';
+    setTimeout(() => document.getElementById('nombre_producto').focus(), 100);
 }
 
 async function editarProducto(id) {
@@ -111,12 +117,12 @@ async function editarProducto(id) {
             document.getElementById('ubicacion').value = p.id_ubicacion || ''; 
             
             document.getElementById('modalTitle').textContent = 'Editar Producto';
-            
             generarPrevisualizacion();
-            
             modal.style.display = 'flex';
         }
-    } catch (e) { Swal.fire('Error', 'No se pudo cargar el producto', 'error'); }
+    } catch (e) { 
+        Swal.fire('Error', 'No se pudo cargar el producto', 'error'); 
+    }
 }
 
 function cerrarModal() {
@@ -135,24 +141,32 @@ async function guardarProducto() {
         const json = await res.json();
 
         if (json.success) {
-            Swal.fire({icon: 'success', title: 'Guardado', showConfirmButton: false, timer: 1000});
+            Swal.fire({
+                icon: 'success', 
+                title: 'Guardado correctamente', 
+                showConfirmButton: false, 
+                timer: 1200
+            });
             cerrarModal();
             cargarProductos(inputBuscar.value);
         } else {
             Swal.fire('Error', json.error || 'Error desconocido', 'error');
         }
-    } catch (e) { Swal.fire('Error', 'Error de conexión', 'error'); }
+    } catch (e) { 
+        Swal.fire('Error', 'Error de conexión', 'error'); 
+    }
 }
 
 function eliminarProducto(id) {
     Swal.fire({
         title: '¿Eliminar producto?',
-        text: "No se podrá recuperar.",
+        text: "Esta acción no se puede deshacer.",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Sí, eliminar'
+        confirmButtonColor: '#ff3b30',
+        cancelButtonColor: '#86868b',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
     }).then(async (result) => {
         if (result.isConfirmed) {
             const formData = new FormData();
@@ -161,7 +175,7 @@ function eliminarProducto(id) {
             
             await fetch('/local3M/api/productos.php', { method: 'POST', body: formData });
             cargarProductos(inputBuscar.value);
-            Swal.fire('Eliminado', '', 'success');
+            Swal.fire('Eliminado', 'El producto ha sido borrado.', 'success');
         }
     });
 }
@@ -172,9 +186,6 @@ function generarCodigoAleatorio() {
     generarPrevisualizacion();
 }
 
-// ==========================================
-// FUNCIÓN: PREVISUALIZACIÓN DE CÓDIGO DE BARRAS (MODO GRANDE)
-// ==========================================
 function generarPrevisualizacion() {
     const valor = document.getElementById('codigo_barras').value.trim();
     const contenedor = document.getElementById('barcodePreviewContainer');
@@ -184,12 +195,13 @@ function generarPrevisualizacion() {
         try {
             JsBarcode("#barcodePreview", valor, {
                 format: "CODE128", 
-                lineColor: "#000",
-                width: 3,          // Hacemos las barras más gruesas
-                height: 80,        // Hacemos el código más alto
+                lineColor: "#1d1d1f",
+                width: 2.5,         
+                height: 70,        
                 displayValue: true, 
-                fontSize: 22,      // Letra más grande
-                background: "transparent"
+                fontSize: 18,      
+                background: "transparent",
+                font: "Poppins"
             });
         } catch (e) {
             console.warn("Código no válido para generar barras aún");

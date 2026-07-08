@@ -1,250 +1,659 @@
-/* =====================================
-   ESTILOS GENERALES (TOOLBAR Y TABLA)
-   =====================================
-*/
-
-/* Toolbar superior */
-.toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    gap: 15px;
-    flex-wrap: wrap;
-}
-
-.search-wrap {
-    flex: 1;
-    max-width: 400px;
-    position: relative;
-}
-
-.search-wrap i {
-    position: absolute;
-    left: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #0056b3;
-}
-
-.search-wrap .form-input {
-    width: 100%;
-    padding-left: 45px; /* Espacio para el icono */
-    height: 45px;
-    margin-bottom: 0;
-    border: 2px solid #ced4da;
-    border-radius: 8px;
-    font-size: 1rem;
-    box-sizing: border-box;
-    transition: all 0.3s;
-}
-.search-wrap .form-input:focus {
-    border-color: #0056b3;
-    outline: none;
-    box-shadow: 0 0 0 4px rgba(0, 86, 179, 0.1);
-}
-
-/* Tabla */
-.table-wrap {
-    overflow-x: auto;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    border: 1px solid #e0e0e0;
-}
-
-.products-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 800px;
-}
-
-.products-table th { 
-    background-color: #212529; 
-    color: white; 
-    padding: 15px;
-    text-transform: uppercase;
-    font-size: 0.85rem;
-    font-weight: 700;
-    text-align: left;
-}
-
-.products-table td { 
-    padding: 12px 15px; 
-    vertical-align: middle;
-    border-bottom: 1px solid #eee;
-    color: #333;
-}
-.products-table tr:hover { background-color: #f8f9fa; }
-
-.text-right { text-align: right; }
-
-.stock-badge {
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-weight: 700;
-    font-size: 0.8rem;
-    display: inline-block;
-}
-.stock-ok { background-color: #d1e7dd; color: #0f5132; }
-.stock-low { background-color: #f8d7da; color: #842029; }
-
-/* Botones Tabla */
-.btn-action {
-    padding: 6px 12px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    margin-left: 5px;
-    color: white;
-    font-size: 0.9rem;
-    transition: transform 0.1s;
-}
-.btn-action:active { transform: translateY(2px); }
-.btn-edit { background-color: #ffc107; color: #212529; }
-.btn-delete { background-color: #dc3545; }
-
-/* Botones Generales */
-.form-button {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 8px;
-    font-weight: 700;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: all 0.2s;
-    font-size: 0.95rem;
-    height: 45px;
-}
-.form-button:hover { opacity: 0.9; transform: translateY(-1px); }
-
-.btn-primary { background-color: #0056b3; color: white; }
-.btn-secondary { background-color: #6c757d; color: white; }
-
-
 /* =========================================
-   ESTILOS DEL MODAL (VENTANA EMERGENTE)
+   ESTILOS CLAROS Y AMIGABLES (ESTILO iOS/APPLE)
+   Módulo: Productos
    ========================================= */
-.modal-overlay {
+
+.productos-wrapper {
+    background-color: #f5f5f7;
+    font-family: 'Poppins', sans-serif;
+    color: #1d1d1f;
+    min-height: calc(100vh - 100px);
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* --- CLASES MAESTRAS CRISTAL CLARO --- */
+.glass-card {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.glass-card.main-content { 
+    padding: 25px; 
+}
+
+.glass-input {
+    width: 100%;
+    padding: 12px 16px;
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    font-size: 14px;
+    color: #1d1d1f;
+    outline: none;
+    transition: all 0.3s ease;
+    font-family: 'Poppins', sans-serif;
+    box-sizing: border-box;
+}
+
+.glass-input:focus {
+    border-color: #007aff;
+    box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.15);
+}
+
+.glass-btn {
+    display: inline-flex; 
+    align-items: center; 
+    justify-content: center; 
+    gap: 8px;
+    padding: 12px 20px; 
+    border-radius: 12px; 
+    font-weight: 600; 
+    font-size: 14px;
+    border: none; 
+    cursor: pointer; 
+    transition: all 0.3s ease;
+    font-family: 'Poppins', sans-serif;
+}
+
+.glass-btn:hover { 
+    transform: translateY(-2px); 
+}
+
+.glass-btn.primary { 
+    background: #007aff; 
+    color: white; 
+    box-shadow: 0 4px 15px rgba(0, 122, 255, 0.2); 
+}
+
+.glass-btn.primary:hover { 
+    background: #0056b3; 
+}
+
+.glass-btn.success { 
+    background: #34c759; 
+    color: white; 
+    box-shadow: 0 4px 15px rgba(52, 199, 89, 0.2); 
+}
+
+.glass-btn.success:hover { 
+    background: #28a745; 
+}
+
+.outline-btn { 
+    background: #ffffff; 
+    border: 1px solid #dee2e6; 
+    color: #1d1d1f; 
+}
+
+.outline-btn:hover { 
+    background: #f8f9fa; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+}
+
+/* --- ENCABEZADOS Y TEXTOS --- */
+.page-title { 
+    margin-bottom: 25px; 
+}
+
+.page-title h1 { 
+    font-size: 26px; 
+    font-weight: 800; 
+    color: #1d1d1f; 
+    margin: 0 0 5px 0; 
+    letter-spacing: -0.5px; 
+}
+
+.section-title { 
+    font-size: 18px; 
+    font-weight: 700; 
+    color: #1d1d1f; 
+    margin-top: 0; 
+    margin-bottom: 20px; 
+    padding-bottom: 15px; 
+    border-bottom: 1px solid rgba(0,0,0,0.06); 
+}
+
+.glass-label { 
+    display: block; 
+    font-size: 13px; 
+    font-weight: 600; 
+    color: #86868b; 
+    margin-bottom: 8px; 
+}
+
+.text-danger { color: #ff3b30; }
+
+/* --- TOOLBAR SUPERIOR --- */
+.toolbar { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 25px; 
+    gap: 15px; 
+    flex-wrap: wrap; 
+}
+
+.search-wrap { 
+    flex: 1; 
+    max-width: 450px; 
+    position: relative; 
+}
+
+.search-wrap i { 
+    position: absolute; 
+    left: 16px; 
+    top: 50%; 
+    transform: translateY(-50%); 
+    color: #86868b; 
+}
+
+.search-wrap .glass-input { 
+    padding-left: 45px; 
+    border-radius: 14px; 
+}
+
+.action-buttons { 
+    display: flex; 
+    gap: 12px; 
+}
+
+/* --- TABLA LIMPIA E INTERACTIVA --- */
+.table-wrap { 
+    overflow-x: auto; 
+    border-radius: 14px; 
+    border: 1px solid rgba(0,0,0,0.05); 
+    background: #fff; 
+    padding: 10px; /* Un poco de aire para que la sombra no se corte en los bordes */
+}
+
+.glass-table { 
+    width: 100%; 
+    /* Cambiamos collapse por separate para permitir que las filas floten y tengan sombra */
+    border-collapse: separate; 
+    border-spacing: 0;
+    min-width: 800px; 
+}
+
+.glass-table th { 
+    background: #f8f9fa; 
+    color: #86868b; 
+    padding: 15px; 
+    font-size: 12px; 
+    text-transform: uppercase; 
+    letter-spacing: 0.5px; 
+    text-align: left; 
+    font-weight: 700; 
+    border-bottom: 2px solid #f1f1f1;
+}
+
+.glass-table td { 
+    padding: 15px; 
+    vertical-align: middle; 
+    border-bottom: 1px solid #f1f1f1; 
+    color: #1d1d1f; 
+    font-size: 14px; 
+}
+
+/* --- LA MAGIA DEL EFECTO 3D EN LAS FILAS --- */
+.glass-table tbody tr {
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative; /* Necesario para que el z-index funcione */
+    background-color: transparent;
+}
+
+.glass-table tbody tr:hover { 
+    /* Le damos un fondo blanco sólido para tapar la línea separadora al flotar */
+    background-color: #ffffff; 
+    
+    /* Lo elevamos 3 pixeles hacia arriba y lo hacemos un 1% más grande */
+    transform: translateY(-3px) scale(1.01); 
+    
+    /* Sombra suave y amplia para dar la ilusión de que está flotando fuera de la pantalla */
+    box-shadow: 0 15px 30px -10px rgba(0, 122, 255, 0.15), 0 5px 15px rgba(0, 0, 0, 0.05); 
+    
+    /* Lo ponemos por encima de las demás filas para que la sombra no quede escondida */
+    z-index: 10; 
+    
+    /* Hacemos que los bordes de la fila se redondeen al flotar */
+    border-radius: 12px;
+}
+
+/* Ocultamos la línea de abajo de la fila cuando está flotando para que se vea más limpio */
+.glass-table tbody tr:hover td {
+    border-bottom-color: transparent;
+}
+
+/* Redondeamos las esquinas de las celdas de los extremos cuando la fila flota */
+.glass-table tbody tr:hover td:first-child {
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
+}
+.glass-table tbody tr:hover td:last-child {
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+/* Efecto en los botones cuando la fila está flotando */
+.glass-table tbody tr:hover .btn-icon {
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+/* Badges de la tabla */
+.badge-code { 
+    background: #f5f5f7; 
+    border: 1px solid #e5e5ea; 
+    padding: 4px 8px; 
+    border-radius: 6px; 
+    font-family: monospace; 
+    color: #1d1d1f; 
+    font-size: 12px; 
+}
+
+.badge-green { 
+    background: rgba(52,199,89,0.1); 
+    color: #34c759; 
+    padding: 5px 10px; 
+    border-radius: 8px; 
+    font-weight: 600; 
+    font-size: 12px;
+}
+
+.badge-red { 
+    background: rgba(255,59,48,0.1); 
+    color: #ff3b30; 
+    padding: 5px 10px; 
+    border-radius: 8px; 
+    font-weight: 700; 
+    font-size: 12px;
+}
+
+/* Botones de acción en la tabla */
+.btn-icon { 
+    width: 36px; 
+    height: 36px; 
+    border-radius: 10px; 
+    border: none; 
+    cursor: pointer; 
+    display: inline-flex; 
+    align-items: center; 
+    justify-content: center; 
+    font-size: 14px; 
+    transition: all 0.2s; 
+    margin-left: 5px; 
+}
+
+.btn-icon.print { background: rgba(0,122,255,0.1); color: #007aff; }
+.btn-icon.edit { background: rgba(255,149,0,0.1); color: #ff9500; }
+.btn-icon.delete { background: rgba(255,59,48,0.1); color: #ff3b30; }
+
+.btn-icon:hover { 
+    transform: translateY(-3px) scale(1.05); 
+}
+
+/* --- MODAL (PERFECTAMENTE CENTRADO) --- */
+.modal-overlay { 
     position: fixed; 
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.7); /* Fondo oscuro semitransparente */
-    z-index: 2000;
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: rgba(0, 0, 0, 0.4); /* Un poco más oscuro para que resalte la tarjeta */
+    z-index: 2000; 
     display: flex; 
     justify-content: center; 
-    align-items: center;
-    backdrop-filter: blur(4px); /* Efecto borroso de fondo */
-    padding: 20px;
+    align-items: center; 
+    backdrop-filter: blur(5px); 
+    padding: 20px; 
+    box-sizing: border-box; /* <- ESTA ES LA CLAVE PARA QUE NO SE MUEVA A LOS LADOS */
 }
 
-.modal-content {
-    background: white; 
-    padding: 2.5rem; 
-    border-radius: 16px;
+.modal-content { 
     width: 100%; 
     max-width: 600px; 
-    position: relative;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-    max-height: 90vh;
-    overflow-y: auto;
-    animation: slideDown 0.3s ease-out; /* Animación de entrada */
+    position: relative; 
+    max-height: 90vh; 
+    overflow-y: auto; 
+    padding: 30px; 
+    background: rgba(255, 255, 255, 0.95); 
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    /* Animación con efecto de rebote amigable (salto) */
+    animation: slideUpBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+    box-sizing: border-box; /* <- ASEGURA EL CENTRADO */
+    margin: 0 auto; 
 }
 
-@keyframes slideDown {
-    from { transform: translateY(-30px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+@keyframes slideUpBounce { 
+    from { transform: translateY(40px) scale(0.95); opacity: 0; } 
+    to { transform: translateY(0) scale(1); opacity: 1; } 
 }
 
-.modal-content h2 {
-    margin-top: 0;
-    color: #0056b3;
-    font-weight: 800;
-    font-size: 1.5rem;
-    border-bottom: 2px solid #f0f0f0;
-    padding-bottom: 15px;
-    margin-bottom: 25px;
+.modal-close { 
+    position: absolute; 
+    top: 20px; 
+    right: 20px; 
+    background: #f5f5f7; 
+    border: none; 
+    width: 32px; 
+    height: 32px; 
+    border-radius: 50%; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    cursor: pointer; 
+    color: #86868b; 
+    transition: all 0.2s; 
 }
 
-.modal-close {
-    position: absolute; top: 20px; right: 25px;
-    background: none; border: none; font-size: 2rem; cursor: pointer;
-    color: #aaa; line-height: 1;
-    transition: color 0.2s;
-}
-.modal-close:hover { color: #333; }
-
-/* Formulario dentro del Modal */
-.form-group { margin-bottom: 1.5rem; }
-.form-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
-    color: #495057;
-    font-size: 0.95rem;
+.modal-close:hover { 
+    background: #e5e5ea; 
+    color: #ff3b30; /* Se pone rojo sutil al pasar el ratón */
 }
 
-.modal-content .form-input {
-    width: 100%;
-    padding: 12px;
-    border: 2px solid #dee2e6;
-    border-radius: 8px;
-    font-size: 1rem;
-    box-sizing: border-box;
-    transition: border-color 0.2s;
-}
-.modal-content .form-input:focus {
-    border-color: #0056b3;
-    outline: none;
-    box-shadow: 0 0 0 4px rgba(0, 86, 179, 0.1);
+.row-2-col { 
+    display: grid; 
+    grid-template-columns: 1fr 1fr; 
+    gap: 20px; 
 }
 
-.row-2-col {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-}
-
-/* Grupo para código de barras + botón generar */
 .input-group { 
     display: flex; 
     gap: 10px; 
 }
-.input-group .form-input {
-    flex: 1;
+
+.input-group .glass-input { 
+    flex: 1; 
 }
 
-.btn-icon {
-    border: 2px solid #dee2e6; 
-    background: #f8f9fa;
-    border-radius: 8px; 
-    width: 50px; 
-    cursor: pointer;
-    color: #0056b3;
-    font-size: 1.2rem;
-    transition: all 0.2s;
-    display: flex; align-items: center; justify-content: center;
-}
-.btn-icon:hover {
-    background-color: #e2e6ea;
-    border-color: #0056b3;
-    color: #004494;
+.barcode-container { 
+    text-align: center; 
+    margin: 25px auto 10px auto; 
+    display: none; 
+    background: #f8f9fa; 
+    padding: 20px; 
+    border-radius: 12px; 
+    border: 2px dashed #dee2e6; 
+    max-width: 100%; 
+    box-sizing: border-box;
 }
 
-.modal-footer {
+.barcode-container p { 
+    font-size: 12px; 
+    color: #86868b; 
+    margin-bottom: 10px; 
+    font-weight: 700; 
+    letter-spacing: 1px; 
+}
+
+.modal-footer { 
     margin-top: 30px; 
     display: flex; 
     justify-content: flex-end; 
-    gap: 15px;
-    border-top: 1px solid #f0f0f0;
-    padding-top: 20px;
+    gap: 15px; 
+    border-top: 1px solid rgba(0,0,0,0.06); 
+    padding-top: 20px; 
 }
 
-/* Responsivo */
+/* --- RESPONSIVO --- */
 @media(max-width: 600px) {
-    .toolbar { flex-direction: column-reverse; align-items: stretch; }
-    .search-wrap { max-width: 100%; }
-    .row-2-col { grid-template-columns: 1fr; gap: 0; }
-    .modal-content { padding: 1.5rem; }
+    .toolbar { 
+        flex-direction: column; 
+        align-items: stretch; 
+    }
+    .search-wrap { 
+        max-width: 100%; 
+    }
+    .action-buttons { 
+        flex-direction: column; 
+    }
+    .row-2-col { 
+        grid-template-columns: 1fr; 
+        gap: 15px; 
+    }
+    .modal-content { 
+        padding: 20px; 
+    }
+}
+
+/* =========================================
+   DISEÑO RESPONSIVO (MÓVILES Y TABLETS)
+   ========================================= */
+
+/* --- TABLETS Y PANTALLAS MEDIANAS --- */
+@media (max-width: 768px) {
+    .page-title h1 {
+        font-size: 22px;
+    }
+
+    .action-buttons {
+        flex-wrap: wrap;
+    }
+
+    .glass-btn {
+        flex: 1; /* Los botones se reparten el espacio */
+        justify-content: center;
+    }
+}
+
+/* --- TELÉFONOS (MOBILE) --- */
+@media (max-width: 600px) {
+    .productos-wrapper {
+        padding: 10px;
+    }
+
+    .glass-card.main-content {
+        padding: 15px;
+    }
+
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+    }
+
+    .search-wrap {
+        max-width: 100%;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .glass-btn {
+        width: 100%; /* Botones de borde a borde para fácil toque */
+    }
+
+    .row-2-col {
+        grid-template-columns: 1fr; /* El formulario pasa a 1 sola columna */
+        gap: 15px;
+    }
+
+    .modal-content {
+        padding: 20px 15px;
+        margin: 10px;
+        width: calc(100% - 20px);
+        max-height: 95vh;
+    }
+
+    /* Ajustes para la tabla en móviles */
+    .table-wrap {
+        padding: 5px;
+        border-radius: 10px;
+        -webkit-overflow-scrolling: touch; /* Desplazamiento fluido en iOS */
+    }
+
+    .glass-table th, 
+    .glass-table td {
+        padding: 12px 10px;
+        font-size: 13px;
+    }
+
+    /* En móviles quitamos el efecto 3D al hacer tap para evitar saltos en la pantalla */
+    .glass-table tbody tr:hover {
+        transform: none;
+        box-shadow: none;
+        background-color: rgba(0, 122, 255, 0.04); /* Solo dejamos el color sutil */
+    }
+}
+
+/* =========================================
+   SCROLLBAR PERSONALIZADO PARA LA TABLA
+   ========================================= */
+.table-wrap::-webkit-scrollbar {
+    height: 8px; /* Altura de la barra horizontal */
+}
+
+.table-wrap::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb {
+    background: #c7c7cc;
+    border-radius: 10px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb:hover {
+    background: #aeaeb2;
+}
+
+/* =========================================
+   DISEÑO RESPONSIVO: TABLA A TARJETAS
+   ========================================= */
+
+/* --- TABLETS Y PANTALLAS MEDIANAS --- */
+@media (max-width: 768px) {
+    .page-title h1 {
+        font-size: 22px;
+    }
+    .action-buttons {
+        flex-wrap: wrap;
+    }
+    .glass-btn {
+        flex: 1; 
+        justify-content: center;
+    }
+
+    /* Convertimos la tabla en Tarjetas */
+    .table-wrap {
+        border: none;
+        background: transparent;
+        padding: 0;
+        box-shadow: none;
+    }
+
+    .glass-table {
+        display: block;
+        min-width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    /* Ocultamos los encabezados tradicionales de la tabla */
+    .glass-table thead {
+        display: none;
+    }
+
+    .glass-table tbody, .glass-table tr, .glass-table td {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* Diseño de cada Fila como Tarjeta */
+    .glass-table tbody tr {
+        background: rgba(255, 255, 255, 0.85);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 16px;
+        margin-bottom: 15px;
+        padding: 10px 20px;
+        
+        /* Mantenemos las animaciones 3D para móvil */
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        position: relative;
+    }
+
+    /* Efecto 3D al tocar (tap) en el celular */
+    .glass-table tbody tr:hover,
+    .glass-table tbody tr:active {
+        background-color: #ffffff;
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: 0 15px 30px -10px rgba(0, 122, 255, 0.2), 0 5px 15px rgba(0, 0, 0, 0.08);
+        z-index: 10;
+    }
+
+    /* Estilo de las celdas dentro de la tarjeta */
+    .glass-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(0,0,0,0.04);
+        text-align: right;
+    }
+
+    .glass-table td:last-child {
+        border-bottom: none;
+        justify-content: flex-end;
+        padding-top: 15px;
+    }
+
+    /* Inyectamos los títulos de las columnas dinámicamente a la izquierda */
+    .glass-table td::before {
+        font-size: 12px;
+        font-weight: 600;
+        color: #86868b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        text-align: left;
+        margin-right: 15px;
+    }
+
+    .glass-table td:nth-child(1)::before { content: "Producto"; }
+    .glass-table td:nth-child(2)::before { content: "Código"; }
+    .glass-table td:nth-child(3)::before { content: "Ubicación"; }
+    .glass-table td:nth-child(4)::before { content: "Precio"; }
+    .glass-table td:nth-child(5)::before { content: "Stock"; }
+    .glass-table td:nth-child(6)::before { content: "Acciones"; }
+}
+
+/* --- TELÉFONOS PEQUEÑOS --- */
+@media (max-width: 600px) {
+    .productos-wrapper {
+        padding: 10px;
+    }
+    .glass-card.main-content {
+        padding: 15px;
+    }
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .search-wrap {
+        max-width: 100%;
+    }
+    .action-buttons {
+        flex-direction: column;
+        width: 100%;
+    }
+    .glass-btn {
+        width: 100%;
+    }
+    .row-2-col {
+        grid-template-columns: 1fr; 
+        gap: 15px;
+    }
+    .modal-content {
+        padding: 20px 15px;
+        width: 100%; /* ¡Esto lo mantiene 100% centrado! */
+        margin: 0;
+        max-height: 95vh;
+    }
 }

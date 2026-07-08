@@ -13,15 +13,36 @@ const formularioMercancia = document.getElementById('formFormercancia') || docum
 const tablaCuerpo = document.getElementById('tablaMercanciaBody');
 const inputBusquedaEfectiva = document.getElementById('buscar');
 
-// Configuración de búsqueda en tiempo real (evita saltos bruscos)
+// Variable para el temporizador de búsqueda
+let timeoutBusqueda;
+
+// Configuración de búsqueda en tiempo real preparada para LECTORES DE CÓDIGO DE BARRAS
 function configurarBusquedaEfectiva() {
     if (inputBusquedaEfectiva) {
+        
+        // Evento input con "Debounce" (espera a que el lector termine de escribir)
         inputBusquedaEfectiva.addEventListener('input', () => {
-            cargarMercancia(inputBusquedaEfectiva.value);
+            clearTimeout(timeoutBusqueda); // Cancelamos la búsqueda anterior si sigue escribiendo
+            
+            // Esperamos 300 milisegundos. Si no hay más teclas, disparamos la búsqueda
+            timeoutBusqueda = setTimeout(() => {
+                // .trim() elimina los espacios y saltos de línea (Enter) que deja el escáner
+                let valorLimpio = inputBusquedaEfectiva.value.trim();
+                cargarMercancia(valorLimpio);
+            }, 300); 
+        });
+
+        // Prevenir que la tecla "Enter" del escáner haga comportamientos extraños
+        inputBusquedaEfectiva.addEventListener('keydown', (evento) => {
+            if (evento.key === 'Enter') {
+                evento.preventDefault(); // Evita que la página intente recargarse
+                clearTimeout(timeoutBusqueda);
+                let valorLimpio = inputBusquedaEfectiva.value.trim();
+                cargarMercancia(valorLimpio);
+            }
         });
     }
 }
-
 // 1. CARGAR DATOS GENERALES E INYECTAR CLASES ASOCIADAS
 async function cargarMercancia(criterioBusqueda = '') {
     try {

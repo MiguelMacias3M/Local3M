@@ -1,10 +1,6 @@
 <?php
-// Revisamos si ya hay una sesión activa
 session_start();
 if (isset($_SESSION['nombre'])) {
-    //
-    // CORRECCIÓN: Usar la misma ruta absoluta que en header.php
-    //
     header('Location: /local3M/dashboard.php');
     exit();
 }
@@ -17,9 +13,9 @@ if (isset($_SESSION['nombre'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Login - 3M-TECNOLOGY</title>
 
-    <!-- CAMBIO: Ruta absoluta al CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <link rel="stylesheet" href="/local3M/css/login.css">
-
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
@@ -36,19 +32,20 @@ if (isset($_SESSION['nombre'])) {
                    placeholder="Nombre de usuario" 
                    required="required" />
 
-            <input type="password" 
-                   id="password" 
-                   class="login-input" 
-                   name="password" 
-                   autocomplete="off" 
-                   placeholder="Contraseña" 
-                   required="required" />
+            <div class="password-wrapper">
+                <input type="password" 
+                       id="password" 
+                       class="login-input password-input" 
+                       name="password" 
+                       autocomplete="off" 
+                       placeholder="Contraseña" 
+                       required="required" />
+                       
+                <button type="button" id="togglePassword" class="toggle-password" tabindex="-1">
+                    <i class="fas fa-eye" id="eyeIcon"></i>
+                </button>
+            </div>
 
-            <!--
-              AQUÍ ESTÁ EL CAMBIO:
-              - Añadido id="loginButton"
-              - Añadidos spans para el texto y el loader
-            -->
             <button class="login-button" type="submit" id="loginButton">
                 <span class="button-text">Iniciar sesión</span>
                 <span class="button-loader"></span>
@@ -57,7 +54,6 @@ if (isset($_SESSION['nombre'])) {
 
     </div>
 
-    <!-- CAMBIO: Ruta absoluta al JS -->
     <script src="/local3M/js/login.js"></script>
 </body>
 </html>

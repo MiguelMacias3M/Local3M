@@ -146,3 +146,50 @@ body {
     }
 }
 
+/* ========================================================
+   ESTILOS PARA EL CAMPO DE CONTRASEÑA Y EL OJITO CUSTOM
+   ======================================================== */
+
+.password-wrapper {
+    position: relative;
+    width: 100%;
+    margin-bottom: 1rem; /* Movemos el margen aquí para no descuadrar */
+}
+
+/* Le quitamos el margen inferior a este input específico porque ya lo tiene el wrapper,
+   y le damos espacio a la derecha para que el texto no quede debajo del ícono */
+.password-wrapper .password-input {
+    margin-bottom: 0;
+    padding-right: 45px; 
+}
+
+.toggle-password {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.6); /* Color semitransparente igual al placeholder */
+    font-size: 1.1rem;
+    cursor: pointer;
+    outline: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.3s ease;
+}
+
+.toggle-password:hover {
+    color: rgba(255, 255, 255, 1);
+}
+
+/* ESTA ES LA MAGIA PARA EDGE (Modo Nuclear) */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    visibility: hidden !important;
+}

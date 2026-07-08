@@ -4,7 +4,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // Seleccionamos el formulario y el botón
     const loginForm = document.getElementById('loginForm');
     const loginButton = document.getElementById('loginButton');
+// --- LÓGICA PARA MOSTRAR/OCULTAR CONTRASEÑA ---
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('password');
+    const eyeIcon = document.getElementById('eyeIcon');
 
+    if (togglePassword && passwordInput) {
+        togglePassword.addEventListener('click', function () {
+            // Verifica el tipo actual del input
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+
+            // Cambia el ícono (ojo cerrado/abierto)
+            if (type === 'text') {
+                eyeIcon.classList.remove('fa-eye');
+                eyeIcon.classList.add('fa-eye-slash');
+            } else {
+                eyeIcon.classList.remove('fa-eye-slash');
+                eyeIcon.classList.add('fa-eye');
+            }
+        });
+    }
     // Escuchamos el evento 'submit' del formulario
     loginForm.addEventListener('submit', (e) => {
         // Prevenimos que el formulario se envíe de la forma tradicional

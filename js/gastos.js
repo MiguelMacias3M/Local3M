@@ -414,16 +414,27 @@ window.cargarMovimientos = function() {
         });
 };
 
+// ==========================================
+// MODO EDICIÓN CON LLAVE MAESTRA (SIN AVISOS EN CONSOLA)
+// ==========================================
 window.editarMovimiento = function(id) {
     Swal.fire({
         title: 'Modo Edición',
-        text: 'Ingresa la Llave Maestra:',
-        input: 'password',
-        inputAttributes: { autocapitalize: 'off', placeholder: '••••••' },
+        // Metemos el input dentro de un form fantasma para que Chrome sea feliz
+        html: `
+            <p style="font-size: 14px; color: #86868b; margin-bottom: 15px;">Ingresa la Llave Maestra:</p>
+            <form onsubmit="event.preventDefault();">
+                <input type="password" id="swal-llave-editar" class="glass-input" style="width: 80%; text-align: center; letter-spacing: 5px; font-size: 20px;" placeholder="••••••" autocomplete="new-password">
+            </form>
+        `,
+        customClass: { popup: 'glass-swal-popup' }, // Le damos el estilo cristal que ya creamos
         showCancelButton: true,
         confirmButtonText: 'Acceder',
         confirmButtonColor: '#007aff',
-        preConfirm: (llave) => {
+        cancelButtonText: 'Cancelar',
+        focusConfirm: false,
+        preConfirm: () => {
+            const llave = document.getElementById('swal-llave-editar').value;
             if (!llave) Swal.showValidationMessage('Escribe la contraseña');
             return llave;
         }
@@ -445,15 +456,30 @@ window.editarMovimiento = function(id) {
     });
 };
 
+// ==========================================
+// ELIMINAR REGISTRO CON LLAVE MAESTRA
+// ==========================================
 window.eliminarMovimiento = function(id) {
     Swal.fire({
         title: 'Eliminar Registro',
-        text: 'Ingresa la Llave Maestra:',
-        input: 'password',
+        // Formulario fantasma para evitar el warning de DOM Password
+        html: `
+            <p style="font-size: 14px; color: #86868b; margin-bottom: 15px;">Ingresa la Llave Maestra:</p>
+            <form onsubmit="event.preventDefault();">
+                <input type="password" id="swal-llave-eliminar" class="glass-input" style="width: 80%; text-align: center; letter-spacing: 5px; font-size: 20px;" placeholder="••••••" autocomplete="new-password">
+            </form>
+        `,
+        customClass: { popup: 'glass-swal-popup' }, 
         showCancelButton: true,
         confirmButtonText: 'Eliminar Definitivamente',
         confirmButtonColor: '#ff3b30',
-        preConfirm: (llave) => { if (!llave) Swal.showValidationMessage('Requerido'); return llave; }
+        cancelButtonText: 'Cancelar',
+        focusConfirm: false,
+        preConfirm: () => {
+            const llave = document.getElementById('swal-llave-eliminar').value;
+            if (!llave) Swal.showValidationMessage('Requerido');
+            return llave;
+        }
     }).then((result) => {
         if (result.isConfirmed) {
             const fd = new FormData();

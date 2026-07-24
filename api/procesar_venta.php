@@ -210,16 +210,17 @@ try {
                 ]);
             } 
             // ==========================================
-            // PROCESAR EQUIPOS DE VITRINA 
+            // PROCESAR EQUIPOS DE VITRINA (VENTA DIRECTA)
             // ==========================================
             else if ($item['tipo'] === 'equipo') {
-                $stmtEquipoUpdate->execute([$item['id']]);
-                $subtotal = $item['precio'] * $item['cantidad']; 
-                
-                // Si escribieron el nombre del cliente, lo usamos. Si lo dejaron en blanco, usamos Público General
                 $clienteEq = (isset($item['cliente_nombre']) && trim($item['cliente_nombre']) !== '') ? $item['cliente_nombre'] : 'Público General';
+                $telefonoEq = $item['telefono'] ?? '';
                 
-                // En el item['nombre'] ya viene el IMEI fusionado desde Javascript
+                // Actualizamos Vitrina con el nombre y el teléfono
+                $stmtEq = $conn->prepare("UPDATE vitrina SET estado = 'Vendido', cliente_nombre = ?, cliente_telefono = ?, fecha_operacion = NOW() WHERE id = ?");
+                $stmtEq->execute([$clienteEq, $telefonoEq, $item['id']]);
+
+                $subtotal = $item['precio'] * $item['cantidad']; 
                 $descripcion = "Venta Equipo: " . $item['nombre'];
                 
                 $stmtCaja->execute([
@@ -278,48 +279,52 @@ try {
                     $stmtHistExtra->execute([$item['id'], $estadoActual, $comentarioHistorial, $usuario]);
                 }
             }
-            // ==========================================
-            // PROCESAR ABONOS DE APARTADOS (CORREGIDO)
-            // ==========================================
+            // ============================================================
+            // PROCESAR ABONOS Y NUEVOS APARTADOS VITRINA (COMPLETO)
+            // ============================================================
             else if ($item['tipo'] === 'abono_apartado') {
-                $id_apartado = $item['id'];
-                $monto_abono = $item['precio'];
+                $id_equipo = $item['id'];
+                $monto_pago = (float)$item['precio'];
+                $cliente_nombre = (isset($item['cliente_nombre']) && trim($item['cliente_nombre']) !== '') ? $item['cliente_nombre'] : 'Público General';
+                $metodoAbonoDB = ($metodoPago === 'Terminal') ? 'Tarjeta' : $metodoPago;
 
-                // 1. Obtener datos actuales del apartado
-                $stmtGet = $conn->prepare("SELECT * FROM apartados WHERE id = ?");
-                $stmtGet->execute([$id_apartado]);
-                $apartado = $stmtGet->fetch(PDO::FETCH_ASSOC);
-
-                if ($apartado && $apartado['estado'] !== 'Liquidado') {
+                // 1. ¿ES UN NUEVO APARTADO (ENGANCHE)?
+                if (isset($item['es_nuevo_apartado']) && $item['es_nuevo_apartado'] == true) {
+                    $telefono = $item['telefono'] ?? '';
+                    $saldo = (float)$item['saldo_restante'];
                     
-                    // 2. Calcular nueva deuda
-                    $nuevo_restante = max(0, $apartado['restante'] - $monto_abono);
-                    $estado_nuevo = ($nuevo_restante == 0) ? 'Liquidado' : $apartado['estado'];
+                    // Actualizamos vitrina a estado 'Apartado'
+                    $stmtUpd = $conn->prepare("UPDATE vitrina SET estado = 'Apartado', cliente_nombre = ?, cliente_telefono = ?, anticipo = ?, saldo_restante = ?, fecha_operacion = NOW() WHERE id = ?");
+                    $stmtUpd->execute([$cliente_nombre, $telefono, $monto_pago, $saldo, $id_equipo]);
+                    
+                    $descripcionCaja = "Enganche: " . str_replace("Enganche: ", "", $item['nombre']);
+                } 
+                // 2. ES UN ABONO A UNA DEUDA EXISTENTE
+                else {
+                    $stmtGet = $conn->prepare("SELECT anticipo, saldo_restante FROM vitrina WHERE id = ?");
+                    $stmtGet->execute([$id_equipo]);
+                    $equipo = $stmtGet->fetch(PDO::FETCH_ASSOC);
 
-                    // 3. Actualizar el apartado
-                    $stmtUpd = $conn->prepare("UPDATE apartados SET restante = ?, estado = ? WHERE id = ?");
-                    $stmtUpd->execute([$nuevo_restante, $estado_nuevo, $id_apartado]);
+                    if ($equipo) {
+                        $nuevo_anticipo = $equipo['anticipo'] + $monto_pago;
+                        $nuevo_saldo = max(0, $equipo['saldo_restante'] - $monto_pago);
+                        $estado_nuevo = ($nuevo_saldo == 0) ? 'Vendido' : 'Apartado';
 
-                    // EVITAMOS CHOQUE DE ENUM: Si mandas 'Terminal', la BD suele exigir 'Tarjeta'
-                    $metodoAbonoDB = ($metodoPago === 'Terminal') ? 'Tarjeta' : $metodoPago;
-
-                    // 4. Registrar historial de este abono
-                    $stmtAbono = $conn->prepare("INSERT INTO abonos_apartados (id_apartado, monto, metodo_pago, id_usuario) VALUES (?, ?, ?, (SELECT id FROM usuarios WHERE nombre = ? LIMIT 1))");
-                    $stmtAbono->execute([$id_apartado, $monto_abono, $metodoAbonoDB, $usuario]);
-
-                    // 5. Inyectar dinero a la CAJA (Usamos categoría 'Abono' para evitar conflictos de bases de datos)
-                    $descripcionCaja = "Abono a Contrato #" . $id_apartado . " (" . $apartado['cliente_nombre'] . ")";
-                    $stmtCaja->execute([
-                        $idTx, 'INGRESO', $id_apartado, $descripcionCaja, 1, 
-                        $monto_abono, $monto_abono, $usuario, $apartado['cliente_nombre'], 'Abono', $metodoPago
-                    ]);
-
-                    // 6. Si con este abono se pagó por completo, sacamos el equipo de la vitrina
-                    if ($estado_nuevo === 'Liquidado') {
-                        $stmtEq = $conn->prepare("UPDATE equipos SET estado = 'Vendido' WHERE id = ?");
-                        $stmtEq->execute([$apartado['id_equipo']]);
+                        $stmtUpd = $conn->prepare("UPDATE vitrina SET estado = ?, anticipo = ?, saldo_restante = ?, fecha_operacion = NOW() WHERE id = ?");
+                        $stmtUpd->execute([$estado_nuevo, $nuevo_anticipo, $nuevo_saldo, $id_equipo]);
                     }
+                    $descripcionCaja = "Abono Vitrina: " . str_replace("Abono: ", "", $item['nombre']);
                 }
+
+                // Registrar en la tabla histórica de abonos
+                $stmtAbono = $conn->prepare("INSERT INTO abonos_apartados (id_apartado, monto, metodo_pago, fecha_abono, id_usuario) VALUES (?, ?, ?, NOW(), (SELECT id FROM usuarios WHERE nombre = ? LIMIT 1))");
+                $stmtAbono->execute([$id_equipo, $monto_pago, $metodoAbonoDB, $usuario]);
+
+                // Registrar en CAJA (Esto es lo que activa el ticket)
+                $stmtCaja->execute([
+                    $idTx, 'INGRESO', $id_equipo, $descripcionCaja, 1, 
+                    $monto_pago, $monto_pago, $usuario, $cliente_nombre, 'Abono', $metodoPago
+                ]);
             }
         }
 

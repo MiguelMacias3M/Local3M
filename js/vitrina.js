@@ -104,8 +104,7 @@ async function cargarVitrina(query = '') {
                 </td>
                 <td><span class="badge-code">${e.imei_serie || '--'}</span></td>
                 <td>
-                    <span class="badge-costo">Costo: $${parseFloat(e.costo).toFixed(2)}</span>
-                    <span class="badge-precio">Venta: $${parseFloat(e.precio_venta).toFixed(2)}</span>
+                    <span class="badge-precio" style="font-size: 16px; color: #007aff;">$${parseFloat(e.precio_venta).toFixed(2)}</span>
                 </td>
                 <td>${badgeEstado}</td>
                 <td>${clienteHtml}</td>

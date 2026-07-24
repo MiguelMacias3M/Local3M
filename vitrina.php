@@ -29,7 +29,7 @@
                     <tr>
                         <th>Equipo</th>
                         <th>IMEI / Serie</th>
-                        <th>Costo / Venta</th>
+                        <th>Venta</th>
                         <th>Estado</th>
                         <th>Cliente y Fecha</th>
                         <th class="text-right">Acciones</th>

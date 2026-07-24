@@ -182,9 +182,8 @@ try {
                          VALUES (?, 'Entregado', ?, ?)";
         $stmtHist = $conn->prepare($sqlHistorial);
 
-        // Queries preparadas para Equipos Elite
-        $sqlEquipoUpdate = "UPDATE equipos SET estado = 'Vendido' WHERE id = ?";
-        $stmtEquipoUpdate = $conn->prepare($sqlEquipoUpdate);
+        // Queries preparadas para Equipos de Vitrina Unificada
+        $sqlEquipoUpdate = "UPDATE vitrina SET estado = 'Vendido', cliente_nombre = 'Mostrador', fecha_operacion = NOW() WHERE id = ?";        $stmtEquipoUpdate = $conn->prepare($sqlEquipoUpdate);
 
         // Caja Central
         $sqlCaja = "INSERT INTO caja_movimientos 

@@ -315,4 +315,57 @@ async function procesarAbono() {
     } catch (e) {
         Swal.fire('Error', 'Problema de conexión con el servidor', 'error');
     }
+    
+}
+
+// --- FUNCIÓN PARA EDITAR CON CONTRASEÑA MAESTRA ---
+async function editarEquipo(id) {
+    const { value: password } = await Swal.fire({
+        title: 'Seguridad',
+        text: 'Ingresa la contraseña maestra para modificar este equipo',
+        input: 'password',
+        inputPlaceholder: 'Contraseña maestra...',
+        inputAttributes: {
+            autocapitalize: 'off',
+            autocorrect: 'off'
+        },
+        showCancelButton: true,
+        confirmButtonColor: '#ff9500',
+        cancelButtonText: 'Cancelar',
+        confirmButtonText: 'Autorizar'
+    });
+
+    if (!password) return; // Si canceló o cerró el cuadro
+
+    let formData = new FormData();
+    formData.append('action', 'obtener_editar');
+    formData.append('id', id);
+    formData.append('password', password);
+
+    try {
+        const res = await fetch('/local3M/api/vitrina.php', { method: 'POST', body: formData });
+        const json = await res.json();
+        
+        if (json.success) {
+            const e = json.data;
+            
+            // Llenar el formulario con los datos protegidos
+            document.getElementById('equipo_id').value = e.id;
+            document.getElementById('equipo_tipo').value = e.tipo;
+            document.getElementById('equipo_imei').value = e.imei_serie;
+            document.getElementById('equipo_marca').value = e.marca;
+            document.getElementById('equipo_modelo').value = e.modelo;
+            document.getElementById('equipo_color').value = e.color;
+            document.getElementById('equipo_costo').value = parseFloat(e.costo).toFixed(2);
+            document.getElementById('equipo_precio').value = parseFloat(e.precio_venta).toFixed(2);
+            
+            // Cambiar título y mostrar modal
+            document.getElementById('tituloModalNuevo').textContent = 'Editar Equipo';
+            document.getElementById('modalNuevoEquipo').style.display = 'flex';
+        } else {
+            Swal.fire('Acceso Denegado', json.error, 'error');
+        }
+    } catch (error) {
+        Swal.fire('Error', 'Problema de conexión con el servidor', 'error');
+    }
 }

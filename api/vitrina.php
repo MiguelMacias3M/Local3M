@@ -36,7 +36,7 @@ try {
         exit();
     }
 
-    // 2. GUARDAR NUEVO EQUIPO
+    // 2. GUARDAR NUEVO EQUIPO O EDITAR
     if ($action === 'guardar_equipo') {
         $id = $_POST['id'] ?? '';
         $tipo = $_POST['tipo'];
@@ -48,11 +48,18 @@ try {
         $precio = $_POST['precio_venta'];
 
         if (empty($id)) {
+            // Es un equipo nuevo
             $sql = "INSERT INTO vitrina (tipo, imei_serie, marca, modelo, color, costo, precio_venta, estado, fecha_ingreso) 
                     VALUES (?, ?, ?, ?, ?, ?, ?, 'Disponible', NOW())";
             $stmt = $conn->prepare($sql);
             $stmt->execute([$tipo, $imei, $marca, $modelo, $color, $costo, $precio]);
+        } else {
+            // Es una edición de un equipo existente
+            $sql = "UPDATE vitrina SET tipo = ?, imei_serie = ?, marca = ?, modelo = ?, color = ?, costo = ?, precio_venta = ? WHERE id = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$tipo, $imei, $marca, $modelo, $color, $costo, $precio, $id]);
         }
+        
         echo json_encode(['success' => true]);
         exit();
     }
@@ -140,4 +147,30 @@ try {
         echo json_encode(['success' => true]);
         exit();
     }
+
+    // 6. OBTENER DATOS PARA EDITAR (PROTEGIDO)
+    if ($action === 'obtener_editar') {
+        $id = $_POST['id'];
+        $pass_ingresada = $_POST['password'];
+
+        // Contraseña maestra temporal oculta
+        $pass_maestra = 'Miguel12$'; 
+        
+        if ($pass_ingresada !== $pass_maestra) {
+            echo json_encode(['success' => false, 'error' => 'Contraseña maestra incorrecta']);
+            exit();
+        }
+
+        $stmt = $conn->prepare("SELECT * FROM vitrina WHERE id = ?");
+        $stmt->execute([$id]);
+        $equipo = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($equipo) {
+            echo json_encode(['success' => true, 'data' => $equipo]);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Equipo no encontrado']);
+        }
+        exit();
+    }
+    
 ?>

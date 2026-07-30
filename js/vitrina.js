@@ -78,10 +78,14 @@ async function cargarVitrina(query = '') {
                         <span class="text-danger" style="font-size:12px; font-weight:700;">Resta: $${e.saldo_restante}</span>
                     </div>`;
                 
-                // --- BOTONES PARA EQUIPOS APARTADOS ---
+               // --- BOTONES PARA EQUIPOS APARTADOS ---
                 botonesHtml = `
                     <button class="btn-icon print" onclick="event.stopPropagation(); abrirModalAbono(${e.id}, '${nombreEquipo}', '${e.imei_serie}', ${e.saldo_restante}, '${e.cliente_nombre}')" title="Abonar / Liquidar">
                         <i class="fas fa-hand-holding-usd"></i>
+                    </button>
+                    <!-- NUEVO BOTON DE CANCELAR APARTADO -->
+                    <button class="btn-icon delete" onclick="event.stopPropagation(); cancelarApartado(${e.id}, '${nombreEquipo}', ${e.anticipo})" title="Cancelar Apartado y Devolver Dinero">
+                        <i class="fas fa-ban"></i>
                     </button>`;
             }
              else if (e.estado === 'Vendido') {
@@ -405,6 +409,40 @@ function eliminarEquipo() {
                 }
             } catch (e) {
                 Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+            }
+        }
+    });
+}
+
+// --- FUNCIÓN PARA CANCELAR UN APARTADO Y REEMBOLSAR ---
+function cancelarApartado(id, nombreEquipo, anticipo) {
+    Swal.fire({
+        title: '¿Cancelar apartado?',
+        text: `El equipo volverá a estar "Disponible". Se registrará una salida de tu caja actual (Devolución) por $${parseFloat(anticipo).toFixed(2)} para regresárselos al cliente.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ff3b30',
+        cancelButtonColor: '#86868b',
+        confirmButtonText: 'Sí, cancelar y devolver',
+        cancelButtonText: 'No'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            let formData = new FormData();
+            formData.append('action', 'cancelar_apartado');
+            formData.append('id', id);
+
+            try {
+                const res = await fetch('/local3M/api/vitrina.php', { method: 'POST', body: formData });
+                const json = await res.json();
+                
+                if (json.success) {
+                    Swal.fire('Cancelado', 'El equipo vuelve a estar disponible y el anticipo se descontó de tu caja de hoy.', 'success');
+                    cargarVitrina(document.getElementById('buscarVitrina').value);
+                } else {
+                    Swal.fire('Error', json.error, 'error');
+                }
+            } catch (e) {
+                Swal.fire('Error', 'Problema de conexión con el servidor', 'error');
             }
         }
     });

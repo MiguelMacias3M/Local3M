@@ -183,5 +183,42 @@ try {
         echo json_encode(['success' => true]);
         exit();
     }
+
+    // 8. CANCELAR APARTADO Y GENERAR DEVOLUCIÓN EN CAJA
+    if ($action === 'cancelar_apartado') {
+        $id = $_POST['id'];
+        
+        // 1. Obtener cuánto dinero dio el cliente en total
+        $stmt = $conn->prepare("SELECT anticipo, cliente_nombre, marca, modelo FROM vitrina WHERE id = ?");
+        $stmt->execute([$id]);
+        $equipo = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$equipo) throw new Exception("Equipo no encontrado");
+        
+        $anticipo_a_devolver = (float)$equipo['anticipo'];
+        $cliente = $equipo['cliente_nombre'];
+        $nombre_equipo = $equipo['marca'] . ' ' . $equipo['modelo'];
+        
+        // 2. Liberar el equipo en la vitrina (Queda como nuevo)
+        $stmtUpd = $conn->prepare("UPDATE vitrina SET estado = 'Disponible', anticipo = 0, saldo_restante = 0, cliente_nombre = NULL, cliente_telefono = NULL, fecha_operacion = NOW() WHERE id = ?");
+        $stmtUpd->execute([$id]);
+        
+        // 3. Registrar el EGRESO en la caja si había dinero de por medio
+        if ($anticipo_a_devolver > 0) {
+            $idTx = 'DEV' . date('ymd') . '-' . strtoupper(bin2hex(random_bytes(2)));
+            $desc = "Devolución de apartado: " . $nombre_equipo;
+            $usuario = $_SESSION['nombre'] ?? 'Sistema';
+            
+            // Insertamos como EGRESO para que reste del total del día
+            $sqlCaja = "INSERT INTO caja_movimientos 
+                        (id_transaccion, tipo, descripcion, cantidad, monto_unitario, egreso, usuario, cliente, categoria, metodo_pago, origen) 
+                        VALUES (?, 'EGRESO', ?, 1, ?, ?, ?, ?, 'Devolución', 'Efectivo', 'CAJA')";
+            $stmtCaja = $conn->prepare($sqlCaja);
+            $stmtCaja->execute([$idTx, $desc, $anticipo_a_devolver, $anticipo_a_devolver, $usuario, $cliente]);
+        }
+        
+        echo json_encode(['success' => true]);
+        exit();
+    }
     
 ?>

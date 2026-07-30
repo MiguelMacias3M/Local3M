@@ -119,6 +119,7 @@ function cerrarModal(id) { document.getElementById(id).style.display = 'none'; }
 
 // FUNCIONES DE MODALES Y ACCIONES
 function abrirModalNuevo() {
+    document.getElementById('btnEliminarEquipo').style.display = 'none'; // OCULTAMOS EL BOTÓN ROJO
     document.getElementById('formNuevoEquipo').reset();
     document.getElementById('equipo_id').value = '';
     document.getElementById('tituloModalNuevo').textContent = 'Registrar Equipo';
@@ -361,6 +362,7 @@ async function editarEquipo(id) {
             
             // Cambiar título y mostrar modal
             document.getElementById('tituloModalNuevo').textContent = 'Editar Equipo';
+            document.getElementById('btnEliminarEquipo').style.display = 'inline-flex'; // MOSTRAMOS EL BOTÓN ROJO
             document.getElementById('modalNuevoEquipo').style.display = 'flex';
         } else {
             Swal.fire('Acceso Denegado', json.error, 'error');
@@ -368,4 +370,42 @@ async function editarEquipo(id) {
     } catch (error) {
         Swal.fire('Error', 'Problema de conexión con el servidor', 'error');
     }
+}
+
+function eliminarEquipo() {
+    const id = document.getElementById('equipo_id').value;
+    
+    if (!id) return; // Por si acaso
+
+    Swal.fire({
+        title: '¿Estás completamente seguro?',
+        text: "Esta acción borrará el equipo de la vitrina para siempre y no se puede deshacer.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ff3b30',
+        cancelButtonColor: '#86868b',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            let formData = new FormData();
+            formData.append('action', 'eliminar_equipo');
+            formData.append('id', id);
+
+            try {
+                const res = await fetch('/local3M/api/vitrina.php', { method: 'POST', body: formData });
+                const json = await res.json();
+                
+                if (json.success) {
+                    Swal.fire({ icon: 'success', title: 'Eliminado', text: 'El equipo fue borrado de tu vitrina.', timer: 1500, showConfirmButton: false });
+                    cerrarModal('modalNuevoEquipo');
+                    cargarVitrina(document.getElementById('buscarVitrina').value);
+                } else {
+                    Swal.fire('Error', json.error, 'error');
+                }
+            } catch (e) {
+                Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+            }
+        }
+    });
 }

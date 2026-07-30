@@ -173,4 +173,15 @@ try {
         exit();
     }
     
+    // 7. ELIMINAR EQUIPO DE LA VITRINA
+    if ($action === 'eliminar_equipo') {
+        $id = $_POST['id'];
+        
+        $stmt = $conn->prepare("DELETE FROM vitrina WHERE id = ?");
+        $stmt->execute([$id]);
+        
+        echo json_encode(['success' => true]);
+        exit();
+    }
+    
 ?>

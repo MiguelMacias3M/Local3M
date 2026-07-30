@@ -104,3 +104,8 @@
     .row-2-col { grid-template-columns: 1fr; gap: 15px; }
     .modal-content { padding: 20px 15px; width: 100%; margin: 0; max-height: 95vh; }
 }
+
+/* Forzar que las alertas de SweetAlert salgan SIEMPRE encima de cualquier modal */
+.swal2-container {
+    z-index: 9999 !important;
+}

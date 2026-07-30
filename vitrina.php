@@ -105,6 +105,9 @@
             <div class="modal-footer">
                 <button type="button" class="glass-btn outline-btn" onclick="cerrarModal('modalNuevoEquipo')">Cancelar</button>
                 <button type="submit" class="glass-btn primary" onclick="guardarEquipo()">Guardar Equipo</button>
+                <button type="button" class="glass-btn" id="btnEliminarEquipo" style="display:none; background-color: #ff3b30; color: white;" onclick="eliminarEquipo()">
+                    <i class="fas fa-trash-alt"></i> Eliminar
+                </button>
             </div>
         </form>
     </div>

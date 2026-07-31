@@ -37,10 +37,16 @@ function calcularSaldo() {
     document.getElementById('apartar_saldo').value = saldo.toFixed(2);
 }
 
+// ==============================================================
+// FUNCIÓN MAESTRA: CARGAR Y DIBUJAR LA VITRINA UNIFICADA
+// ==============================================================
 async function cargarVitrina(query = '') {
     try {
+        // 1. Llamada a la API con tu acción original "listar"
         const res = await fetch(`/local3M/api/vitrina.php?action=listar&q=${encodeURIComponent(query)}`);
         const json = await res.json();
+        
+        // 2. Usando tu ID correcto "tablaVitrinaBody"
         const tbody = document.getElementById('tablaVitrinaBody');
         tbody.innerHTML = '';
         
@@ -56,59 +62,65 @@ async function cargarVitrina(query = '') {
             // Construir Nombre Completo
             const nombreEquipo = `${e.marca || ''} ${e.modelo || ''} ${e.color || ''}`.trim();
 
+            // --- ESTADO: DISPONIBLE ---
             if (e.estado === 'Disponible') {
                 badgeEstado = `<span class="badge-status status-disponible"><i class="fas fa-check-circle"></i> Disponible</span>`;
                 botonesHtml = `
-                    <button class="btn-icon print" onclick="event.stopPropagation(); abrirModalVender(${e.id}, '${nombreEquipo}', '${e.imei_serie}', ${e.precio_venta})" title="Vender">
-                        <i class="fas fa-dollar-sign"></i>
+                    <button class="btn-icon success" onclick="event.stopPropagation(); abrirModalVender(${e.id}, '${nombreEquipo}', '${e.imei_serie}', ${e.precio_venta})" title="Vender">
+                        <i class="fas fa-shopping-cart"></i>
                     </button>
                     <button class="btn-icon edit" onclick="event.stopPropagation(); abrirModalApartar(${e.id}, '${nombreEquipo}', '${e.imei_serie}', ${e.precio_venta})" title="Apartar">
                         <i class="fas fa-calendar-alt"></i>
                     </button>
-                    <button class="btn-icon" style="background:rgba(0,0,0,0.05);" onclick="event.stopPropagation(); editarEquipo(${e.id})" title="Editar">
-                        <i class="fas fa-pen"></i>
+                    <button class="btn-icon print" style="background: rgba(0, 122, 255, 0.1); color: #007aff;" onclick="event.stopPropagation(); editarEquipo(${e.id})" title="Editar (Requiere Contraseña)">
+                        <i class="fas fa-pencil-alt"></i>
+                    </button>
+                   <button class="btn-icon" style="background: rgba(90, 90, 90, 0.1); color: #5a5a5a;" onclick="event.stopPropagation(); imprimirEtiqueta('${e.imei_serie}', '${nombreEquipo}', '')" title="Imprimir Etiqueta con Código de Barras">
+                        <i class="fas fa-barcode"></i>
                     </button>
                 `;
-           } else if (e.estado === 'Apartado') {
+            } 
+            // --- ESTADO: APARTADO ---
+            else if (e.estado === 'Apartado') {
                 badgeEstado = `<span class="badge-status status-apartado"><i class="fas fa-clock"></i> Apartado</span>`;
                 clienteHtml = `
                     <div class="cliente-info">
                         <span class="cliente-nombre"><i class="fas fa-user"></i> ${e.cliente_nombre || 'Sin nombre'}</span>
-                        <span class="cliente-fecha">${e.fecha_operacion}</span>
-                        <span class="text-danger" style="font-size:12px; font-weight:700;">Resta: $${e.saldo_restante}</span>
+                        <span class="cliente-fecha">${e.fecha_operacion || ''}</span>
+                        <span class="text-danger" style="font-size:12px; font-weight:700;">Resta: $${parseFloat(e.saldo_restante).toFixed(2)}</span>
                     </div>`;
                 
-               // --- BOTONES PARA EQUIPOS APARTADOS ---
                 botonesHtml = `
                     <button class="btn-icon print" onclick="event.stopPropagation(); abrirModalAbono(${e.id}, '${nombreEquipo}', '${e.imei_serie}', ${e.saldo_restante}, '${e.cliente_nombre}')" title="Abonar / Liquidar">
                         <i class="fas fa-hand-holding-usd"></i>
                     </button>
-                    <!-- NUEVO BOTON DE CANCELAR APARTADO -->
                     <button class="btn-icon delete" onclick="event.stopPropagation(); cancelarApartado(${e.id}, '${nombreEquipo}', ${e.anticipo})" title="Cancelar Apartado y Devolver Dinero">
                         <i class="fas fa-ban"></i>
                     </button>`;
-            }
-             else if (e.estado === 'Vendido') {
+            } 
+            // --- ESTADO: VENDIDO ---
+            else if (e.estado === 'Vendido') {
                 badgeEstado = `<span class="badge-status status-vendido"><i class="fas fa-lock"></i> Vendido</span>`;
                 clienteHtml = `
                     <div class="cliente-info">
-                        <span class="cliente-nombre"><i class="fas fa-user"></i> ${e.cliente_nombre || 'Sin nombre'}</span>
-                        <span class="cliente-fecha">${e.fecha_operacion}</span>
+                        <span class="cliente-nombre"><i class="fas fa-user"></i> ${e.cliente_nombre || 'Mostrador'}</span>
+                        <span class="cliente-fecha">${e.fecha_operacion || ''}</span>
                     </div>`;
                 botonesHtml = `
-                    <button class="btn-icon outline-btn" onclick="event.stopPropagation(); Swal.fire('Garantía Válida', 'Equipo vendido a ${e.cliente_nombre}', 'success')" title="Ver Garantía">
+                    <button class="btn-icon outline-btn" onclick="event.stopPropagation(); Swal.fire('Garantía Válida', 'Equipo vendido a ${e.cliente_nombre || 'Mostrador'}', 'success')" title="Ver Garantía">
                         <i class="fas fa-shield-alt"></i>
                     </button>`;
             }
 
+            // 3. Dibujar la fila completa adaptada a tu diseño original (Ocultando costo)
             tr.innerHTML = `
                 <td>
-                    <span style="font-size:12px; color:#86868b; display:block;">${e.tipo}</span>
+                    <span style="font-size:12px; color:#86868b; display:block;">${e.tipo || ''}</span>
                     <strong style="color: #1d1d1f; font-size: 15px;">${nombreEquipo}</strong>
                 </td>
                 <td><span class="badge-code">${e.imei_serie || '--'}</span></td>
                 <td>
-                    <span class="badge-precio" style="font-size: 16px; color: #007aff;">$${parseFloat(e.precio_venta).toFixed(2)}</span>
+                    <span class="badge-precio" style="font-size: 16px; color: #007aff; font-weight: 600;">$${parseFloat(e.precio_venta).toFixed(2)}</span>
                 </td>
                 <td>${badgeEstado}</td>
                 <td>${clienteHtml}</td>
@@ -116,7 +128,11 @@ async function cargarVitrina(query = '') {
             `;
             tbody.appendChild(tr);
         });
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+        console.error("Error cargando vitrina:", e); 
+        const tbody = document.getElementById('tablaVitrinaBody');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#ff3b30;">Error de conexión al cargar la vitrina.</td></tr>';
+    }
 }
 
 function cerrarModal(id) { document.getElementById(id).style.display = 'none'; }
@@ -446,4 +462,13 @@ function cancelarApartado(id, nombreEquipo, anticipo) {
             }
         }
     });
+}
+
+// --- FUNCIÓN PARA IMPRIMIR ETIQUETA TÉRMICA (CONECTADA A TU ARCHIVO) ---
+function imprimirEtiqueta(codigo, nombre, detalles) {
+    // Codificamos los textos para que viajen seguros por la URL (espacios, signos de $, etc.)
+    const url = `/local3M/imprimir_etiqueta.php?codigo=${encodeURIComponent(codigo)}&nombre=${encodeURIComponent(nombre)}&detalles=${encodeURIComponent(detalles)}`;
+    
+    // Abrimos tu ventana de impresión
+    window.open(url, 'Etiqueta', 'width=400,height=500');
 }

@@ -22,14 +22,13 @@
 
     <div class="glass-table-wrapper">
         <table class="glass-table" id="tablaMercancia">
-            <thead>
+           <thead>
                 <tr>
                     <th>Refacción / Código</th>
                     <th>Equipo Destino</th>
                     <th>Compatibilidad Ext.</th>
                     <th>Ubicación Almacén</th>
                     <th class="text-center">Stock Real</th>
-                    <th>Costo Unitario</th>
                     <th class="text-right">Acciones de Gestión</th>
                 </tr>
             </thead>

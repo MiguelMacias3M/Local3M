@@ -127,9 +127,7 @@ async function cargarMercancia(criterioBusqueda = '') {
                             </button>
                         </div>
                     </td>
-                    <td data-label="Costo">
-                        <span class="cost-currency-display" style="font-weight: 700; color: #1d1d1f; font-size: 14px;">$${parseFloat(itemStock.costo).toFixed(2)}</span>
-                    </td>
+                    
                     <td data-label="Acciones" class="text-right">
                         <div class="row-actions-container" style="display: flex; gap: 6px; justify-content: flex-end;">
                             <button type="button" class="control-action-btn print-action" style="width: 34px; height: 34px; border-radius: 8px; border: none; background: rgba(0,122,255,0.1); color: #007aff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onclick="imprimirEtiquetaRefaccion('${itemStock.codigo_barras}', '${itemStock.tipo_repuesto} ${itemStock.marca} ${itemStock.modelo}')" title="Imprimir Etiqueta Xprinter"><i class="fas fa-print"></i></button>

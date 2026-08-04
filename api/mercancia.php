@@ -72,6 +72,7 @@ try {
         $cantidad = (int)($_POST['cantidad'] ?? 0);
         $compatibilidad = trim($_POST['compatibilidad'] ?? '');
         $costo = (float)($_POST['costo'] ?? 0);
+        $precio_publico = $_POST['precio_publico'] ?? 0;
         $ubicacionTexto = trim($_POST['ubicacion'] ?? '');
         $codigo = trim($_POST['codigo_barras'] ?? '');
 
@@ -98,22 +99,25 @@ try {
             $codigo = 'MER' . date('ymd') . rand(100, 999);
         }
 
-        if (!empty($id)) {
-            // EDITAR (Añadido tipo_repuesto)
+      if (empty($id)) {
+            // ES UN REGISTRO NUEVO
+            $sql = "INSERT INTO mercancia (tipo_repuesto, marca, modelo, compatibilidad, cantidad, costo, precio_publico, id_ubicacion, codigo_barras) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $stmt = $conn->prepare($sql);
+            
+            // Usamos las variables correctas que declaraste arriba
+            $stmt->execute([$tipo_repuesto, $marca, $modelo, $compatibilidad, $cantidad, $costo, $precio_publico, $id_ubicacion, $codigo]);
+        } else {
+            // ES UNA ACTUALIZACIÓN (Aquí estaba el error, ahora es un UPDATE)
             $sql = "UPDATE mercancia SET 
-                    tipo_repuesto = ?, marca = ?, modelo = ?, cantidad = ?, compatibilidad = ?, 
-                    costo = ?, id_ubicacion = ?, codigo_barras = ?
+                    tipo_repuesto = ?, marca = ?, modelo = ?, compatibilidad = ?, 
+                    cantidad = ?, costo = ?, precio_publico = ?, id_ubicacion = ?, codigo_barras = ? 
                     WHERE id = ?";
             $stmt = $conn->prepare($sql);
-            $stmt->execute([$tipo_repuesto, $marca, $modelo, $cantidad, $compatibilidad, $costo, $id_ubicacion, $codigo, $id]);
-        } else {
-            // NUEVO (Añadido tipo_repuesto)
-            $sql = "INSERT INTO mercancia (tipo_repuesto, marca, modelo, cantidad, compatibilidad, costo, id_ubicacion, codigo_barras) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-            $stmt = $conn->prepare($sql);
-            $stmt->execute([$tipo_repuesto, $marca, $modelo, $cantidad, $compatibilidad, $costo, $id_ubicacion, $codigo]);
+            
+            $stmt->execute([$tipo_repuesto, $marca, $modelo, $compatibilidad, $cantidad, $costo, $precio_publico, $id_ubicacion, $codigo, $id]);
         }
-
+        
         echo json_encode(['success' => true]);
         exit();
     }

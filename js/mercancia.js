@@ -97,7 +97,15 @@ async function cargarMercancia(criterioBusqueda = '') {
                                 <i class="fas ${estiloVisual.icono}"></i>
                             </div>
                             <div>
-                                <span class="main-repuesto-name" style="font-weight: 700; color: #1d1d1f; display: block; font-size: 14px;">${itemStock.tipo_repuesto}</span>
+                                <span class="main-repuesto-name" style="font-weight: 700; color: #1d1d1f; display: flex; align-items: center; font-size: 14px;">
+                                    ${itemStock.tipo_repuesto}
+                                    ${parseFloat(itemStock.costo) <= 0 
+                                        ? '<span title="Falta Costo Mayoreo (Oculto)" style="width:10px; height:10px; border-radius:50%; background:#ff3b30; margin-left:8px; box-shadow:0 0 5px rgba(255,59,48,0.5);"></span>' 
+                                        : parseFloat(itemStock.precio_publico) <= 0 
+                                        ? '<span title="Falta Precio Público" style="width:10px; height:10px; border-radius:50%; background:#ffcc00; margin-left:8px; box-shadow:0 0 5px rgba(255,204,0,0.5);"></span>' 
+                                        : '<span title="Todo Correcto" style="width:10px; height:10px; border-radius:50%; background:#34c759; margin-left:8px; box-shadow:0 0 5px rgba(52,199,89,0.5);"></span>'
+                                    }
+                                </span>
                                 <code class="barcode-subtext" style="font-size: 11px; color: #86868b; font-family: monospace; letter-spacing: 0.5px;">${itemStock.codigo_barras || '--'}</code>
                             </div>
                         </div>
@@ -127,7 +135,11 @@ async function cargarMercancia(criterioBusqueda = '') {
                             </button>
                         </div>
                     </td>
-                    
+                    <td data-label="Precio">
+                        <span style="font-weight: 700; color: #007aff; font-size: 15px; background: rgba(0,122,255,0.08); padding: 4px 8px; border-radius: 6px;">
+                            $${parseFloat(itemStock.precio_publico || 0).toFixed(0)}
+                        </span>
+                    </td>
                     <td data-label="Acciones" class="text-right">
                         <div class="row-actions-container" style="display: flex; gap: 6px; justify-content: flex-end;">
                             <button type="button" class="control-action-btn print-action" style="width: 34px; height: 34px; border-radius: 8px; border: none; background: rgba(0,122,255,0.1); color: #007aff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onclick="imprimirEtiquetaRefaccion('${itemStock.codigo_barras}', '${itemStock.tipo_repuesto} ${itemStock.marca} ${itemStock.modelo}')" title="Imprimir Etiqueta Xprinter"><i class="fas fa-print"></i></button>
@@ -169,6 +181,8 @@ function abrirModalNuevo() {
     document.getElementById('inputId').value = '';
     document.getElementById('modalTitle').innerHTML = '<i class="fas fa-box-open" style="color: #007aff; margin-right: 10px;"></i>Nueva Refacción al Inventario';
     document.getElementById('barcode-preview').style.display = 'none';
+    document.getElementById('grupoCostoSecreto').style.display = 'none'; // Se oculta a empleados
+    document.getElementById('inputCosto').value = '0'; // Se va en ceros por defecto
     modalOverlay.style.display = 'flex';
 }
 
@@ -201,8 +215,84 @@ function generarCodigo() {
     document.getElementById('barcode-preview').style.display = 'block';
 }
 
-// 5. EDICIÓN TÉCNICA AVANZADA
+// 5. EDICIÓN TÉCNICA AVANZADA (PROTEGIDA CON CONTRASEÑA Y ANTI-ERRORES)
 async function editarMercancia(idBusqueda) {
+// Construimos el modal con estilos Glassmorphism puros inyectados
+    const { value: password } = await Swal.fire({
+        title: '<i class="fas fa-user-shield" style="color: #ff9500; font-size: 24px; margin-bottom: 10px; display: block;"></i><span style="color: #1d1d1f; font-weight: 800;">Modo Administrador</span>',
+        html: `
+            <style>
+                /* Efecto Cristal para el fondo de la ventana */
+                .swal-glass-popup {
+                    background: rgba(255, 255, 255, 0.65) !important;
+                    backdrop-filter: blur(16px) !important;
+                    -webkit-backdrop-filter: blur(16px) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.8) !important;
+                    border-radius: 24px !important;
+                    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1) !important;
+                }
+                
+                /* Efecto Cristal para el input de la contraseña */
+                .swal-glass-input {
+                    background: rgba(255, 255, 255, 0.5) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.8) !important;
+                    border-radius: 12px !important;
+                    color: #1d1d1f !important;
+                    font-size: 18px !important;
+                    letter-spacing: 3px !important;
+                    box-shadow: inset 0 2px 5px rgba(0,0,0,0.03) !important;
+                    transition: all 0.3s ease !important;
+                }
+                
+                /* Brillo al hacer clic en el input */
+                .swal-glass-input:focus {
+                    background: rgba(255, 255, 255, 0.9) !important;
+                    border-color: #ff9500 !important;
+                    box-shadow: 0 0 0 4px rgba(255, 149, 0, 0.15) !important;
+                    outline: none !important;
+                }
+            </style>
+            
+            <form onsubmit="event.preventDefault()" style="margin: 0; padding: 5px 10px;">
+                <p style="font-size: 15px; color: #545454; margin-bottom: 20px; font-weight: 500;">
+                    Ingresa tu contraseña para acceder a los costos internos.
+                </p>
+                
+                <!-- Truco para silenciar la advertencia de Chrome -->
+                <input type="text" autocomplete="username" style="display: none;" value="admin">
+                
+                <input type="password" id="swal-pass-input" class="swal2-input swal-glass-input" placeholder="••••••••" autocomplete="current-password" style="display: flex; margin: 0 auto; width: 85%;">
+            </form>
+        `,
+        customClass: {
+            popup: 'swal-glass-popup' // Aquí le aplicamos la clase de cristal que creamos arriba
+        },
+        showCancelButton: true,
+        confirmButtonColor: '#ff9500',
+        cancelButtonColor: 'rgba(0,0,0,0.08)', 
+        cancelButtonText: '<span style="color: #1d1d1f; font-weight: 600;">Cancelar</span>',
+        confirmButtonText: '<strong style="color: white; font-weight: 600;">Autorizar</strong>',
+        preConfirm: () => {
+            const pass = document.getElementById('swal-pass-input').value;
+            if (!pass) {
+                Swal.showValidationMessage('Debes ingresar la contraseña');
+            }
+            return pass;
+        }
+    });
+
+    if (!password) return; // Si canceló
+
+    if (password !== 'Miguel12$') {
+        Swal.fire({
+            icon: 'error',
+            title: 'Acceso Denegado',
+            text: 'La contraseña es incorrecta.',
+            confirmButtonColor: '#ff3b30'
+        });
+        return;
+    }
+
     try {
         const peticionFicha = await fetch(`/local3M/api/mercancia.php?action=obtener&id=${idBusqueda}`);
         const conversionFicha = await peticionFicha.json();
@@ -211,24 +301,33 @@ async function editarMercancia(idBusqueda) {
             const dataObjeto = conversionFicha.data;
             
             document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit" style="color: #ff9500; margin-right: 10px;"></i>Modificar Ficha de Refacción';
-            document.getElementById('inputId').value = dataObjeto.id;
-            document.getElementById('inputTipoRepuesto').value = dataObjeto.tipo_repuesto || 'Pantalla';
-            document.getElementById('inputMarca').value = dataObjeto.marca;
-            document.getElementById('inputModelo').value = dataObjeto.modelo;
-            document.getElementById('inputCantidad').value = dataObjeto.cantidad;
-            document.getElementById('inputCompatibilidad').value = dataObjeto.compatibilidad || '';
-            document.getElementById('inputCosto').value = dataObjeto.costo;
-            document.getElementById('inputUbicacion').value = dataObjeto.ubicacion || '';
-            document.getElementById('inputCodigoBarras').value = dataObjeto.codigo_barras || '';
+            
+            // --- MAGIA: Función segura que evita el error "null" ---
+            const setVal = (id, valor) => {
+                const elemento = document.getElementById(id);
+                if (elemento) elemento.value = valor;
+            };
+
+            // Llenamos los campos de forma segura
+            setVal('inputId', dataObjeto.id);
+            setVal('inputTipoRepuesto', dataObjeto.tipo_repuesto || 'Pantalla');
+            setVal('inputMarca', dataObjeto.marca);
+            setVal('inputModelo', dataObjeto.modelo);
+            setVal('inputCantidad', dataObjeto.cantidad);
+            setVal('inputCompatibilidad', dataObjeto.compatibilidad || '');
+            setVal('inputUbicacion', dataObjeto.ubicacion || '');
+            setVal('inputCodigoBarras', dataObjeto.codigo_barras || '');
+            
+            // Llenamos los precios sin decimales
+            setVal('inputPrecioPublico', parseFloat(dataObjeto.precio_publico || 0).toFixed(0));
+            setVal('inputCosto', parseFloat(dataObjeto.costo || 0).toFixed(0));
+            
+            // Mostramos el campo secreto si existe en el HTML
+            const grupoCosto = document.getElementById('grupoCostoSecreto');
+            if (grupoCosto) grupoCosto.style.display = 'block';
             
             if (dataObjeto.codigo_barras) {
-                JsBarcode("#barcode-svg", dataObjeto.codigo_barras, {
-                    format: "CODE128",
-                    width: 1.8,
-                    height: 45,
-                    displayValue: true,
-                    fontSize: 12
-                });
+                JsBarcode("#barcode-svg", dataObjeto.codigo_barras, { format: "CODE128", width: 1.8, height: 45, displayValue: true, fontSize: 12 });
                 document.getElementById('barcode-preview').style.display = 'block';
             } else {
                 document.getElementById('barcode-preview').style.display = 'none';
@@ -240,7 +339,6 @@ async function editarMercancia(idBusqueda) {
         console.error("Fallo en recuperación de ficha técnica: ", e);
     }
 }
-
 // 6. GUARDAR (INSERCIÓN O ACTUALIZACIÓN CON SWEETALERT ANIMADO)
 async function guardarMercancia() {
     try {

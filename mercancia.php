@@ -88,20 +88,27 @@
                     <label class="glass-label">Stock Inicial <span class="req-star">*</span></label>
                     <input type="number" name="cantidad" id="inputCantidad" class="glass-input text-center font-bold" value="1" min="0" required>
                 </div>
+                
                 <div class="form-group">
                     <label class="glass-label">Precio Público ($) <span class="req-star">*</span></label>
-                    <input type="number" name="costo" id="inputCosto" class="glass-input font-bold" value="0" min="0">                </div>
+                    <input type="number" name="precio_publico" id="inputPrecioPublico" class="glass-input font-bold" placeholder="0" min="0" required>
+                </div>
+                
                 <div class="form-group">
                     <label class="glass-label">Ubicación Física</label>
                     <input type="text" name="ubicacion" id="inputUbicacion" class="glass-input" placeholder="Ej: Caja 4A, Estante B">
                 </div>
             </div>
-            
-            <!-- CAMPO OCULTO SOLO PARA EL PATRÓN -->
-            <div class="form-group" id="grupoCostoSecreto" style="display: none; background: rgba(255,59,48,0.05); padding: 10px; border-radius: 8px; border: 1px dashed #ff3b30; margin-bottom: 15px;">
-                <label class="glass-label" style="color: #ff3b30;"><i class="fas fa-lock"></i> Costo Real Mayoreo ($)</label>
-                <input type="number" name="costo" id="inputCosto" class="glass-input font-bold" value="0" step="0.01" min="0">
-            </div>
+
+            <!-- MAGIA PHP: Validación de Rol Inhackable (Fuera de las columnas) -->
+            <?php if (isset($esAdmin) && $esAdmin): ?>
+                <div class="form-group" id="grupoCostoSecreto" style="background: rgba(255,59,48,0.05); padding: 10px; border-radius: 8px; border: 1px dashed #ff3b30; margin-bottom: 15px;">
+                    <label class="glass-label" style="color: #ff3b30;"><i class="fas fa-eye-slash"></i> Costo Real Mayoreo ($)</label>
+                    <input type="number" name="costo" id="inputCosto" class="glass-input font-bold" value="0" min="0">
+                </div>
+            <?php else: ?>
+                <input type="hidden" name="costo" id="inputCosto" value="0">
+            <?php endif; ?>
 
             <div class="form-group barcode-section-wrap">
                 <label class="glass-label">Código de Barras Interno</label>
@@ -111,7 +118,7 @@
                         <i class="fas fa-random"></i> Generar
                     </button>
                 </div>
-                <div id="barcode-preview" class="barcode-container-render" style="display: none;">
+                <div id="barcode-preview" class="barcode-container-render" style="display: none; text-align: center;">
                     <svg id="barcode-svg"></svg>
                 </div>
             </div>

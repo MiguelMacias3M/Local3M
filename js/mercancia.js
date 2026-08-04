@@ -19,23 +19,19 @@ let timeoutBusqueda;
 // Configuración de búsqueda en tiempo real preparada para LECTORES DE CÓDIGO DE BARRAS
 function configurarBusquedaEfectiva() {
     if (inputBusquedaEfectiva) {
-        
         // Evento input con "Debounce" (espera a que el lector termine de escribir)
         inputBusquedaEfectiva.addEventListener('input', () => {
-            clearTimeout(timeoutBusqueda); // Cancelamos la búsqueda anterior si sigue escribiendo
-            
-            // Esperamos 300 milisegundos. Si no hay más teclas, disparamos la búsqueda
+            clearTimeout(timeoutBusqueda);
             timeoutBusqueda = setTimeout(() => {
-                // .trim() elimina los espacios y saltos de línea (Enter) que deja el escáner
                 let valorLimpio = inputBusquedaEfectiva.value.trim();
                 cargarMercancia(valorLimpio);
             }, 300); 
         });
 
-        // Prevenir que la tecla "Enter" del escáner haga comportamientos extraños
+        // Prevenir que la tecla "Enter" del escáner recargue la página
         inputBusquedaEfectiva.addEventListener('keydown', (evento) => {
             if (evento.key === 'Enter') {
-                evento.preventDefault(); // Evita que la página intente recargarse
+                evento.preventDefault();
                 clearTimeout(timeoutBusqueda);
                 let valorLimpio = inputBusquedaEfectiva.value.trim();
                 cargarMercancia(valorLimpio);
@@ -43,6 +39,7 @@ function configurarBusquedaEfectiva() {
         });
     }
 }
+
 // 1. CARGAR DATOS GENERALES E INYECTAR CLASES ASOCIADAS
 async function cargarMercancia(criterioBusqueda = '') {
     try {
@@ -80,10 +77,7 @@ async function cargarMercancia(criterioBusqueda = '') {
                 
                 // MAGIA UX: Hacer toda la fila clickleable
                 filaFisica.onclick = function(evento) {
-                    // Si el clic fue DENTRO de un botón (eliminar, imprimir, sumar stock), NO abras el modal
                     if(evento.target.closest('button')) return; 
-                    
-                    // Si el clic fue en el texto o espacio vacío, abre el modo edición
                     editarMercancia(itemStock.id);
                 };
 
@@ -167,7 +161,6 @@ async function cambiarStock(idRegistro, operacionAccion) {
         const resultadoOperación = await consultaServidor.json();
         
         if (resultadoOperación.success) {
-            // Recargar respetando el filtro actual de búsqueda
             cargarMercancia(inputBusquedaEfectiva ? inputBusquedaEfectiva.value : '');
         }
     } catch (e) {
@@ -175,14 +168,23 @@ async function cambiarStock(idRegistro, operacionAccion) {
     }
 }
 
-// 3. APERTURA Y CONTROL DE MODALES
+// 3. APERTURA Y CONTROL DE MODALES (A prueba de errores)
 function abrirModalNuevo() {
-    formularioMercancia.reset();
-    document.getElementById('inputId').value = '';
+    if (formularioMercancia) formularioMercancia.reset();
+    
     document.getElementById('modalTitle').innerHTML = '<i class="fas fa-box-open" style="color: #007aff; margin-right: 10px;"></i>Nueva Refacción al Inventario';
     document.getElementById('barcode-preview').style.display = 'none';
-    document.getElementById('grupoCostoSecreto').style.display = 'none'; // Se oculta a empleados
-    document.getElementById('inputCosto').value = '0'; // Se va en ceros por defecto
+    
+    // Función segura para inyectar valores iniciales
+    const setVal = (id, valor) => {
+        const elemento = document.getElementById(id);
+        if (elemento) elemento.value = valor;
+    };
+    
+    setVal('inputId', '');
+    setVal('inputCosto', '0'); 
+    setVal('inputPrecioPublico', '0');
+    
     modalOverlay.style.display = 'flex';
 }
 
@@ -190,7 +192,7 @@ function cerrarModal() {
     modalOverlay.style.display = 'none';
 }
 
-// 4. GENERACIÓN DE CÓDIGOS DE BARRAS DE ALTA DENSIDAD (JsBarcode)
+// 4. GENERACIÓN DE CÓDIGOS DE BARRAS DE ALTA DENSIDAD
 function generarCodigo() {
     const fechaInstante = new Date();
     const formatoFechaStr = fechaInstante.getFullYear().toString().substr(-2) + 
@@ -200,9 +202,8 @@ function generarCodigo() {
     const codigoUnicoConstruido = 'MER' + formatoFechaStr + digitoAleatorio;
     
     const inputDestino = document.getElementById('inputCodigoBarras');
-    inputDestino.value = codigoUnicoConstruido;
+    if(inputDestino) inputDestino.value = codigoUnicoConstruido;
     
-    // Inyectar el vector gráfico SVG en pantalla
     JsBarcode("#barcode-svg", codigoUnicoConstruido, {
         format: "CODE128",
         width: 1.8,
@@ -215,84 +216,8 @@ function generarCodigo() {
     document.getElementById('barcode-preview').style.display = 'block';
 }
 
-// 5. EDICIÓN TÉCNICA AVANZADA (PROTEGIDA CON CONTRASEÑA Y ANTI-ERRORES)
+// 5. EDICIÓN TÉCNICA LIBRE (La seguridad del costo la maneja PHP)
 async function editarMercancia(idBusqueda) {
-// Construimos el modal con estilos Glassmorphism puros inyectados
-    const { value: password } = await Swal.fire({
-        title: '<i class="fas fa-user-shield" style="color: #ff9500; font-size: 24px; margin-bottom: 10px; display: block;"></i><span style="color: #1d1d1f; font-weight: 800;">Modo Administrador</span>',
-        html: `
-            <style>
-                /* Efecto Cristal para el fondo de la ventana */
-                .swal-glass-popup {
-                    background: rgba(255, 255, 255, 0.65) !important;
-                    backdrop-filter: blur(16px) !important;
-                    -webkit-backdrop-filter: blur(16px) !important;
-                    border: 1px solid rgba(255, 255, 255, 0.8) !important;
-                    border-radius: 24px !important;
-                    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1) !important;
-                }
-                
-                /* Efecto Cristal para el input de la contraseña */
-                .swal-glass-input {
-                    background: rgba(255, 255, 255, 0.5) !important;
-                    border: 1px solid rgba(255, 255, 255, 0.8) !important;
-                    border-radius: 12px !important;
-                    color: #1d1d1f !important;
-                    font-size: 18px !important;
-                    letter-spacing: 3px !important;
-                    box-shadow: inset 0 2px 5px rgba(0,0,0,0.03) !important;
-                    transition: all 0.3s ease !important;
-                }
-                
-                /* Brillo al hacer clic en el input */
-                .swal-glass-input:focus {
-                    background: rgba(255, 255, 255, 0.9) !important;
-                    border-color: #ff9500 !important;
-                    box-shadow: 0 0 0 4px rgba(255, 149, 0, 0.15) !important;
-                    outline: none !important;
-                }
-            </style>
-            
-            <form onsubmit="event.preventDefault()" style="margin: 0; padding: 5px 10px;">
-                <p style="font-size: 15px; color: #545454; margin-bottom: 20px; font-weight: 500;">
-                    Ingresa tu contraseña para acceder a los costos internos.
-                </p>
-                
-                <!-- Truco para silenciar la advertencia de Chrome -->
-                <input type="text" autocomplete="username" style="display: none;" value="admin">
-                
-                <input type="password" id="swal-pass-input" class="swal2-input swal-glass-input" placeholder="••••••••" autocomplete="current-password" style="display: flex; margin: 0 auto; width: 85%;">
-            </form>
-        `,
-        customClass: {
-            popup: 'swal-glass-popup' // Aquí le aplicamos la clase de cristal que creamos arriba
-        },
-        showCancelButton: true,
-        confirmButtonColor: '#ff9500',
-        cancelButtonColor: 'rgba(0,0,0,0.08)', 
-        cancelButtonText: '<span style="color: #1d1d1f; font-weight: 600;">Cancelar</span>',
-        confirmButtonText: '<strong style="color: white; font-weight: 600;">Autorizar</strong>',
-        preConfirm: () => {
-            const pass = document.getElementById('swal-pass-input').value;
-            if (!pass) {
-                Swal.showValidationMessage('Debes ingresar la contraseña');
-            }
-            return pass;
-        }
-    });
-
-    if (!password) return; // Si canceló
-
-    if (password !== 'Miguel12$') {
-        Swal.fire({
-            icon: 'error',
-            title: 'Acceso Denegado',
-            text: 'La contraseña es incorrecta.',
-            confirmButtonColor: '#ff3b30'
-        });
-        return;
-    }
-
     try {
         const peticionFicha = await fetch(`/local3M/api/mercancia.php?action=obtener&id=${idBusqueda}`);
         const conversionFicha = await peticionFicha.json();
@@ -300,15 +225,14 @@ async function editarMercancia(idBusqueda) {
         if (conversionFicha.success) {
             const dataObjeto = conversionFicha.data;
             
-            document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit" style="color: #ff9500; margin-right: 10px;"></i>Modificar Ficha de Refacción';
+            document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit" style="color: #007aff; margin-right: 10px;"></i>Modificar Ficha de Refacción';
             
-            // --- MAGIA: Función segura que evita el error "null" ---
+            // Función segura que evita el error "Cannot set properties of null"
             const setVal = (id, valor) => {
                 const elemento = document.getElementById(id);
                 if (elemento) elemento.value = valor;
             };
 
-            // Llenamos los campos de forma segura
             setVal('inputId', dataObjeto.id);
             setVal('inputTipoRepuesto', dataObjeto.tipo_repuesto || 'Pantalla');
             setVal('inputMarca', dataObjeto.marca);
@@ -321,10 +245,6 @@ async function editarMercancia(idBusqueda) {
             // Llenamos los precios sin decimales
             setVal('inputPrecioPublico', parseFloat(dataObjeto.precio_publico || 0).toFixed(0));
             setVal('inputCosto', parseFloat(dataObjeto.costo || 0).toFixed(0));
-            
-            // Mostramos el campo secreto si existe en el HTML
-            const grupoCosto = document.getElementById('grupoCostoSecreto');
-            if (grupoCosto) grupoCosto.style.display = 'block';
             
             if (dataObjeto.codigo_barras) {
                 JsBarcode("#barcode-svg", dataObjeto.codigo_barras, { format: "CODE128", width: 1.8, height: 45, displayValue: true, fontSize: 12 });
@@ -339,6 +259,7 @@ async function editarMercancia(idBusqueda) {
         console.error("Fallo en recuperación de ficha técnica: ", e);
     }
 }
+
 // 6. GUARDAR (INSERCIÓN O ACTUALIZACIÓN CON SWEETALERT ANIMADO)
 async function guardarMercancia() {
     try {
@@ -410,23 +331,19 @@ function eliminarMercancia(idEliminar) {
     });
 }
 
-// 8. COMUNICACIÓN DIRECTA CON HARDWARE IMPRESOR XPRINTER (VÍA IFRAME/VENTANA MODAL)
+// 8. COMUNICACIÓN DIRECTA CON HARDWARE IMPRESOR XPRINTER
 function imprimirEtiquetaRefaccion(codigoBarrasArticulo, identificadorTextoCompleto) {
     if (!codigoBarrasArticulo || codigoBarrasArticulo.trim() === '' || codigoBarrasArticulo === 'null') {
         Swal.fire('Código Requerido', 'Para despachar una etiqueta necesitas generar un código de barras primero.', 'info');
         return;
     }
     
-    // Abrir pasarela de render térmico nativo
     const rutaImpresionDirecta = `/local3M/imprimir_etiqueta.php?codigo=${encodeURIComponent(codigoBarrasArticulo)}&nombre=${encodeURIComponent(identificadorTextoCompleto)}&cliente=Stock&detalles=Refaccion`;
     window.open(rutaImpresionDirecta, '_blank', 'width=450,height=550,scrollbars=no,resizable=no');
 }
 
-// ==========================================================================
-// CIERRE DE MODAL AL HACER CLIC AFUERA (Fondo oscuro)
-// ==========================================================================
+// CIERRE DE MODAL AL HACER CLIC AFUERA
 window.addEventListener('click', (evento) => {
-    // Si el clic fue exactamente en la capa oscura (modalOverlay) y no adentro
     if (evento.target === modalOverlay) {
         cerrarModal();
     }

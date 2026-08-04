@@ -127,14 +127,16 @@ if (!isset($_SESSION['rol']) || strtolower($_SESSION['rol']) !== 'admin') {
             </div>
 
             <div class="row-2-col" style="margin-bottom: 15px;">
-                <div>
-                    <label style="font-size: 13px; font-weight: 600; color: #86868b; display: block; margin-bottom: 5px;">Fecha y Hora <span class="text-danger">*</span></label>
-                    <input type="datetime-local" class="glass-input" name="fecha_movimiento" id="inputFechaMovimiento" required style="margin:0;">
-                </div>
-                <div>
-                    <label style="font-size: 13px; font-weight: 600; color: #86868b; display: block; margin-bottom: 5px;">Usuario Responsable <span class="text-danger">*</span></label>
-                    <input type="text" name="usuario" id="inputUsuario" class="glass-input" required style="margin:0;">
-                </div>
+                <!-- FECHA Y HORA OCUPANDO TODO EL ANCHO PARA EVITAR EL DESBORDE EN MÓVILES -->
+            <div style="margin-bottom: 15px;">
+                <label style="font-size: 13px; font-weight: 600; color: #86868b; display: block; margin-bottom: 5px;">Fecha y Hora <span class="text-danger">*</span></label>
+                <input type="datetime-local" class="glass-input" name="fecha_movimiento" id="inputFechaMovimiento" required style="margin:0;">
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="font-size: 13px; font-weight: 600; color: #86868b; display: block; margin-bottom: 5px;">Usuario Responsable <span class="text-danger">*</span></label>
+                <input type="text" name="usuario" id="inputUsuario" class="glass-input" required style="margin:0;">
+            </div>
             </div>
 
             <div style="margin-bottom: 15px;">

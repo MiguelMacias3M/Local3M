@@ -507,19 +507,17 @@ body {
 }
 
 @media (max-width: 600px) {
-    /* 2. Reducimos los márgenes internos en pantallas pequeñas */
     .glass-modal-content {
         padding: 20px 15px !important; 
         width: 95% !important;
+        box-sizing: border-box !important;
+        overflow-x: hidden !important; /* Bloquea el desplazamiento lateral */
     }
 
-    /* 3. Forzamos al calendario nativo del celular a respetar el ancho máximo */
+    /* Forzamos al input de fecha a acoplarse perfectamente al ancho de la pantalla */
     input[type="datetime-local"].glass-input {
+        width: 100% !important;
         max-width: 100% !important;
-        min-width: 0 !important;
-        display: block !important;
-        /* Un poco menos de padding lateral solo en el input de fecha para que quepa mejor */
-        padding-left: 8px !important; 
-        padding-right: 8px !important;
+        box-sizing: border-box !important;
     }
 }

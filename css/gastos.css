@@ -497,3 +497,29 @@ body {
         width: 100% !important;
     }
 }
+/* ==========================================================================
+   FIX: AJUSTE DE MODAL Y FECHA PARA CELULARES REALES
+   ========================================================================== */
+
+/* 1. Protegemos el modal para que el padding no lo haga crecer de más */
+.glass-modal-content {
+    box-sizing: border-box !important;
+}
+
+@media (max-width: 600px) {
+    /* 2. Reducimos los márgenes internos en pantallas pequeñas */
+    .glass-modal-content {
+        padding: 20px 15px !important; 
+        width: 95% !important;
+    }
+
+    /* 3. Forzamos al calendario nativo del celular a respetar el ancho máximo */
+    input[type="datetime-local"].glass-input {
+        max-width: 100% !important;
+        min-width: 0 !important;
+        display: block !important;
+        /* Un poco menos de padding lateral solo en el input de fecha para que quepa mejor */
+        padding-left: 8px !important; 
+        padding-right: 8px !important;
+    }
+}

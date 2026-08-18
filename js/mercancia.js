@@ -180,7 +180,8 @@ function abrirModalNuevo() {
         const elemento = document.getElementById(id);
         if (elemento) elemento.value = valor;
     };
-    
+    setVal('inputTipoRepuesto', 'Pantalla'); // Resetea el select
+    verificarTipoOtro(); // Se asegura de ocultar el campo de texto
     setVal('inputId', '');
     setVal('inputCosto', '0'); 
     setVal('inputPrecioPublico', '0');
@@ -234,8 +235,20 @@ async function editarMercancia(idBusqueda) {
             };
 
             setVal('inputId', dataObjeto.id);
-            setVal('inputTipoRepuesto', dataObjeto.tipo_repuesto || 'Pantalla');
-            setVal('inputMarca', dataObjeto.marca);
+// Inteligencia para leer piezas personalizadas de la BD
+            const opcionesPredefinidas = ['Pantalla', 'Batería', 'Centro de Carga', 'Flexor', 'Cámara', 'Tablilla', 'Tapa Trasera'];
+            let tipoDbReal = dataObjeto.tipo_repuesto || 'Pantalla';
+            
+            if (!opcionesPredefinidas.includes(tipoDbReal)) {
+                // Es una pieza personalizada (Ej: Lector de huella)
+                setVal('inputTipoRepuesto', 'Otro');
+                setVal('inputTipoRepuestoOtro', tipoDbReal);
+            } else {
+                setVal('inputTipoRepuesto', tipoDbReal);
+                setVal('inputTipoRepuestoOtro', '');
+            }
+            verificarTipoOtro(); // Ejecutamos la animación
+            //             setVal('inputMarca', dataObjeto.marca);
             setVal('inputModelo', dataObjeto.modelo);
             setVal('inputCantidad', dataObjeto.cantidad);
             setVal('inputCompatibilidad', dataObjeto.compatibilidad || '');
@@ -348,3 +361,21 @@ window.addEventListener('click', (evento) => {
         cerrarModal();
     }
 });
+
+// Despliega o esconde el campo manual de "Otro"
+window.verificarTipoOtro = function() {
+    const select = document.getElementById('inputTipoRepuesto');
+    const inputOtro = document.getElementById('inputTipoRepuestoOtro');
+    
+    if (select && inputOtro) {
+        if (select.value === 'Otro') {
+            inputOtro.style.display = 'block';
+            inputOtro.setAttribute('required', 'true'); // Lo vuelve obligatorio
+            setTimeout(() => inputOtro.focus(), 100);
+        } else {
+            inputOtro.style.display = 'none';
+            inputOtro.removeAttribute('required');
+            inputOtro.value = ''; // Limpiamos si se arrepintió
+        }
+    }
+};

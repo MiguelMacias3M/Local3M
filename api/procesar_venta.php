@@ -45,7 +45,6 @@ try {
 
     // --- 3. AGREGAR AL CARRITO (Sistema Viejo) ---
     if ($action === 'agregar') {
-        // Mantenemos esto por si tienes otra sección usando el carrito viejo
         $id = $_POST['id'] ?? null;
         $cantidad = (int)($_POST['cantidad'] ?? 1);
 
@@ -150,7 +149,7 @@ try {
     }
 
     // =========================================================================
-    // --- 7. FINALIZAR VENTA DESDE EL CARRITO GLOBAL (CON DESCUENTOS) ---
+    // --- 7. FINALIZAR VENTA DESDE EL CARRITO GLOBAL (CON DESCUENTOS Y PAGOS MIXTOS) ---
     // =========================================================================
     if ($action === 'finalizar_global') {
         $input = json_decode(file_get_contents('php://input'), true);
@@ -168,63 +167,124 @@ try {
         $idTx = 'VEN' . date('ymd') . '-' . strtoupper(bin2hex(random_bytes(2)));
         $usuario = $_SESSION['nombre'];
 
-        // Queries preparadas para Productos
+        // Queries preparadas para los diferentes módulos
         $sqlVenta = "INSERT INTO ventas (id_producto, cantidad, id_transaccion, usuario, fecha) VALUES (?, ?, ?, ?, NOW())";
         $stmtVenta = $conn->prepare($sqlVenta);
 
         $sqlUpdateStock = "UPDATE productos SET cantidad_piezas = cantidad_piezas - ? WHERE id_productos = ? AND cantidad_piezas >= ?";
         $stmtUpdateStock = $conn->prepare($sqlUpdateStock);
         
-        // Queries preparadas para Reparaciones
         $sqlRepUpdate = "UPDATE reparaciones SET estado = 'Entregado', adelanto = adelanto + deuda, deuda = 0 WHERE id = ?";        
         $stmtRepUpdate = $conn->prepare($sqlRepUpdate);
         
-        $sqlHistorial = "INSERT INTO historial_reparaciones (id_reparacion, estado_nuevo, comentario, usuario_responsable) 
-                         VALUES (?, 'Entregado', ?, ?)";
+        $sqlHistorial = "INSERT INTO historial_reparaciones (id_reparacion, estado_nuevo, comentario, usuario_responsable) VALUES (?, 'Entregado', ?, ?)";
         $stmtHist = $conn->prepare($sqlHistorial);
 
-        // Queries preparadas para Equipos de Vitrina Unificada
         $sqlEquipoUpdate = "UPDATE vitrina SET estado = 'Vendido', cliente_nombre = 'Mostrador', fecha_operacion = NOW() WHERE id = ?";        
         $stmtEquipoUpdate = $conn->prepare($sqlEquipoUpdate);
 
-        // Caja Central
-        $sqlCaja = "INSERT INTO caja_movimientos 
-                    (id_transaccion, tipo, ref_id, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, cliente, fecha, categoria, metodo_pago) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, NOW(), ?, ?)";
-        $stmtCaja = $conn->prepare($sqlCaja);
+        // ================================================================
+        // 🌟 LÓGICA MAESTRA DE DISTRIBUCIÓN DE PAGOS MIXTOS 🌟
+        // ================================================================
+        $pagosMixtos = $input['pagos_mixtos'] ?? ['efectivo' => 0, 'terminal' => 0, 'transferencia' => 0];
+        $bolsaEfectivo = 0; 
+        $bolsaTerminal = 0; 
+        $bolsaTransferencia = 0;
 
-        foreach ($carrito as $item) {
+        if ($metodoPago === 'Mixto') {
+            $totalCobrarExacto = 0;
+            foreach ($carrito as $i) {
+                $dUnit = isset($i['descuento_unitario']) ? (float)$i['descuento_unitario'] : 0;
+                if ($i['tipo'] === 'producto' || $i['tipo'] === 'equipo') {
+                    $totalCobrarExacto += (max(0, (float)$i['precio'] - $dUnit) * $i['cantidad']);
+                } else if ($i['tipo'] === 'reparacion') {
+                    $totalCobrarExacto += max(0, (float)$i['a_cobrar'] - $dUnit);
+                } else if ($i['tipo'] === 'abono_apartado') {
+                    $totalCobrarExacto += (float)$i['precio'];
+                }
+            }
+
+            $sumaRecibida = $pagosMixtos['efectivo'] + $pagosMixtos['terminal'] + $pagosMixtos['transferencia'];
+            $cambio = max(0, $sumaRecibida - $totalCobrarExacto);
             
-            // CAPTURAR EL DESCUENTO NEGOCIADO
+            // Lógica contable: El cambio siempre sale de la caja física (Efectivo)
+            $bolsaEfectivo = max(0, $pagosMixtos['efectivo'] - $cambio);
+            $bolsaTerminal = $pagosMixtos['terminal'];
+            $bolsaTransferencia = $pagosMixtos['transferencia'];
+        }
+
+        // Query Central de Caja
+        $stmtCaja = $conn->prepare("INSERT INTO caja_movimientos 
+                    (id_transaccion, tipo, ref_id, descripcion, cantidad, monto_unitario, ingreso, egreso, usuario, cliente, fecha, categoria, metodo_pago) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, NOW(), ?, ?)");
+
+        // FUNCIÓN DINÁMICA QUE REBANA LOS COBROS SI ES MIXTO
+        $procesarCobroCaja = function($tipoMov, $refId, $descripcion, $cantidad, $montoFila, $clienteCaja, $catCaja) use ($stmtCaja, $idTx, $usuario, &$bolsaEfectivo, &$bolsaTerminal, &$bolsaTransferencia, $metodoPago) {
+            
+            if ($montoFila <= 0) return; // Si costó $0, no entra a caja
+            
+            if ($metodoPago !== 'Mixto') {
+                // Pago normal, se va directo de un golpe
+                $stmtCaja->execute([$idTx, $tipoMov, $refId, $descripcion, $cantidad, $montoFila / $cantidad, $montoFila, $usuario, $clienteCaja, $catCaja, $metodoPago]);
+                return;
+            }
+
+            // Es Mixto: Rebanamos el cobro usando el dinero disponible en cada "Bolsa"
+            $montoPorCobrar = $montoFila;
+
+            while ($montoPorCobrar > 0.009) {
+                $montoAplicar = 0;
+                $metodoAplicar = '';
+                
+                if ($bolsaEfectivo > 0.009) {
+                    $montoAplicar = min($montoPorCobrar, $bolsaEfectivo);
+                    $bolsaEfectivo -= $montoAplicar;
+                    $metodoAplicar = 'Efectivo';
+                } else if ($bolsaTerminal > 0.009) {
+                    $montoAplicar = min($montoPorCobrar, $bolsaTerminal);
+                    $bolsaTerminal -= $montoAplicar;
+                    $metodoAplicar = 'Terminal';
+                } else if ($bolsaTransferencia > 0.009) {
+                    $montoAplicar = min($montoPorCobrar, $bolsaTransferencia);
+                    $bolsaTransferencia -= $montoAplicar;
+                    $metodoAplicar = 'Transferencia';
+                } else {
+                    // Fallback de seguridad contable
+                    $montoAplicar = $montoPorCobrar;
+                    $metodoAplicar = 'Efectivo'; 
+                }
+                
+                $descFinal = $descripcion . " [Pagado c/ " . $metodoAplicar . "]";
+                
+                $stmtCaja->execute([$idTx, $tipoMov, $refId, $descFinal, 1, $montoAplicar, $montoAplicar, $usuario, $clienteCaja, $catCaja, $metodoAplicar]);
+                
+                $montoPorCobrar -= $montoAplicar;
+            }
+        };
+        // ================================================================
+
+        // PROCESAMOS EL CARRITO
+        foreach ($carrito as $item) {
             $descuentoUnitario = isset($item['descuento_unitario']) ? (float)$item['descuento_unitario'] : 0;
             
-            // ==========================================
-            // PROCESAR PRODUCTOS NORMALES
-            // ==========================================
+            // 1. PRODUCTOS
             if ($item['tipo'] === 'producto') {
                 $stmtUpdateStock->execute([$item['cantidad'], $item['id'], $item['cantidad']]);
                 if ($stmtUpdateStock->rowCount() === 0) throw new Exception("Stock insuficiente para: " . $item['nombre']);
 
                 $stmtVenta->execute([$item['id'], $item['cantidad'], $idTx, $usuario]);
                 
-                // Lógica de precio real
                 $precioOriginal = (float)$item['precio'];
                 $precioFinal = max(0, $precioOriginal - $descuentoUnitario);
                 $subtotalFinal = $precioFinal * $item['cantidad'];
                 
                 $descripcion = $item['nombre'];
-                if ($descuentoUnitario > 0) {
-                    $descripcion .= " (Descuento aplicado: -$" . number_format($descuentoUnitario * $item['cantidad'], 2) . ")";
-                }
+                if ($descuentoUnitario > 0) $descripcion .= " (Desc: -$" . number_format($descuentoUnitario * $item['cantidad'], 2) . ")";
 
-                $stmtCaja->execute([
-                    $idTx, 'INGRESO', $item['id'], $descripcion, $item['cantidad'], 
-                    $precioFinal, $subtotalFinal, $usuario, 'Público General', 'Venta', $metodoPago
-                ]);
+                $procesarCobroCaja('INGRESO', $item['id'], $descripcion, $item['cantidad'], $subtotalFinal, 'Público General', 'Venta');
             } 
-            // ==========================================
-            // PROCESAR EQUIPOS DE VITRINA (VENTA DIRECTA)
-            // ==========================================
+            
+            // 2. EQUIPOS (VITRINA)
             else if ($item['tipo'] === 'equipo') {
                 $clienteEq = (isset($item['cliente_nombre']) && trim($item['cliente_nombre']) !== '') ? $item['cliente_nombre'] : 'Público General';
                 $telefonoEq = $item['telefono'] ?? '';
@@ -232,28 +292,19 @@ try {
                 $stmtEq = $conn->prepare("UPDATE vitrina SET estado = 'Vendido', cliente_nombre = ?, cliente_telefono = ?, fecha_operacion = NOW() WHERE id = ?");
                 $stmtEq->execute([$clienteEq, $telefonoEq, $item['id']]);
 
-                // Lógica de precio real
                 $precioOriginal = (float)$item['precio'];
                 $precioFinal = max(0, $precioOriginal - $descuentoUnitario);
                 $subtotalFinal = $precioFinal * $item['cantidad'];
                 
                 $descripcion = "Venta Equipo: " . $item['nombre'];
-                if ($descuentoUnitario > 0) {
-                    $descripcion .= " (Descuento: -$" . number_format($descuentoUnitario * $item['cantidad'], 2) . ")";
-                }
+                if ($descuentoUnitario > 0) $descripcion .= " (Desc: -$" . number_format($descuentoUnitario * $item['cantidad'], 2) . ")";
                 
-                $stmtCaja->execute([
-                    $idTx, 'INGRESO', $item['id'], $descripcion, $item['cantidad'], 
-                    $precioFinal, $subtotalFinal, $usuario, $clienteEq, 'Equipos', $metodoPago
-                ]);
+                $procesarCobroCaja('INGRESO', $item['id'], $descripcion, $item['cantidad'], $subtotalFinal, $clienteEq, 'Equipos');
             }
-            // ==========================================
-            // PROCESAR REPARACIONES
-            // ==========================================
+            
+            // 3. REPARACIONES
             else if ($item['tipo'] === 'reparacion') {
                 $accionRep = $item['accion_reparacion'] ?? 'liquidar';
-                
-                // Lógica de precio real para el cobro actual
                 $monto_pagado_original = (float)$item['a_cobrar'];
                 $monto_pagado_final = max(0, $monto_pagado_original - $descuentoUnitario); 
 
@@ -264,7 +315,6 @@ try {
                 $clienteReal = $repDB ? $repDB['nombre_cliente'] : 'Cliente Mostrador';
                 $detalleReal = $repDB ? $repDB['tipo_reparacion'] . ' ' . $repDB['modelo'] : $item['nombre'];
                 $estadoActual = $repDB ? $repDB['estado'] : 'En progreso';
-                
                 $descDescuento = ($descuentoUnitario > 0) ? " (Desc: -$" . number_format($descuentoUnitario, 2) . ")" : "";
 
                 if ($accionRep === 'liquidar') {
@@ -272,10 +322,7 @@ try {
                     $comentario = "Equipo entregado y saldo liquidado en caja ($metodoPago). Folio: $idTx";
                     $stmtHist->execute([$item['id'], $comentario, $usuario]);
 
-                    $stmtCaja->execute([
-                        $idTx, 'REPARACION', $item['id'], 'Pago Final: ' . $detalleReal . $descDescuento, 1, 
-                        $monto_pagado_final, $monto_pagado_final, $usuario, $clienteReal, 'General', $metodoPago
-                    ]);
+                    $procesarCobroCaja('REPARACION', $item['id'], 'Pago Final: ' . $detalleReal . $descDescuento, 1, $monto_pagado_final, $clienteReal, 'General');
                 } 
                 else if ($accionRep === 'abonar') {
                     $sqlAbono = "UPDATE reparaciones SET adelanto = adelanto + ?, deuda = GREATEST(0, deuda - ?) WHERE id = ?";
@@ -286,26 +333,18 @@ try {
                     $stmtHistAbono = $conn->prepare("INSERT INTO historial_reparaciones (id_reparacion, estado_nuevo, comentario, usuario_responsable) VALUES (?, ?, ?, ?)");
                     $stmtHistAbono->execute([$item['id'], $estadoActual, $comentario, $usuario]);
 
-                    $stmtCaja->execute([
-                        $idTx, 'REPARACION', $item['id'], 'Abono: ' . $detalleReal . $descDescuento, 1, 
-                        $monto_pagado_final, $monto_pagado_final, $usuario, $clienteReal, 'Abono', $metodoPago
-                    ]);
+                    $procesarCobroCaja('REPARACION', $item['id'], 'Abono: ' . $detalleReal . $descDescuento, 1, $monto_pagado_final, $clienteReal, 'Abono');
                 }
                 else if ($accionRep === 'nuevo_adelanto') {
-                    $comentarioCaja = "Adelanto (Nueva Orden): " . $detalleReal . $descDescuento;
-                    $stmtCaja->execute([
-                        $idTx, 'REPARACION', $item['id'], $comentarioCaja, 1, 
-                        $monto_pagado_final, $monto_pagado_final, $usuario, $clienteReal, 'Adelanto', $metodoPago
-                    ]);
-                    
                     $comentarioHistorial = "Adelanto cobrado en caja por $" . number_format($monto_pagado_final, 2) . " ($metodoPago). Folio: $idTx";
                     $stmtHistExtra = $conn->prepare("INSERT INTO historial_reparaciones (id_reparacion, estado_nuevo, comentario, usuario_responsable) VALUES (?, ?, ?, ?)");
                     $stmtHistExtra->execute([$item['id'], $estadoActual, $comentarioHistorial, $usuario]);
+
+                    $procesarCobroCaja('REPARACION', $item['id'], "Adelanto: " . $detalleReal . $descDescuento, 1, $monto_pagado_final, $clienteReal, 'Adelanto');
                 }
             }
-            // ============================================================
-            // PROCESAR ABONOS Y NUEVOS APARTADOS VITRINA (SIN DESCUENTOS)
-            // ============================================================
+            
+            // 4. ABONOS DE APARTADOS (VITRINA)
             else if ($item['tipo'] === 'abono_apartado') {
                 $id_equipo = $item['id'];
                 $monto_pago = (float)$item['precio'];
@@ -320,8 +359,7 @@ try {
                     $stmtUpd->execute([$cliente_nombre, $telefono, $monto_pago, $saldo, $id_equipo]);
                     
                     $descripcionCaja = "Enganche: " . str_replace("Enganche: ", "", $item['nombre']);
-                } 
-                else {
+                } else {
                     $stmtGet = $conn->prepare("SELECT anticipo, saldo_restante FROM vitrina WHERE id = ?");
                     $stmtGet->execute([$id_equipo]);
                     $equipo = $stmtGet->fetch(PDO::FETCH_ASSOC);
@@ -340,10 +378,7 @@ try {
                 $stmtAbono = $conn->prepare("INSERT INTO abonos_apartados (id_apartado, monto, metodo_pago, fecha_abono, id_usuario) VALUES (?, ?, ?, NOW(), (SELECT id FROM usuarios WHERE nombre = ? LIMIT 1))");
                 $stmtAbono->execute([$id_equipo, $monto_pago, $metodoAbonoDB, $usuario]);
 
-                $stmtCaja->execute([
-                    $idTx, 'INGRESO', $id_equipo, $descripcionCaja, 1, 
-                    $monto_pago, $monto_pago, $usuario, $cliente_nombre, 'Abono', $metodoPago
-                ]);
+                $procesarCobroCaja('INGRESO', $id_equipo, $descripcionCaja, 1, $monto_pago, $cliente_nombre, 'Abono');
             }
         }
 

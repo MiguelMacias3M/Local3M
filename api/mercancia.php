@@ -66,7 +66,14 @@ try {
     // --- 2. GUARDAR (CREAR O EDITAR) ---
     if ($action === 'guardar') {
         $id = $_POST['id'] ?? '';
-        $tipo_repuesto = trim($_POST['tipo_repuesto'] ?? 'Pantalla'); // NUEVO CAMPO
+        
+        // --- INICIO MAGIA DE TIPO DE PIEZA ---
+        $tipo_select = trim($_POST['tipo_repuesto_select'] ?? 'Pantalla');
+        $tipo_otro = trim($_POST['tipo_repuesto_otro'] ?? '');
+        
+        // Si eligió 'Otro' y sí escribió algo, guardamos el texto. Si no, guardamos lo del select.
+        $tipo_repuesto = ($tipo_select === 'Otro' && !empty($tipo_otro)) ? $tipo_otro : $tipo_select;
+
         $marca = trim($_POST['marca'] ?? '');
         $modelo = trim($_POST['modelo'] ?? '');
         $cantidad = (int)($_POST['cantidad'] ?? 0);
@@ -117,7 +124,7 @@ try {
             
             $stmt->execute([$tipo_repuesto, $marca, $modelo, $compatibilidad, $cantidad, $costo, $precio_publico, $id_ubicacion, $codigo, $id]);
         }
-        
+
         echo json_encode(['success' => true]);
         exit();
     }

@@ -50,10 +50,10 @@
             <input type="hidden" name="id" id="inputId">
             
             <div class="row-2-col">
-                <div class="form-group">
-                    <label class="glass-label">Tipo de Repuesto <span class="req-star">*</span></label>
-                    <select name="tipo_repuesto" id="inputTipoRepuesto" class="glass-input select-glass" required>
-                        <option value="">Selecciona una opción...</option>
+<div class="form-group">
+                <label class="glass-label"><i class="fas fa-microchip"></i> Tipo de Pieza <span class="req-star">*</span></label>
+                <select id="inputTipoRepuesto" name="tipo_repuesto_select" class="glass-input select-glass" onchange="verificarTipoOtro()" required>
+                   <option value="">Selecciona una opción...</option>
                         <option value="Pantalla">Pantalla / Display LCD</option>
                         <option value="Batería">Batería de Litio</option>
                         <option value="Centro de Carga">Centro de Carga / Flex Pin</option>
@@ -64,9 +64,12 @@
                         <option value="Tapa Trasera">Tapa Trasera / Cristal</option>
                         <option value="Cristal de Cámara">Cristal de Cámara Lens</option>
                         <option value="Componente IC">Componente IC / Integrado</option>
-                        <option value="Otro">Otro Componente</option>
-                    </select>
-                </div>
+                    <option value="Otro">➕ Otro (Especificar manualmente...)</option>
+                </select>
+                
+                <input type="text" id="inputTipoRepuestoOtro" name="tipo_repuesto_otro" class="glass-input" placeholder="Ej: Lector de huella iPhone 13" style="display: none; margin-top: 12px; border: 1px solid #007aff; background: rgba(0, 122, 255, 0.05); transition: all 0.3s ease;">
+            </div>
+            
                 <div class="form-group">
                     <label class="glass-label">Marca del Dispositivo <span class="req-star">*</span></label>
                     <input type="text" name="marca" id="inputMarca" class="glass-input" placeholder="Ej: Samsung, iPhone, Xiaomi" required>

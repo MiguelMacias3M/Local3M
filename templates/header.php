@@ -155,43 +155,116 @@ $esAdmin = (isset($_SESSION['rol']) && strtolower($_SESSION['rol']) === 'admin')
             </button>
         </div>
         
-        <div class="carrito-body">
+        <!-- AQUÍ VA EL SCROLL: La lista de productos toma el espacio restante -->
+        <div class="carrito-body" style="flex-grow: 1; overflow-y: auto; padding-bottom: 10px;">
             <ul id="lista-items-carrito" class="lista-items">
                 <li class="item-vacio">El carrito está vacío</li>
             </ul>
         </div>
         
-        <div class="carrito-footer">
-            <div class="fila-total">
-                <span>Total a Pagar:</span>
-                <span class="monto-total">$<span id="total-carrito">0.00</span></span>
+        <!-- FOOTER DE COBRO: Fijo, compacto y sin duplicados -->
+        <div class="carrito-footer" style="padding: 15px; border-top: 1px solid rgba(0,0,0,0.08); background: #f9f9f9; flex-shrink: 0;">
+            
+            <!-- ÚNICO TOTAL A PAGAR -->
+            <div class="fila-total" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border: none; padding: 0;">
+                <span style="font-size: 15px; font-weight: 800; color: #1d1d1f;">Total a Pagar:</span>
+                <span class="monto-total" style="font-size: 22px; font-weight: 800; color: #1d1d1f;">$<span id="total-carrito">0.00</span></span>
             </div>
             
             <div class="seccion-cobro">
+                <style>
+                .payment-methods-grid {
+                    display: grid;
+                    grid-template-columns: repeat(4, 1fr);
+                    gap: 6px;
+                    margin-bottom: 12px;
+                }
+                .pm-card {
+                    background: #ffffff;
+                    border: 1px solid rgba(0, 0, 0, 0.1);
+                    border-radius: 8px;
+                    padding: 8px 4px;
+                    text-align: center;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    color: #86868b;
+                    font-weight: 700;
+                    font-size: 10px;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 4px;
+                }
+                .pm-card i { font-size: 16px; }
+                .pm-card.active {
+                    background: rgba(0, 122, 255, 0.08);
+                    border-color: #007aff;
+                    color: #007aff;
+                }
+                </style>
+
+                <!-- BOTONES DE MÉTODO DE PAGO -->
                 <div style="margin-bottom: 10px;">
-                    <label style="font-size: 0.9em; color: #555;">Método de Pago:</label>
-                    <select id="metodo-pago" class="form-input" style="width: 100%; margin-top: 5px;" onchange="cambiarMetodoPago()">
-                        <option value="Efectivo">💵 Efectivo</option>
-                        <option value="Transferencia">📱 Transferencia</option>
-                        <option value="Terminal">💳 Terminal / Tarjeta</option>
-                    </select>
-                </div>
-                
-                <div class="input-group">
-                    <label for="paga-con">Paga con:</label>
-                    <div class="input-moneda">
-                        <span>$</span>
-                        <input type="number" id="paga-con" placeholder="0.00" onkeyup="calcularCambio()" onchange="calcularCambio()">
+                    <label style="font-size: 12px; font-weight: 700; color: #1d1d1f; margin-bottom: 6px; display: block;">Método de Pago:</label>
+                    <input type="hidden" id="metodo-pago" value="Efectivo">
+                    
+                    <div class="payment-methods-grid">
+                        <div class="pm-card active" onclick="seleccionarMetodo('Efectivo', this)">
+                            <i class="fas fa-money-bill-wave" style="color: #34c759;"></i><span>Efectivo</span>
+                        </div>
+                        <div class="pm-card" onclick="seleccionarMetodo('Terminal', this)">
+                            <i class="fas fa-credit-card" style="color: #ff9500;"></i><span>Terminal</span>
+                        </div>
+                        <div class="pm-card" onclick="seleccionarMetodo('Transferencia', this)">
+                            <i class="fas fa-mobile-alt" style="color: #5856d6;"></i><span>Transf.</span>
+                        </div>
+                        <div class="pm-card" onclick="seleccionarMetodo('Mixto', this)">
+                            <i class="fas fa-random" style="color: #007aff;"></i><span>Mixto</span>
+                        </div>
                     </div>
                 </div>
-                <div class="fila-cambio">
-                    <span>Cambio:</span>
-                    <span class="monto-cambio">$<span id="cambio-carrito">0.00</span></span>
+                
+                <!-- COBRO NORMAL COMPACTO -->
+                <div id="cobro-normal">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; background: #ffffff; border: 1px solid rgba(0,0,0,0.1); padding: 6px 10px; border-radius: 8px;">
+                        <label for="paga-con" style="font-weight: 700; font-size: 12px; margin: 0; color: #86868b;">Paga con:</label>
+                        <div style="display: flex; align-items: center; width: 60%;">
+                            <span style="font-weight: bold; color: #1d1d1f; font-size: 14px;">$</span>
+                            <input type="number" id="paga-con" placeholder="0.00" onkeyup="calcularCambio()" onchange="calcularCambio()" style="border: none; outline: none; width: 100%; text-align: right; font-weight: 800; font-size: 16px; color: #1d1d1f; background: transparent;">
+                        </div>
+                    </div>
+                    <div class="fila-cambio" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 5px;">
+                        <span style="font-size: 12px; font-weight: 700; color: #86868b;">Cambio:</span>
+                        <span style="font-size: 15px; font-weight: 800;">$<span id="cambio-carrito">0.00</span></span>
+                    </div>
+                </div>
+
+                <!-- COBRO MIXTO COMPACTO -->
+                <div id="cobro-mixto" style="display: none; background: rgba(0,122,255,0.03); border: 1px solid rgba(0,122,255,0.2); padding: 10px; border-radius: 8px; margin-bottom: 12px;">
+                    <label style="font-size: 10px; font-weight: 800; color: #007aff; text-transform: uppercase; margin-bottom: 8px; display: block; text-align: center;">Distribuir el Pago</label>
+                    
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="font-size: 11px; font-weight: 700;">💵 Efectivo:</span>
+                        <input type="number" id="mixto-efectivo" style="width: 55%; padding: 4px 8px; text-align: right; font-weight: 800; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; outline: none;" placeholder="0.00" onkeyup="calcularCambioMixto()" onchange="calcularCambioMixto()">
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="font-size: 11px; font-weight: 700;">💳 Terminal:</span>
+                        <input type="number" id="mixto-terminal" style="width: 55%; padding: 4px 8px; text-align: right; font-weight: 800; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; outline: none;" placeholder="0.00" onkeyup="calcularCambioMixto()" onchange="calcularCambioMixto()">
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-size: 11px; font-weight: 700;">📱 Transf:</span>
+                        <input type="number" id="mixto-transferencia" style="width: 55%; padding: 4px 8px; text-align: right; font-weight: 800; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; outline: none;" placeholder="0.00" onkeyup="calcularCambioMixto()" onchange="calcularCambioMixto()">
+                    </div>
+                    
+                    <div style="border-top: 1px dashed rgba(0,0,0,0.15); padding-top: 8px; display: flex; justify-content: space-between; font-weight: 800; font-size: 12px;">
+                        <span>Estado:</span>
+                        <span id="estado-mixto" style="color: #ff3b30;">Faltan $0.00</span>
+                    </div>
                 </div>
             </div>
             
-            <button class="btn-procesar-cobro" onclick="procesarCobroGlobal()">
-                <i class="fas fa-check-circle"></i> Cobrar e Imprimir Ticket
+            <button class="btn-procesar-cobro" onclick="procesarCobroGlobal()" style="width: 100%; background: #007aff; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 800; font-size: 14px; cursor: pointer; transition: 0.2s;">
+                <i class="fas fa-check-circle"></i> Cobrar e Imprimir
             </button>
         </div>
     </div>

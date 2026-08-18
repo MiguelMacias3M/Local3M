@@ -287,24 +287,33 @@ function toggleCarrito() {
     }
 }
 
-function cambiarMetodoPago() {
+window.cambiarMetodoPago = function() {
     const metodoSelect = document.getElementById('metodo-pago');
     const metodo = metodoSelect ? metodoSelect.value : 'Efectivo';
     const inputPagaCon = document.getElementById('paga-con');
+    const cobroNormal = document.getElementById('cobro-normal');
+    const cobroMixto = document.getElementById('cobro-mixto');
     
-    if (!inputPagaCon) return;
-
-    if (metodo !== 'Efectivo' && totalCarrito > 0) {
-        inputPagaCon.value = totalCarrito.toFixed(2);
-        inputPagaCon.disabled = true; 
+    if (metodo === 'Mixto') {
+        cobroNormal.style.display = 'none';
+        cobroMixto.style.display = 'block';
+        calcularCambioMixto();
     } else {
-        if(inputPagaCon.disabled) inputPagaCon.value = ''; 
-        inputPagaCon.disabled = false;
+        cobroMixto.style.display = 'none';
+        cobroNormal.style.display = 'block';
+        
+        if (metodo !== 'Efectivo' && totalCarrito > 0) {
+            inputPagaCon.value = totalCarrito.toFixed(2);
+            inputPagaCon.disabled = true; 
+        } else {
+            if(inputPagaCon.disabled) inputPagaCon.value = ''; 
+            inputPagaCon.disabled = false;
+        }
+        calcularCambio();
     }
-    calcularCambio();
 }
 
-function calcularCambio() {
+window.calcularCambio = function() {
     const pagaConInput = document.getElementById('paga-con');
     if (!pagaConInput) return;
     
@@ -321,20 +330,69 @@ function calcularCambio() {
     }
 }
 
-async function procesarCobroGlobal() {
-    const pagaConInput = document.getElementById('paga-con').value;
-    const pagaCon = parseFloat(pagaConInput) || 0;
+window.calcularCambioMixto = function() {
+    const efe = parseFloat(document.getElementById('mixto-efectivo').value) || 0;
+    const term = parseFloat(document.getElementById('mixto-terminal').value) || 0;
+    const trans = parseFloat(document.getElementById('mixto-transferencia').value) || 0;
+    
+    const sumaPagos = efe + term + trans;
+    const diferencia = sumaPagos - totalCarrito;
+    const spanEstado = document.getElementById('estado-mixto');
+    
+    if (diferencia < -0.01) {
+        spanEstado.innerText = "Faltan $" + Math.abs(diferencia).toFixed(2);
+        spanEstado.style.color = "#ff3b30"; // Rojo
+    } else if (diferencia > 0.01) {
+        spanEstado.innerText = "Dar Cambio: $" + diferencia.toFixed(2);
+        spanEstado.style.color = "#34c759"; // Verde
+    } else {
+        spanEstado.innerText = "Suma Exacta ✔";
+        spanEstado.style.color = "#007aff"; // Azul
+    }
+}
+
+window.procesarCobroGlobal = async function() {
     const metodoSelect = document.getElementById('metodo-pago');
     const metodoPago = metodoSelect ? metodoSelect.value : 'Efectivo';
     
+    let pagaCon = 0;
+    let cambioAEntregar = 0;
+    let pagosMixtos = { efectivo: 0, terminal: 0, transferencia: 0 };
+
     if (carritoGlobal.length === 0) {
         Swal.fire('Atención', 'El carrito está vacío.', 'warning');
         return;
     }
     
-    if (pagaCon < (totalCarrito - 0.01)) { 
-        Swal.fire('Atención', 'El monto pagado es menor al total a cobrar.', 'warning');
-        return;
+    // --- LÓGICA SI ES PAGO MIXTO ---
+    if (metodoPago === 'Mixto') {
+        pagosMixtos.efectivo = parseFloat(document.getElementById('mixto-efectivo').value) || 0;
+        pagosMixtos.terminal = parseFloat(document.getElementById('mixto-terminal').value) || 0;
+        pagosMixtos.transferencia = parseFloat(document.getElementById('mixto-transferencia').value) || 0;
+        
+        pagaCon = pagosMixtos.efectivo + pagosMixtos.terminal + pagosMixtos.transferencia;
+        
+        if (pagaCon < (totalCarrito - 0.01)) {
+            Swal.fire('Atención', 'La suma de los pagos no cubre el total.', 'warning');
+            return;
+        }
+        
+        cambioAEntregar = pagaCon - totalCarrito;
+        
+        // Seguro contable: El cambio solo se puede devolver del dinero físico
+        if (cambioAEntregar > pagosMixtos.efectivo) {
+            Swal.fire('Error Contable', 'No puedes dar más cambio en efectivo del que el cliente te entregó en billetes.', 'error');
+            return;
+        }
+    } 
+    // --- LÓGICA SI ES PAGO NORMAL ---
+    else {
+        pagaCon = parseFloat(document.getElementById('paga-con').value) || 0;
+        if (pagaCon < (totalCarrito - 0.01)) { 
+            Swal.fire('Atención', 'El monto pagado es menor al total a cobrar.', 'warning');
+            return;
+        }
+        cambioAEntregar = pagaCon - totalCarrito;
     }
 
     const btnCobrar = document.querySelector('.btn-procesar-cobro');
@@ -349,8 +407,8 @@ async function procesarCobroGlobal() {
             body: JSON.stringify({ 
                 carrito: carritoGlobal,
                 paga_con: pagaCon,
-                metodo_pago: metodoPago
-                // La variable carritoGlobal ya lleva incrustado el .descuento_unitario de cada producto
+                metodo_pago: metodoPago,
+                pagos_mixtos: pagosMixtos // Mandamos el desglose al backend
             })
         });
 
@@ -360,7 +418,7 @@ async function procesarCobroGlobal() {
             Swal.fire({
                 icon: 'success',
                 title: '¡Venta Exitosa!',
-                text: `Cobrado con ${metodoPago}. Cambio a entregar: $${(pagaCon - totalCarrito).toFixed(2)}`,
+                text: `Cambio a entregar: $${cambioAEntregar.toFixed(2)}`,
                 showConfirmButton: true,
                 confirmButtonText: 'Abrir Tickets y Cerrar',
                 confirmButtonColor: '#007aff'
@@ -375,24 +433,43 @@ async function procesarCobroGlobal() {
                 
                 carritoGlobal = [];
                 guardarCarrito();
-                document.getElementById('paga-con').value = "";
-                if(metodoSelect) metodoSelect.value = "Efectivo"; 
+                
+                // Limpiar campos
+                if (document.getElementById('paga-con')) document.getElementById('paga-con').value = "";
+                if (document.getElementById('mixto-efectivo')) document.getElementById('mixto-efectivo').value = "";
+                if (document.getElementById('mixto-terminal')) document.getElementById('mixto-terminal').value = "";
+                if (document.getElementById('mixto-transferencia')) document.getElementById('mixto-transferencia').value = "";
+                if (metodoSelect) metodoSelect.value = "Efectivo"; 
+                cambiarMetodoPago();
+                
                 toggleCarrito(); 
-
-                if (typeof cargarProductos === 'function') {
-                    cargarProductos();
-                } else {
-                    setTimeout(() => { window.location.reload(); }, 500); 
-                }
+                if (typeof cargarProductos === 'function') cargarProductos();
+                else setTimeout(() => { window.location.reload(); }, 500); 
             });
         } else {
             Swal.fire('Error', data.error || 'No se pudo completar la venta', 'error');
         }
     } catch (error) {
-        console.error('Error:', error);
         Swal.fire('Error', 'Hubo un problema de conexión con el servidor.', 'error');
     } finally {
         btnCobrar.innerHTML = textoOriginal;
         btnCobrar.disabled = false;
     }
 }
+
+// Función para animar y seleccionar las nuevas tarjetas de métodos de pago
+window.seleccionarMetodo = function(metodo, elementoClickeado) {
+    // 1. Guardamos el método elegido en el input oculto
+    const inputMetodo = document.getElementById('metodo-pago');
+    if (inputMetodo) inputMetodo.value = metodo;
+    
+    // 2. Le quitamos el brillo (clase 'active') a todas las tarjetas
+    const tarjetas = document.querySelectorAll('.pm-card');
+    tarjetas.forEach(tarjeta => tarjeta.classList.remove('active'));
+    
+    // 3. Encendemos únicamente la tarjeta a la que le dimos clic
+    elementoClickeado.classList.add('active');
+    
+    // 4. Ejecutamos la lógica de mostrar/ocultar los inputs que ya teníamos
+    cambiarMetodoPago();
+};

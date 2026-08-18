@@ -32,20 +32,19 @@ const barcodeError = document.getElementById('barcode-error');
 const btnPrintBarcode = document.getElementById('btnPrintBarcode');
 const btnCopyBarcode = document.getElementById('btnCopyBarcode');
 
-// --- FUNCIÓN PARA COLORES DE ESTADOS ---
+// --- FUNCIÓN PARA COLORES DE ESTADOS (NUEVO FLUJO PREMIUM) ---
 function obtenerClaseEstado(estado) {
     let est = estado ? estado.trim() : '';
     switch (est) {
-        case 'En espera':          return 'est-espera';
-        case 'En revision':        return 'est-revision';
-        case 'Diagnosticado':      return 'est-diagnosticado';
-        case 'En preparacion':     return 'est-preparacion';
-        case 'En progreso':        return 'est-progreso';
-        case 'Reparado':           return 'est-reparado';
-        case 'Entregado':          return 'est-entregado';
-        case 'Cancelado':          return 'est-cancelado';
-        case 'No se pudo reparar': return 'est-no-reparado';
-        default:                   return 'est-espera'; 
+        case 'Pendiente':           return 'est-pendiente';
+        case 'Evaluacion Tecnica':  return 'est-evaluacion';
+        case 'Espera de Refaccion': return 'est-espera-ref';
+        case 'En Reparacion':       return 'est-reparacion';
+        case 'Terminado':           return 'est-terminado';
+        case 'Entregado':           return 'est-entregado';
+        case 'Cancelado':           return 'est-cancelado';
+        case 'Irreparable':         return 'est-irreparable';
+        default:                    return 'est-pendiente'; 
     }
 }
 
@@ -92,37 +91,23 @@ async function cargarPagina() {
 }
 
 // ========= Renderizar Filas de la Tabla =========
-// ========= Renderizar Filas de la Tabla =========
-// ========= Renderizar Filas de la Tabla =========
 function renderizarFilas(lista) {
     lista.forEach(rep => {
         const tr = document.createElement('tr');
         
-        // =================================================================
-        // 🪄 MAGIA UX: HACER TODA LA FILA CLICKLEABLE (CONTROL)
-        // =================================================================
+        // Hacer toda la fila clickleable
         tr.onclick = function(evento) {
             // Si el clic fue en un botón, enlace (a) o el modal mismo, lo ignoramos
             if(evento.target.closest('button') || evento.target.closest('a') || evento.target.closest('input')) {
                 return;
             }
-            
-            // Redirigir a la pantalla de edición usando tu variable rep.id
             window.location.href = `/local3M/editar_reparacion.php?id=${rep.id}`;
-            
-            // (Ojo: Si en el futuro decides crear un modal para control igual que en mercancía, 
-            // solo borras el window.location de arriba y pones: abrirModalEdicion(rep.id); )
         };
 
         const claseEstado = obtenerClaseEstado(rep.estado);
-
-        const costoTotal = parseFloat(rep.monto) || 0;
-        const totalAbonado = parseFloat(rep.adelanto) || 0; 
-        const saldoPendiente = rep.deuda !== undefined && rep.deuda !== null ? parseFloat(rep.deuda) : (costoTotal - totalAbonado);
-
         const marcaYModelo = `${rep.marca_celular || ''} ${rep.modelo}`.trim();
 
-        // Estructura HTML (Ya viene SIN el botón de editar para que quede limpio)
+        // Estructura HTML con Backticks (`)
         tr.innerHTML = `
             <td data-label="Cliente">
                 <div style="font-weight:600;">${escapeHTML(rep.nombre_cliente)}</div>
@@ -132,7 +117,9 @@ function renderizarFilas(lista) {
                 <div style="font-weight:600; color:#007aff;">${escapeHTML(marcaYModelo)}</div>
             </td>
             <td data-label="Problema">${escapeHTML(rep.tipo_reparacion)}</td>
-            <td data-label="Estado"><span class="badge-estado ${claseEstado}">${escapeHTML(rep.estado)}</span></td>
+            <td data-label="Estado" style="text-align: center;">
+                <span class="badge-estado ${claseEstado}">${escapeHTML(rep.estado)}</span>
+            </td>
             <td data-label="Acciones" style="text-align: center;">
                 <div style="display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: center;">
                     <button class="glass-btn" style="height:36px; padding:0 12px; font-size:13px; background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.25); color: #1d1d1f;" onclick="verDetalles(${rep.id})" title="Ver Detalles y Código">

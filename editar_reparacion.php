@@ -88,27 +88,54 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
                     </div>
                 </div>
 
-                <div class="glass-card">
-                    <h3><i class="fas fa-info-circle"></i> Estado y Ubicación</h3>
+               <div class="glass-card" style="position: relative; z-index: 99;">
+                     <h3><i class="fas fa-info-circle"></i> Estado y Ubicación</h3>
                     
                     <div class="form-group">
                         <label>Información Extra / Notas</label>
                         <input type="text" class="glass-input" name="info_extra" value="<?= htmlspecialchars($reparacion['info_extra']) ?>">
                     </div>
 
-                    <div class="form-group">
+ <div class="form-group">
                         <label>Estado Actual</label>
-                        <select class="glass-input" name="estado" id="selectEstado">
+                        
+                        <!-- El select nativo se oculta, pero sigue funcionando como cerebro -->
+                        <select class="glass-input" name="estado" id="selectEstado" style="display: none;">
                             <?php
-                            $estados = ['En espera', 'En revision', 'Diagnosticado', 'En preparacion', 'En progreso', 'Reparado', 'Entregado', 'Cancelado', 'No se pudo reparar'];
-                            foreach ($estados as $est) {
-                                $sel = ($reparacion['estado'] == $est) ? 'selected' : '';
-                                echo "<option value='$est' $sel>$est</option>";
+                            $estadosNuevos = [
+                                'Pendiente' => '⏳ Pendiente (Recepción)',
+                                'Evaluacion Tecnica' => '🪛 Evaluación Técnica / Apertura',
+                                'Espera de Refaccion' => '🧩 Esperando Refacción',
+                                'En Reparacion' => '🛠️ Ejecutando Reparación',
+                                'Terminado' => '🌟 Terminado (Listo en Repisa)',
+                                'Entregado' => '🤝 Entregado al Cliente',
+                                'Cancelado' => '🛑 Orden Cancelada',
+                                'Irreparable' => '⚠️ Irreparable / Devuelto'
+                            ];
+
+                            $estadoActualBD = $reparacion['estado'];
+                            if (!array_key_exists($estadoActualBD, $estadosNuevos) && !empty($estadoActualBD)) {
+                                $estadosNuevos[$estadoActualBD] = '🔄 ' . $estadoActualBD . ' (Estado Anterior)';
+                            }
+
+                            foreach ($estadosNuevos as $valor => $etiqueta) {
+                                $sel = ($estadoActualBD === $valor) ? 'selected' : '';
+                                echo "<option value=\"$valor\" $sel>$etiqueta</option>";
                             }
                             ?>
                         </select>
-                    </div>
 
+                        <!-- NUEVO DROPDOWN LIQUID GLASS -->
+                        <div class="custom-glass-dropdown" id="glassDropdown">
+                            <div class="glass-dropdown-selected" onclick="toggleGlassDropdown()">
+                                <span id="glassDropdownText">Cargando...</span>
+                                <i class="fas fa-chevron-down arrow-icon"></i>
+                            </div>
+                            <div class="glass-dropdown-options" id="glassDropdownOptions">
+                                <!-- El JavaScript llenará esto de opciones de cristal -->
+                            </div>
+                        </div>
+                    </div>
                     <div class="row-2-col">
                         <div class="form-group">
                             <label><i class="fas fa-map-marker-alt" style="color:#ff2d55;"></i> Ubicación Física</label>

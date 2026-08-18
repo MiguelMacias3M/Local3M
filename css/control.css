@@ -225,48 +225,106 @@
     }
 }
 /* =========================================
-   LIQUID GLASS - ETIQUETAS DE ESTADOS
+   LIQUID GLASS - ETIQUETAS DE ESTADOS 3D
    ========================================= */
 .badge-estado {
-    padding: 6px 12px;
-    border-radius: 8px;
+    padding: 8px 14px; 
+    border-radius: 12px; 
     font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
+    font-weight: 800; 
+    text-transform: uppercase; 
     letter-spacing: 0.5px;
-    display: inline-block;
-    white-space: nowrap;
+    display: inline-block; 
+    white-space: nowrap; 
     text-align: center;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06), inset 0 2px 4px rgba(255,255,255,0.6);
+    transition: transform 0.2s;
+}
+/* =========================================
+   LIQUID GLASS - ETIQUETAS DE ESTADOS VIBRANTES 3D
+   ========================================= */
+.badge-estado {
+    padding: 8px 14px; 
+    border-radius: 10px; 
+    font-size: 11px;
+    font-weight: 800; 
+    text-transform: uppercase; 
+    letter-spacing: 0.5px;
+    display: inline-block; 
+    white-space: nowrap; 
+    text-align: center;
+    color: #ffffff; /* Texto blanco brillante por defecto */
+    text-shadow: 0 1px 3px rgba(0,0,0,0.3); /* Sombra para resaltar el texto */
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* 1. En espera (Naranja Suave) */
-.est-espera { background: rgba(255, 149, 0, 0.15); color: #ff9500; border: 1px solid rgba(255, 149, 0, 0.2); }
+.badge-estado:hover { 
+    transform: translateY(-3px) scale(1.05); 
+    filter: brightness(1.15); /* Se ilumina al pasar el mouse */
+}
 
-/* 2. En revision (Cian) */
-.est-revision { background: rgba(90, 200, 250, 0.15); color: #007bb5; border: 1px solid rgba(90, 200, 250, 0.2); }
+/* Colores Súper Vivos con Gradientes y Resplandor Neon */
 
-/* 3. Diagnosticado (Morado) */
-.est-diagnosticado { background: rgba(175, 82, 222, 0.15); color: #af52de; border: 1px solid rgba(175, 82, 222, 0.2); }
+/* 1. Pendiente (Amarillo / Naranja Brillante) */
+.est-pendiente { 
+    background: linear-gradient(135deg, rgba(255, 184, 0, 0.85), rgba(255, 149, 0, 0.85)); 
+    border: 1px solid rgba(255, 255, 255, 0.6); 
+    box-shadow: 0 4px 15px rgba(255, 149, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.5); 
+}
 
-/* 4. En preparacion (Azul Claro) */
-.est-preparacion { background: rgba(50, 173, 230, 0.15); color: #0088cc; border: 1px solid rgba(50, 173, 230, 0.2); }
+/* 2. Evaluación Técnica (Morado / Magenta Neón) */
+.est-evaluacion { 
+    background: linear-gradient(135deg, rgba(191, 90, 242, 0.85), rgba(153, 50, 204, 0.85)); 
+    border: 1px solid rgba(255, 255, 255, 0.6); 
+    box-shadow: 0 4px 15px rgba(191, 90, 242, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.5); 
+}
 
-/* 5. En progreso (Azul Fuerte/Primario) */
-.est-progreso { background: rgba(0, 122, 255, 0.15); color: #007aff; border: 1px solid rgba(0, 122, 255, 0.2); }
+/* 3. Espera de Refacción (Naranja / Rojo Vibrante) */
+.est-espera-ref { 
+    background: linear-gradient(135deg, rgba(255, 149, 0, 0.85), rgba(255, 59, 48, 0.85)); 
+    border: 1px solid rgba(255, 255, 255, 0.6); 
+    box-shadow: 0 4px 15px rgba(255, 59, 48, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.5); 
+}
 
-/* 6. Reparado (Verde Éxito) */
-.est-reparado { background: rgba(52, 199, 89, 0.15); color: #28a745; border: 1px solid rgba(52, 199, 89, 0.2); }
+/* 4. En Reparación (Azul Eléctrico) */
+.est-reparacion { 
+    background: linear-gradient(135deg, rgba(10, 132, 255, 0.85), rgba(0, 86, 204, 0.85)); 
+    border: 1px solid rgba(255, 255, 255, 0.6); 
+    box-shadow: 0 4px 15px rgba(10, 132, 255, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.5); 
+}
 
-/* 7. Entregado (Gris Oscuro/Neutral) */
-.est-entregado { background: rgb(0, 199, 50); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.2); }
+/* 5. Terminado (Verde Esmeralda Brillante) */
+.est-terminado { 
+    background: linear-gradient(135deg, rgba(48, 209, 88, 0.85), rgba(40, 167, 69, 0.85)); 
+    border: 1px solid rgba(255, 255, 255, 0.6); 
+    box-shadow: 0 4px 15px rgba(48, 209, 88, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.5); 
+}
 
-/* 8. Cancelado (Rojo Suave) */
-.est-cancelado { background: rgba(255, 59, 48, 0.15); color: #ff3b30; border: 1px solid rgba(255, 59, 48, 0.2); }
+/* 6. Entregado (Gris Oscuro / Acero Elegante) */
+.est-entregado { 
+    background: linear-gradient(135deg, rgba(0, 255, 30, 0.85), rgba(94, 255, 0, 0.85)); 
+    border: 1px solid rgba(255, 255, 255, 0.4); 
+    box-shadow: 0 4px 15px rgba(99, 99, 102, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.3); 
+}
 
-/* 9. No se pudo reparar (Rojo Oscuro) */
-.est-no-reparado { background: rgba(200, 0, 0, 0.15); color: #cc0000; border: 1px solid rgba(200, 0, 0, 0.2); }
+/* 7. Cancelado (Carmesí Brillante) */
+.est-cancelado { 
+    background: linear-gradient(135deg, rgba(255, 69, 58, 0.85), rgba(204, 0, 0, 0.85)); 
+    border: 1px solid rgba(255, 255, 255, 0.6); 
+    box-shadow: 0 4px 15px rgba(255, 69, 58, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.5); 
+}
 
-/* Ocultar el texto de la Llave Maestra sin alertar a Chrome */
+/* 8. Irreparable (Negro Gel con Texto Rojo) */
+.est-irreparable { 
+    background: linear-gradient(135deg, rgba(44, 44, 46, 0.9), rgba(28, 28, 30, 0.9)); 
+    color: #ff453a; /* Mantenemos el texto rojo para alertar visualmente */
+    border: 1px solid rgba(255, 69, 58, 0.6); 
+    box-shadow: 0 4px 15px rgba(255, 69, 58, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.1); 
+}cultar el texto de la Llave Maestra sin alertar a Chrome */
 .password-mask {
     -webkit-text-security: disc;
 }

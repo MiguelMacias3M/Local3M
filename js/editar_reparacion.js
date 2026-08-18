@@ -1,6 +1,6 @@
 /* =========================================
  * LÓGICA PARA EDITAR REPARACIÓN (JS PURO)
- * Versión Final: Ubicación (Mapa Caja) + Fotos + Pagos + Checklist
+ * Versión Final: Ubicación (Mapa Caja) + Fotos + Pagos + Checklist + Nuevos Estados
  * ========================================= */
 
 // --- DIBUJO DE CÓDIGO DE BARRAS INICIAL ---
@@ -194,6 +194,23 @@ function agregarAbono() {
 }
 
 function guardarCambios() {
+    const estadoSeleccionado = document.getElementById('selectEstado').value;
+    const ubicacionActual = document.getElementById('ubicacion').value.trim();
+
+    // 🔒 CANDADO DE SEGURIDAD: Si está Terminado, requiere ubicación física
+    if (estadoSeleccionado === 'Terminado' && ubicacionActual === '') {
+        Swal.fire({
+            title: '¡Falta la Ubicación!',
+            text: 'Para marcar el equipo como Terminado, debes indicar en qué repisa o caja lo dejaste para no perderlo.',
+            icon: 'warning',
+            confirmButtonText: '<i class="fas fa-map-marker-alt"></i> Asignar Lugar',
+            confirmButtonColor: '#007aff'
+        }).then(() => {
+            abrirMapaCaja(); // Despliega el mapa automáticamente
+        });
+        return; // Detiene el guardado hasta que cumpla la regla
+    }
+
     let formData = new FormData();
     formData.append('action', 'guardar');
     formData.append('id', REPARACION_ID);
@@ -294,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
         estadoAnterior = selectEstadoGlobal.value;
         
         selectEstadoGlobal.addEventListener('change', function() {
-            if (this.value === 'Reparado') {
+            if (this.value === 'Terminado') {
                 window.abrirChecklist();
             } else {
                 estadoAnterior = this.value;
@@ -334,7 +351,7 @@ window.confirmarChecklist = function() {
             showCancelButton: true,
             confirmButtonColor: '#34c759',
             cancelButtonColor: '#8e8e93',
-            confirmButtonText: 'Sí, forzar Reparado',
+            confirmButtonText: 'Sí, forzar Terminado',
             cancelButtonText: 'Revisar de nuevo'
         }).then((result) => {
             if (result.isConfirmed) {
@@ -348,7 +365,7 @@ window.confirmarChecklist = function() {
 
 window.finalizarChecklist = function() {
     document.getElementById('modalChecklist').style.display = 'none';
-    estadoAnterior = 'Reparado'; 
+    estadoAnterior = 'Terminado'; 
     
     Swal.fire({
         toast: true, position: 'top-end', icon: 'success',
@@ -390,3 +407,59 @@ window.imprimirEtiquetaReparacion = function() {
     window.open(url, '_blank', 'width=450,height=550,scrollbars=no,resizable=no');
 };
 
+// ==========================================
+// MOTOR CUSTOM DROPDOWN LIQUID GLASS
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    const nativeSelect = document.getElementById('selectEstado');
+    if (!nativeSelect) return;
+
+    const dropdownOptions = document.getElementById('glassDropdownOptions');
+    const dropdownText = document.getElementById('glassDropdownText');
+    
+    // 1. Clonar las opciones del viejo select al nuevo diseño de cristal
+    Array.from(nativeSelect.options).forEach(option => {
+        const div = document.createElement('div');
+        div.className = 'glass-option';
+        
+        // Si es el estado actual guardado, lo pintamos activo
+        if (option.selected) {
+            div.classList.add('selected');
+            dropdownText.innerHTML = option.text;
+        }
+        
+        div.innerHTML = option.text;
+        
+        // 2. ¿Qué pasa al hacer clic en una opción de cristal?
+        div.onclick = function() {
+            // A) Actualizar colores visuales
+            document.querySelectorAll('.glass-option').forEach(el => el.classList.remove('selected'));
+            this.classList.add('selected');
+            dropdownText.innerHTML = this.innerHTML;
+            
+            // B) Sincronizar secretamente con el Select Oculto para que Guardar() siga funcionando
+            nativeSelect.value = option.value;
+            
+            // C) Disparar el evento para que salte el Checklist si se elige "Terminado"
+            nativeSelect.dispatchEvent(new Event('change'));
+            
+            // D) Cerrar el menú
+            document.getElementById('glassDropdown').classList.remove('active');
+        };
+        
+        dropdownOptions.appendChild(div);
+    });
+
+    // 3. Cerrar el menú si hacemos clic afuera en la pantalla
+    document.addEventListener('click', function(e) {
+        const customDropdown = document.getElementById('glassDropdown');
+        if (customDropdown && !customDropdown.contains(e.target)) {
+            customDropdown.classList.remove('active');
+        }
+    });
+});
+
+// Función para el botón del Dropdown
+window.toggleGlassDropdown = function() {
+    document.getElementById('glassDropdown').classList.toggle('active');
+};

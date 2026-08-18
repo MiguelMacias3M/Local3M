@@ -36,7 +36,8 @@ if (isset($_GET['msg']) && $_GET['msg'] === 'eliminado') {
                         <th>Cliente</th>
                         <th>Equipo</th>
                         <th>Problema</th>
-                        <th>Estado</th>
+                        <th style="text-align: center;">Estado</th>
+                        
                         <th style="text-align: center;">Acciones</th>
                     </tr>
                 </thead>

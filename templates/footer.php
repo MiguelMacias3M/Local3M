@@ -18,6 +18,8 @@
         }
     });
 </script>
-<script src="/local3M/js/carrito_global.js"></script>)
+<script src="/local3M/js/carrito_global.js"></script
+<!-- Librería QZ Tray para Impresión Silenciosa -->
+<script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2.2/qz-tray.min.js"></script>
 </body>
 </html>

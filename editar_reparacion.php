@@ -105,9 +105,9 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
                             $estadosNuevos = [
                                 'Pendiente' => '⏳ Pendiente (Recepción)',
                                 'Evaluacion Tecnica' => '🪛 Evaluación Técnica / Apertura',
-                                'Espera de Refaccion' => '🧩 Esperando Refacción',
+                                'Espera de Refaccion' => '📦 Esperando Refacción',
                                 'En Reparacion' => '🛠️ Ejecutando Reparación',
-                                'Terminado' => '🌟 Terminado (Listo en Repisa)',
+                                'Terminado' => '✅ Terminado (Listo en Repisa)',
                                 'Entregado' => '🤝 Entregado al Cliente',
                                 'Cancelado' => '🛑 Orden Cancelada',
                                 'Irreparable' => '⚠️ Irreparable / Devuelto'

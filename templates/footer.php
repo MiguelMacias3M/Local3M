@@ -18,8 +18,5 @@
         }
     });
 </script>
-<!-- Librería QZ Tray para Impresión Silenciosa -->
-    <script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2.2/qz-tray.min.js"></script>
 
-    <!-- CONFIGURACIÓN VIP PARA IMPRESIÓN SILENCIOSA (Rutas Absolutas) -->
-    
+<script src="/local3M/js/carrito_global.js?v=<?php echo time(); ?>"></script>

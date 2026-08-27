@@ -37,12 +37,11 @@ if (isset($_GET['msg']) && $_GET['msg'] === 'eliminado') {
                         <th>Equipo</th>
                         <th>Problema</th>
                         <th style="text-align: center;">Estado</th>
-                        
                         <th style="text-align: center;">Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="tablaReparacionesBody">
-                    </tbody>
+                </tbody>
             </table>
         </div>
         
@@ -86,52 +85,41 @@ if (isset($_GET['msg']) && $_GET['msg'] === 'eliminado') {
 </div>
 
 <!-- BOTÓN DE PRUEBA QZ TRAY -->
-<button class="glass-btn success" onclick="probarImpresoraSilenciosa()" style="margin: 20px;">
-    <i class="fas fa-bolt"></i> Disparar Ticket Silencioso
-</button>
+<div style="text-align: center;">
+    <button class="glass-btn success" onclick="probarImpresoraSilenciosa()" style="margin: 20px;">
+        <i class="fas fa-bolt"></i> Disparar Ticket Silencioso
+    </button>
+</div>
 
-<script>
-function probarImpresoraSilenciosa() {
-    // 1. Nombre exacto de tu impresora en Windows (¡CÁMBIALO POR EL TUYO!)
-    var nombreImpresora = "XP-80C"; 
-
-    // 2. Conectar con la cajita verde de QZ Tray
-    qz.websocket.connect().then(function() {
-        console.log("Conectado a QZ Tray!");
-        
-        // 3. Crear la configuración de la impresora
-        var config = qz.configs.create(nombreImpresora);
-        
-        // 4. Armar el diseño del ticket (Texto Crudo ESC/POS ultrarrápido)
-        var data = [
-            '\x1B' + '\x40', // Iniciar impresora
-            '\x1B' + '\x61' + '\x01', // Centrar texto
-            '3M TECHNOLOGY\n',
-            '----------------------\n',
-            'TICKET DE PRUEBA EXITOSO\n',
-            'La impresion silenciosa\n',
-            'esta funcionando al 100%\n',
-            '----------------------\n',
-            '\x1B' + '\x61' + '\x00', // Alinear a la izquierda
-            '\n\n\n\n', // Espacio para arrancar el papel
-            '\x1D' + '\x56' + '\x41' + '\x00' // Comando para Cortar Papel (si la impresora tiene guillotina)
-        ];
-        
-        // 5. Mandar a imprimir y desconectar
-        return qz.print(config, data);
-    }).then(function() {
-        console.log("¡Impresión enviada!");
-        return qz.websocket.disconnect(); // Desconectar para no saturar la memoria
-    }).catch(function(e) {
-        console.error("Error en QZ Tray:", e);
-        alert("Hubo un error de conexión con la impresora. Revisa la consola.");
-    });
-}
-</script>
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<!-- SCRIPTS DE IMPRESIÓN Y UTILIDADES -->
+<script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2.2/qz-tray.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    // Alerta de PHP si existe
     <?php echo $toastMessage; ?>
+
+    // Función limpia de prueba QZ Tray
+    function probarImpresoraSilenciosa() {
+        var nombreImpresora = "XP-80C";
+
+        qz.websocket.connect().then(function() {
+            var config = qz.configs.create(nombreImpresora);
+            var data = [
+                '\x1B' + '\x40',
+                '3M TECHNOLOGY - TICKET DE PRUEBA\n',
+                '--------------------------------\n',
+                '¡Impresion silenciosa lista!\n',
+                '\n\n\n\x1D\x56\x41\x00'
+            ];
+            return qz.print(config, data);
+        }).then(function() {
+            return qz.websocket.disconnect();
+        }).catch(function(e) {
+            console.error(e);
+            alert("Error: " + e);
+        });
+    }
 </script>
 <script src="/local3M/js/control.js?v=<?php echo time(); ?>"></script>
+
 <?php include 'templates/footer.php'; ?>

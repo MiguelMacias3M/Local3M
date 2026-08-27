@@ -1,4 +1,4 @@
-</div> <script>
+<script>
     // Buscamos el botón y el menú por sus ID
     const toggleButton = document.getElementById('menu-toggle');
     const menu = document.getElementById('navbar-menu');
@@ -18,8 +18,8 @@
         }
     });
 </script>
-<script src="/local3M/js/carrito_global.js"></script
 <!-- Librería QZ Tray para Impresión Silenciosa -->
-<script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2.2/qz-tray.min.js"></script>
-</body>
-</html>
+    <script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2.2/qz-tray.min.js"></script>
+
+    <!-- CONFIGURACIÓN VIP PARA IMPRESIÓN SILENCIOSA (Rutas Absolutas) -->
+    

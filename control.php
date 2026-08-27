@@ -93,7 +93,7 @@ if (isset($_GET['msg']) && $_GET['msg'] === 'eliminado') {
 <script>
 function probarImpresoraSilenciosa() {
     // 1. Nombre exacto de tu impresora en Windows (¡CÁMBIALO POR EL TUYO!)
-    var nombreImpresora = "XP-58"; 
+    var nombreImpresora = "XP-80C"; 
 
     // 2. Conectar con la cajita verde de QZ Tray
     qz.websocket.connect().then(function() {

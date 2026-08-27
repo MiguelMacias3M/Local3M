@@ -84,12 +84,7 @@ if (isset($_GET['msg']) && $_GET['msg'] === 'eliminado') {
     </div>
 </div>
 
-<!-- BOTÓN DE PRUEBA QZ TRAY -->
-<div style="text-align: center;">
-    <button class="glass-btn success" onclick="probarImpresoraSilenciosa()" style="margin: 20px;">
-        <i class="fas fa-bolt"></i> Disparar Ticket Silencioso
-    </button>
-</div>
+
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 

@@ -89,9 +89,9 @@ if (isset($_GET['msg']) && $_GET['msg'] === 'eliminado') {
 <script>
     <?php echo $toastMessage; ?>
 </script>
-
+<!-- LIBRERÍA JSBARCODE OBLIGATORIA -->
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <!-- RECONECTAR EL CARRITO GLOBAL Y EL JS DE CONTROL -->
-<script src="/local3M/js/carrito_global.js?v=<?php echo time(); ?>"></script>
 <script src="/local3M/js/control.js?v=<?php echo time(); ?>"></script>
 
 <?php include 'templates/footer.php'; ?>

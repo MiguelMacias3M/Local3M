@@ -1,7 +1,10 @@
 // js/carrito_global.js
-let carritoGlobal = JSON.parse(localStorage.getItem('carritoGlobal')) || [];
-let totalCarrito = 0.00;
-
+if (typeof carritoGlobal === 'undefined') {
+    var carritoGlobal = JSON.parse(localStorage.getItem('carritoGlobal')) || [];
+}
+if (typeof totalCarrito === 'undefined') {
+    let totalCarrito = 0.00;
+}
 document.addEventListener("DOMContentLoaded", () => {
     renderizarCarrito();
 });

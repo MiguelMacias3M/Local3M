@@ -283,6 +283,14 @@
     box-shadow: 0 4px 15px rgba(191, 90, 242, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.5); 
 }
 
+/* 2. Evaluación Técnica (Morado / Magenta Neón) */
+.est-confirmacion { 
+    background: linear-gradient(135deg, rgb(246, 255, 0), rgba(159, 209, 23, 0.999)); 
+    border: 1px solid rgba(255, 255, 255, 0.6); 
+    box-shadow: 0 4px 15px rgba(78, 35, 100, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.5); 
+}
+
+
 /* 3. Espera de Refacción (Naranja / Rojo Vibrante) */
 .est-espera-ref { 
     background: linear-gradient(135deg, rgba(255, 149, 0, 0.85), rgba(255, 59, 48, 0.85)); 

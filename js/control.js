@@ -38,6 +38,7 @@ function obtenerClaseEstado(estado) {
     switch (est) {
         case 'Pendiente':           return 'est-pendiente';
         case 'Evaluacion Tecnica':  return 'est-evaluacion';
+        case 'En espera de confimacion':  return 'est-confirmacion';
         case 'Espera de Refaccion': return 'est-espera-ref';
         case 'En Reparacion':       return 'est-reparacion';
         case 'Terminado':           return 'est-terminado';

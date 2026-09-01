@@ -148,8 +148,14 @@ $esAdmin = (isset($_SESSION['rol']) && strtolower($_SESSION['rol']) === 'admin')
     </div>
 
     <div id="panel-carrito-global" class="panel-carrito">
-        <div class="carrito-header">
-            <h2><i class="fas fa-cash-register"></i> Punto de Venta</h2>
+        <div class="carrito-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center;">
+                <h2 style="margin: 0;"><i class="fas fa-cash-register"></i> Punto de Venta</h2>
+                <!-- Botón minimalista para conceptos extra -->
+                <button type="button" onclick="agregarConceptoLibre()" style="background: rgba(255, 149, 0, 0.1); border: none; color: #ff9500; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; transition: 0.2s; margin-left: 10px;" title="Agregar Cobro Extra Rápido">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
             <button class="btn-cerrar-carrito" onclick="toggleCarrito()">
                 <i class="fas fa-times"></i>
             </button>

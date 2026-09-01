@@ -476,3 +476,58 @@ window.seleccionarMetodo = function(metodo, elementoClickeado) {
     // 4. Ejecutamos la lógica de mostrar/ocultar los inputs que ya teníamos
     cambiarMetodoPago();
 };
+
+// ==========================================
+// CONCEPTO LIBRE / COBRO EXTRA RÁPIDO
+// ==========================================
+window.agregarConceptoLibre = function() {
+    Swal.fire({
+        title: '<span style="font-weight: 800; color: #1d1d1f; font-family: \'Poppins\', sans-serif;"><i class="fas fa-bolt" style="color:#ff9500; margin-right: 8px;"></i> Cobro Extra</span>',
+        html: `
+            <div style="text-align: left; font-family: 'Poppins', sans-serif;">
+                <label style="font-size: 11px; font-weight: 700; color: #86868b; text-transform: uppercase;">Concepto (Ej: Mantenimiento)</label>
+                <input id="swal-extra-nombre" class="swal2-input" style="width: 85%; margin: 5px auto 15px auto; border-radius: 10px; font-size: 14px;" placeholder="¿Qué vas a cobrar?">
+                
+                <label style="font-size: 11px; font-weight: 700; color: #86868b; text-transform: uppercase;">Precio ($)</label>
+                <input id="swal-extra-precio" type="number" class="swal2-input" style="width: 85%; margin: 5px auto; border-radius: 10px; font-weight: bold; color: #34c759;" placeholder="0.00" min="1">
+            </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Añadir al Ticket',
+        confirmButtonColor: '#34c759',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+            const nombre = document.getElementById('swal-extra-nombre').value;
+            const precio = document.getElementById('swal-extra-precio').value;
+            if (!nombre || !precio || precio <= 0) {
+                Swal.showValidationMessage('Ingresa un concepto y un precio válido');
+            }
+            return { nombre: nombre, precio: parseFloat(precio) }
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Creamos el ítem fantasma y lo mandamos al carrito
+            const itemExtra = {
+                id: 'EXTRA-' + Date.now(), // ID único temporal
+                nombre: result.value.nombre,
+                precio: result.value.precio,
+                cantidad: 1,
+                tipo: 'producto', // Lo tratamos como producto para que sume normal
+                descuento_unitario: 0
+            };
+            
+            carritoGlobal.push(itemExtra);
+            guardarCarrito();
+            
+            Swal.fire({
+                toast: true, 
+                position: 'top-end', 
+                icon: 'success', 
+                title: 'Cobro extra añadido', 
+                showConfirmButton: false, 
+                timer: 1500
+            });
+        }
+    });
+};

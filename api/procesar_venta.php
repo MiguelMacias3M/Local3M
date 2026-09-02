@@ -283,6 +283,18 @@ try {
 
                 $procesarCobroCaja('INGRESO', $item['id'], $descripcion, $item['cantidad'], $subtotalFinal, 'Público General', 'Venta');
             } 
+            // 1.5. SERVICIOS / COBROS EXTRAS (NUEVO)
+            else if ($item['tipo'] === 'servicio') {
+                $precioOriginal = (float)$item['precio'];
+                $precioFinal = max(0, $precioOriginal - $descuentoUnitario);
+                $subtotalFinal = $precioFinal * $item['cantidad'];
+                
+                $descripcion = $item['nombre'];
+                if ($descuentoUnitario > 0) $descripcion .= " (Desc: -$" . number_format($descuentoUnitario * $item['cantidad'], 2) . ")";
+
+                // Registra directo en la caja y en el ticket sin buscar stock ni ID real
+                $procesarCobroCaja('INGRESO', 0, $descripcion, $item['cantidad'], $subtotalFinal, 'Público General', 'Servicio');
+            }
             
             // 2. EQUIPOS (VITRINA)
             else if ($item['tipo'] === 'equipo') {

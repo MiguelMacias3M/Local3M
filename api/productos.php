@@ -2,8 +2,7 @@
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 
-// --- DEBUG TEMPORAL: ACTIVAR PARA VER ERRORES REALES ---
-ini_set('display_errors', 0); // Lo ponemos en 0 para producción
+ini_set('display_errors', 0); 
 error_reporting(E_ALL);
 
 // 1. Verificar sesión
@@ -25,32 +24,25 @@ include '../config/conexion.php';
 if (isset($conn)) {
     try {
         $conn->exec("SET NAMES 'utf8'");
-    } catch (Exception $e) {
-        // Ignoramos si falla
-    }
+    } catch (Exception $e) {}
 }
 
 $action = $_GET['action'] ?? ($_POST['action'] ?? null);
 
 try {
-    // --- 1. LISTAR / BUSCAR (CORREGIDO ERROR HY093) ---
+    // --- 1. LISTAR / BUSCAR (AHORA SOLO MUESTRA ACTIVOS) ---
     if ($action === 'listar') {
         $q = $_GET['q'] ?? '';
-        
-        // ==========================================
-        // LA MAGIA: Capturamos la señal secreta
-        // ==========================================
         $todo = $_GET['todo'] ?? 0; 
         
-        // Armamos la consulta BASE sin el límite
+        // Filtramos para que SOLO traiga los activos (o los antiguos que tengan NULL)
         $sql = "SELECT p.*, u.ubicacion as nombre_ubicacion 
                 FROM productos p
                 LEFT JOIN ubicacion_stock u ON p.id_ubicacion = u.id
-                WHERE 
-                LOWER(p.nombre_producto) LIKE ? OR p.codigo_barras LIKE ? 
+                WHERE (p.estado = 'Activo' OR p.estado IS NULL)
+                AND (LOWER(p.nombre_producto) LIKE ? OR p.codigo_barras LIKE ?) 
                 ORDER BY p.id_productos DESC";
         
-        // Si no nos mandaron la señal, protegemos el sistema con el LÍMITE de 50
         if ($todo != 1) {
             $sql .= " LIMIT 50";
         }
@@ -60,7 +52,6 @@ try {
         
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // --- BLINDAJE PARA VERSIONES ANTIGUAS DE PHP ---
         if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
             echo json_encode(['success' => true, 'data' => $data], JSON_INVALID_UTF8_SUBSTITUTE);
         } else {
@@ -81,43 +72,31 @@ try {
         $precio = $_POST['precio_producto'];
         $stock = $_POST['cantidad_piezas'];
         $codigo = trim($_POST['codigo_barras']);
-        // Recibimos 'ubicacion' que puede ser el texto o el ID (depende de tu frontend)
         $ubicacionInput = trim($_POST['ubicacion'] ?? ''); 
 
         if (empty($nombre) || empty($precio)) {
             throw new Exception('Nombre y Precio son obligatorios');
         }
 
-        // --- MANEJO DE UBICACIÓN ---
+        // --- MANEJO INTELIGENTE DE UBICACIÓN (A1, A2, etc.) ---
         $idUbicacionFinal = null;
 
         if (!empty($ubicacionInput)) {
-            // 1. Verificamos si lo que llegó es un número (ID existente)
-            if (ctype_digit($ubicacionInput)) {
-                $stmtCheck = $conn->prepare("SELECT id FROM ubicacion_stock WHERE id = ?");
-                $stmtCheck->execute([$ubicacionInput]);
-                if ($stmtCheck->fetch()) {
-                    $idUbicacionFinal = $ubicacionInput;
-                } else {
-                    $idUbicacionFinal = null; 
-                }
-            } else {
-                // 2. Es un TEXTO (ej: "Estante A"), buscamos su ID o lo creamos
-                $stmtBusca = $conn->prepare("SELECT id FROM ubicacion_stock WHERE ubicacion = ?");
-                $stmtBusca->execute([$ubicacionInput]);
-                $rowUbi = $stmtBusca->fetch(PDO::FETCH_ASSOC);
+            // Buscamos directamente el texto exacto (Ej. "A1") en la tabla
+            $stmtBusca = $conn->prepare("SELECT id FROM ubicacion_stock WHERE ubicacion = ?");
+            $stmtBusca->execute([$ubicacionInput]);
+            $rowUbi = $stmtBusca->fetch(PDO::FETCH_ASSOC);
 
-                if ($rowUbi) {
-                    $idUbicacionFinal = $rowUbi['id'];
-                } else {
-                    $stmtIns = $conn->prepare("INSERT INTO ubicacion_stock (ubicacion) VALUES (?)");
-                    $stmtIns->execute([$ubicacionInput]);
-                    $idUbicacionFinal = $conn->lastInsertId();
-                }
+            if ($rowUbi) {
+                $idUbicacionFinal = $rowUbi['id'];
+            } else {
+                // Si no existe "A1", lo creamos al vuelo
+                $stmtIns = $conn->prepare("INSERT INTO ubicacion_stock (ubicacion) VALUES (?)");
+                $stmtIns->execute([$ubicacionInput]);
+                $idUbicacionFinal = $conn->lastInsertId();
             }
         }
 
-        // Generar código si hace falta
         if (empty($codigo)) {
             $codigo = 'PROD' . date('ymd') . rand(100, 999);
         }
@@ -130,9 +109,9 @@ try {
             $stmt = $conn->prepare($sql);
             $stmt->execute([$nombre, $precio, $stock, $codigo, $idUbicacionFinal, $id]);
         } else {
-            // NUEVO
-            $sql = "INSERT INTO productos (nombre_producto, precio_producto, cantidad_piezas, codigo_barras, id_ubicacion) 
-                    VALUES (?, ?, ?, ?, ?)";
+            // NUEVO (Se crea como Activo por defecto)
+            $sql = "INSERT INTO productos (nombre_producto, precio_producto, cantidad_piezas, codigo_barras, id_ubicacion, estado) 
+                    VALUES (?, ?, ?, ?, ?, 'Activo')";
             $stmt = $conn->prepare($sql);
             $stmt->execute([$nombre, $precio, $stock, $codigo, $idUbicacionFinal]);
         }
@@ -141,13 +120,15 @@ try {
         exit();
     }
 
-    // --- 3. ELIMINAR ---
+    // --- 3. ELIMINAR (BAJA LÓGICA / SOFT DELETE) ---
     if ($action === 'eliminar') {
         $id = $_POST['id'] ?? null;
         if (!$id) throw new Exception('Falta ID');
         
-        $stmt = $conn->prepare("DELETE FROM productos WHERE id_productos = ?");
+        // En lugar de borrar la fila y romper las ventas, solo lo ocultamos
+        $stmt = $conn->prepare("UPDATE productos SET estado = 'Inactivo' WHERE id_productos = ?");
         $stmt->execute([$id]);
+        
         echo json_encode(['success' => true]);
         exit();
     }
@@ -163,7 +144,8 @@ try {
         $prod = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if ($prod) {
-            $prod['ubicacion'] = $prod['nombre_ubicacion'] ?? ''; 
+            // TRUCO: Le inyectamos el texto de la ubicación al ID para que el JS te muestre "A1" en el recuadro
+            $prod['id_ubicacion'] = $prod['nombre_ubicacion'] ?? ''; 
 
             if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
                 echo json_encode(['success' => true, 'data' => $prod], JSON_INVALID_UTF8_SUBSTITUTE);

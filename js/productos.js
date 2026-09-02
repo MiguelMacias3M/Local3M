@@ -114,8 +114,7 @@ async function editarProducto(id) {
             document.getElementById('codigo_barras').value = p.codigo_barras;
             document.getElementById('precio_producto').value = p.precio_producto;
             document.getElementById('cantidad_piezas').value = p.cantidad_piezas;
-            document.getElementById('ubicacion').value = p.id_ubicacion || ''; 
-            
+            document.getElementById('ubicacion').value = p.ubicacion || '';            
             document.getElementById('modalTitle').textContent = 'Editar Producto';
             generarPrevisualizacion();
             modal.style.display = 'flex';

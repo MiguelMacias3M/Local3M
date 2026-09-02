@@ -507,13 +507,13 @@ window.agregarConceptoLibre = function() {
         }
     }).then((result) => {
         if (result.isConfirmed) {
-            // Creamos el ítem fantasma y lo mandamos al carrito
+            // Creamos el ítem libre
             const itemExtra = {
-                id: 'EXTRA-' + Date.now(), // ID único temporal
+                id: 'EXTRA-' + Date.now(), 
                 nombre: result.value.nombre,
                 precio: result.value.precio,
                 cantidad: 1,
-                tipo: 'producto', // Lo tratamos como producto para que sume normal
+                tipo: 'servicio', // <-- CAMBIA ESTO DE 'producto' A 'servicio'
                 descuento_unitario: 0
             };
             

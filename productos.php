@@ -52,7 +52,20 @@ include 'templates/header.php';
     <div class="modal-content glass-card">
         <button class="modal-close" onclick="cerrarModal()"><i class="fas fa-times"></i></button>
         <h2 id="modalTitle" class="section-title">Nuevo Producto</h2>
-        
+     <!-- Banderín de Estándar de Nomenclatura -->
+<div style="background: rgba(0, 122, 255, 0.08); border-left: 4px solid #007aff; padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 10px;">
+    <i class="fas fa-lightbulb" style="color: #007aff; font-size: 16px; margin-top: 2px;"></i>
+    <div>
+        <strong style="color: #007aff; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">Estándar de Registro 3M</strong>
+        <p style="margin: 0; font-size: 12px; color: #48484a; line-height: 1.5;">
+            <b>Fórmula:</b> [Qué es] + [Conector] + [Marca] + [Modelo] + [Color].<br>
+            <span style="color: #86868b; font-weight: 600;">Ej 1:</span> <i>Cargador Completo C-C 1Hora GAR153 Blanco</i>.<br>
+            <span style="color: #86868b; font-weight: 600;">Ej 2:</span> <i>Cable C-Lightning 1Hora CAB123</i>.<br>
+            <span style="color: #86868b; font-weight: 600;">Ej 3:</span> <i>Funda Silicona iPhone 15 Pro Max Negra</i>.<br>
+            <b>Conectores estándar:</b> Usa siempre <b>C-C</b>, <b>USB-C</b>, <b>C-Lightning</b>, <b>USB-Lightning</b> o <b>V8</b> para facilitar la búsqueda.
+        </p>
+    </div>
+</div>
         <form id="formProducto" onsubmit="return false;">
             <input type="hidden" id="id_productos" name="id_productos">
             

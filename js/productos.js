@@ -12,12 +12,26 @@ const form = document.getElementById('formProducto');
 const tbody = document.getElementById('tablaProductosBody');
 const inputBuscar = document.getElementById('buscar');
 
-if(inputBuscar) {
+let timeoutBusqueda; // Variable para controlar la velocidad del escáner
+
+if (inputBuscar) {
+    // 1. Freno para escritura manual (espera 300ms a que dejes de escribir)
     inputBuscar.addEventListener('input', () => {
-        cargarProductos(inputBuscar.value);
+        clearTimeout(timeoutBusqueda);
+        timeoutBusqueda = setTimeout(() => {
+            cargarProductos(inputBuscar.value.trim());
+        }, 300); 
+    });
+
+    // 2. Freno automático para el disparo rápido del escáner de código de barras
+    inputBuscar.addEventListener('keydown', (evento) => {
+        if (evento.key === 'Enter') {
+            evento.preventDefault();
+            clearTimeout(timeoutBusqueda);
+            cargarProductos(inputBuscar.value.trim());
+        }
     });
 }
-
 async function cargarProductos(query = '') {
     try {
         const res = await fetch(`/local3M/api/productos.php?action=listar&q=${encodeURIComponent(query)}`);

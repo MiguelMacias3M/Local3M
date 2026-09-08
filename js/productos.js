@@ -223,3 +223,4 @@ function generarPrevisualizacion() {
         if(contenedor) contenedor.style.display = 'none';
     }
 }
+

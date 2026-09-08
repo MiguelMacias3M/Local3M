@@ -8,9 +8,14 @@
             <h1><i class="fas fa-boxes" style="color: #007aff; margin-right: 10px;"></i>Inventario de Mercancía</h1>
             <p>Gestiona refacciones, componentes de reparación, ubicaciones físicos y costos reales de stock.</p>
         </div>
-        <button class="glass-btn primary-btn" onclick="abrirModalNuevo()">
-            <i class="fas fa-plus"></i> Nueva Mercancía
-        </button>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <button class="glass-btn" style="background: #ffffff; border: 1px solid rgba(0,0,0,0.08); color: #1d1d1f; box-shadow: 0 4px 10px rgba(0,0,0,0.03);" onclick="imprimirInventarioMercancia()">
+                <i class="fas fa-file-pdf" style="color: #ff3b30;"></i> Imprimir Stock
+            </button>
+            <button class="glass-btn primary-btn" onclick="abrirModalNuevo()">
+                <i class="fas fa-plus"></i> Nueva Mercancía
+            </button>
+        </div>
     </div>
 
     <div class="glass-card toolbar-card">

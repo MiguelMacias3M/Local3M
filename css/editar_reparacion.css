@@ -100,11 +100,11 @@
     background: rgba(255, 255, 255, 0.5); 
     backdrop-filter: blur(10px); 
     border: 1px solid rgba(255, 255, 255, 0.8); 
-    border-radius: 14px; 
+    border-radius: 16px; /* Más redondeados */
     padding: 0 20px; 
-    height: 48px; 
-    font-weight: 600; 
-    font-size: 14px; 
+    height: 52px; /* Más altos en computadora */
+    font-weight: 700; /* Letra más gruesa */
+    font-size: 15px; 
     color: #1d1d1f; 
     cursor: pointer; 
     transition: all 0.3s; 
@@ -112,10 +112,13 @@
     align-items: center; 
     justify-content: center; 
     gap: 8px; 
-    /* 🚨 ESTA LÍNEA ES LA MAGIA: Obliga a <a> y <button> a medir exactamente lo mismo */
     box-sizing: border-box; 
 }
-.glass-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }ss-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+
+.glass-btn:hover { 
+    transform: translateY(-2px); 
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1); 
+}
 
 .glass-btn.primary { background: rgba(0, 122, 255, 0.9); color: white; border-color: rgba(0, 122, 255, 0.4); }
 .glass-btn.success { background: rgba(52, 199, 89, 0.9); color: white; border-color: rgba(52, 199, 89, 0.4); }
@@ -151,13 +154,13 @@
 }
 .barcode-display {
     background: white;
-    /* 🚨 Aumentamos el padding inferior a 25px para que quepan los números */
     padding: 15px 15px 25px 15px; 
     border-radius: 12px;
     box-shadow: inset 0 2px 10px rgba(0,0,0,0.03);
     overflow: visible;
 }
 .barcode-display svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+
 /* --- 5. TABLA HISTORIAL LIQUID GLASS --- */
 .glass-table-wrapper { 
     border-radius: 16px; 
@@ -195,62 +198,14 @@
 .lugar-box.ocupado { background: rgba(255, 59, 48, 0.2); color: #ff3b30; border-color: #ff3b30; cursor: not-allowed; opacity: 0.6; }
 .lugar-box.seleccionado { background: #007aff; color: white; border: 2px solid #0056b3; transform: scale(1.15); z-index: 3; }
 
-/* =====================================
-   📱 RESPONSIVO ESTRICTO
-   =====================================
-*/
-@media (max-width: 992px) {
-    .edit-grid { grid-template-columns: 1fr; }
-    .barcode-card { position: static; margin-top: 1rem; }
-}
-
-@media (max-width: 768px) {
-    .row-3-col, .row-2-col { grid-template-columns: 1fr; gap: 1rem; }
-    
-    /* 🚨 CORRECCIÓN BOTONES (Se estiran al 100% y se centran) */
-    .glass-action-bar { 
-        flex-direction: column; 
-        align-items: stretch; /* Obliga a los hijos a ocupar el ancho total */
-        gap: 12px;
-    }
-    .glass-action-bar .glass-btn { 
-        width: 100%; 
-        min-width: 100%;
-    }
-    
-    .abono-box { flex-direction: column; align-items: stretch; }
-    .abono-box .glass-btn { width: 100%; }
-
-    /* 🚨 CORRECCIÓN TABLA HISTORIAL MÓVIL */
-    .glass-table { min-width: 100%; }
-    .glass-table, .glass-table tbody, .glass-table tr, .glass-table td { display: block; width: 100%; box-sizing: border-box; }
-    .glass-table thead { display: none; }
-    
-    .glass-table tr { 
-        margin-bottom: 15px; background: rgba(255, 255, 255, 0.5); 
-        border-radius: 16px; border: 1px solid rgba(255,255,255,0.8); 
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 10px; 
-    }
-    .glass-table td { 
-        display: flex; justify-content: space-between; align-items: center; 
-        text-align: right; border-bottom: 1px solid rgba(0,0,0,0.05); padding: 12px 10px; 
-    }
-    .glass-table td:last-child { border-bottom: none; justify-content: flex-end; gap: 10px; }
-    
-    .glass-table td::before { 
-        content: attr(data-label); font-weight: 700; color: #86868b; 
-        text-transform: uppercase; font-size: 11px; text-align: left; flex: 1; 
-    }
-}
-
 /* --- BOTÓN DE SUBIR ARCHIVO PERSONALIZADO --- */
 .custom-file-upload {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    background: rgba(0, 122, 255, 0.05); /* Fondo azul cristalino */
-    border: 2px dashed rgba(0, 122, 255, 0.4); /* Borde punteado moderno */
+    background: rgba(0, 122, 255, 0.05); 
+    border: 2px dashed rgba(0, 122, 255, 0.4); 
     border-radius: 14px;
     padding: 16px 20px;
     cursor: pointer;
@@ -269,6 +224,7 @@
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(0, 122, 255, 0.15);
 }
+
 /* --- CHECKLIST DE CALIDAD (LIQUID GLASS) --- */
 .check-item {
     display: flex;
@@ -291,7 +247,7 @@
 .check-item input[type="checkbox"] {
     width: 22px;
     height: 22px;
-    accent-color: #34c759; /* Verde de éxito */
+    accent-color: #34c759; 
     cursor: pointer;
 }
 
@@ -332,12 +288,13 @@
     from { opacity: 0; transform: scale(0.95); } 
     to { opacity: 1; transform: scale(1); } 
 }
+
 /* =====================================
    FIX: SWEETALERT SIEMPRE AL FRENTE
    =====================================
 */
 .swal2-container {
-    z-index: 999999 !important; /* Un nivel exageradamente alto para ganarle a todo */
+    z-index: 999999 !important;
 }
 
 /* MAGIA LIQUID GLASS PARA EL SELECT DE ESTADOS */
@@ -410,14 +367,14 @@
     left: 0;
     width: 100%;
     margin-top: 8px;
-    background: rgba(255, 255, 255, 0.85); /* Fondo Semi-transparente */
-    backdrop-filter: blur(25px); /* Efecto Borroso Fuerte */
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
     border: 1px solid rgba(255, 255, 255, 0.9);
     border-radius: 16px;
     box-shadow: 0 15px 35px rgba(0,0,0,0.15);
     z-index: 1000;
-    display: none; /* Oculto por defecto */
+    display: none; 
     flex-direction: column;
     overflow: hidden;
     animation: slideDownGlass 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -443,7 +400,7 @@
 .glass-option:hover {
     background: rgba(0, 122, 255, 0.1);
     color: #007aff;
-    padding-left: 22px; /* Se desliza un poquito a la derecha al pasar el mouse */
+    padding-left: 22px; 
 }
 
 .glass-option.selected {
@@ -455,4 +412,61 @@
 @keyframes slideDownGlass {
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+/* =====================================
+   📱 RESPONSIVO ESTRICTO
+   =====================================
+*/
+@media (max-width: 992px) {
+    .edit-grid { grid-template-columns: 1fr; }
+    .barcode-card { position: static; margin-top: 1rem; }
+}
+
+@media (max-width: 768px) {
+    .row-3-col, .row-2-col { grid-template-columns: 1fr; gap: 1rem; }
+    
+    /* 🚨 NUEVO DISEÑO DE BOTONES MÓVIL: SOLO ÍCONOS EN FILA */
+    .glass-action-bar { 
+        flex-direction: row; 
+        flex-wrap: nowrap; 
+        justify-content: space-between; 
+        gap: 12px; 
+    }
+    
+    .glass-action-bar .glass-btn { 
+        flex: 1; 
+        min-width: unset; 
+        width: auto; 
+        height: 55px; 
+        padding: 0; 
+        font-size: 0; /* 💥 Oculta el texto */
+        border-radius: 14px;
+    }
+
+    .glass-action-bar .glass-btn i {
+        font-size: 22px; /* Ícono grande */
+        margin: 0; 
+    }
+
+    /* 🚨 CORRECCIÓN TABLA HISTORIAL MÓVIL */
+    .glass-table { min-width: 100%; }
+    .glass-table, .glass-table tbody, .glass-table tr, .glass-table td { display: block; width: 100%; box-sizing: border-box; }
+    .glass-table thead { display: none; }
+    
+    .glass-table tr { 
+        margin-bottom: 15px; background: rgba(255, 255, 255, 0.5); 
+        border-radius: 16px; border: 1px solid rgba(255,255,255,0.8); 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 10px; 
+    }
+    .glass-table td { 
+        display: flex; justify-content: space-between; align-items: center; 
+        text-align: right; border-bottom: 1px solid rgba(0,0,0,0.05); padding: 12px 10px; 
+    }
+    .glass-table td:last-child { border-bottom: none; justify-content: flex-end; gap: 10px; }
+    
+    .glass-table td::before { 
+        content: attr(data-label); font-weight: 700; color: #86868b; 
+        text-transform: uppercase; font-size: 11px; text-align: left; flex: 1; 
+    }
 }

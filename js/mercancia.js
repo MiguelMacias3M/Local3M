@@ -379,3 +379,11 @@ window.verificarTipoOtro = function() {
         }
     }
 };
+
+// ==========================================
+// 9. IMPRIMIR REPORTE DE INVENTARIO FÍSICO
+// ==========================================
+window.imprimirInventarioMercancia = function() {
+    // Abrimos el archivo PHP generador del reporte en una nueva pestaña
+    window.open('/local3M/imprimir_inventario_mercancia.php', '_blank');
+};

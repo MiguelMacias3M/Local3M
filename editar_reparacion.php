@@ -88,6 +88,46 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
                     </div>
                 </div>
 
+                <!-- NUEVO MÓDULO: PIEZAS Y GANANCIA NETA -->
+                <div class="glass-card" style="background: rgba(52, 199, 89, 0.04); border: 1px solid rgba(52, 199, 89, 0.2);">
+                    <h3><i class="fas fa-microchip" style="color:#34c759;"></i> Refacciones Utilizadas</h3>
+                    
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <input type="text" id="buscador_piezas" class="glass-input" placeholder="Buscar refacción en inventario..." onkeyup="buscarPiezaReparacion()" autocomplete="off">
+                    </div>
+                    
+                    <div id="resultados_piezas" style="background: white; border-radius: 10px; max-height: 150px; overflow-y: auto; margin-bottom: 15px; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.1);"></div>
+
+                    <!-- Tabla de piezas agregadas -->
+                    <div style="background: white; border-radius: 12px; padding: 10px;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid #eee; color: #86868b; text-align: left;">
+                                    <th style="padding: 8px;">Pieza Extraída</th>
+                                    <!-- SOLO ADMIN VE LA COLUMNA DE COSTO -->
+                                    <?php if(isset($esAdmin) && $esAdmin): ?>
+                                    <th style="padding: 8px; text-align: right;">Costo (Mayoreo)</th>
+                                    <?php endif; ?>
+                                    <!-- COLUMNA PARA EL BOTÓN DE ELIMINAR -->
+                                    <th style="padding: 8px; text-align: right; width: 50px;"></th> 
+                                </tr>
+                            </thead>
+                            <tbody id="tabla_piezas_usadas">
+                                <!-- Se llena con JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- SOLO ADMIN VE LA GANANCIA FINAL -->
+                    <?php if(isset($esAdmin) && $esAdmin): ?>
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center;">
+                        <div style="color: #86868b; font-size: 13px;">Costo total piezas: <b id="lbl_costo_piezas" style="color: #ff3b30;">$0.00</b></div>
+                        <div style="font-size: 16px; font-weight: 800; color: #1d1d1f;">Ganancia Neta: <span id="lbl_ganancia_neta" style="color: #34c759;">$0.00</span></div>
+                    </div>
+                    <?php endif; ?>
+                </div>
+
+
                <div class="glass-card" style="position: relative; z-index: 99;">
                      <h3><i class="fas fa-info-circle"></i> Estado y Ubicación</h3>
                     
@@ -314,6 +354,12 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
             }, 100);
         }
     });
+</script>
+<script>
+    const REPARACION_ID = <?= $id ?>;
+    const TICKET_URL = "<?= $ticketUrl ?>";
+    const CODIGO_BARRAS = "<?= $reparacion['codigo_barras'] ?? '' ?>";
+    const ES_ADMIN = <?= (isset($esAdmin) && $esAdmin) ? 'true' : 'false' ?>; // <-- AGREGA ESTA LÍNEA
 </script>
 <script>
     const REPARACION_ID = <?= $id ?>;

@@ -463,3 +463,159 @@ document.addEventListener('DOMContentLoaded', () => {
 window.toggleGlassDropdown = function() {
     document.getElementById('glassDropdown').classList.toggle('active');
 };
+
+// ==========================================
+// MÓDULO DE REFACCIONES Y GANANCIA NETA
+// ==========================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    if(typeof REPARACION_ID !== 'undefined') cargarPiezasUsadas();
+});
+
+let timeoutPiezas;
+function buscarPiezaReparacion() {
+    clearTimeout(timeoutPiezas);
+    const q = document.getElementById('buscador_piezas').value.trim();
+    const caja = document.getElementById('resultados_piezas');
+    
+    if(q.length < 2) { caja.style.display = 'none'; return; }
+
+    timeoutPiezas = setTimeout(() => {
+        fetch(`api/gestion_piezas.php?action=buscar_mercancia&q=${encodeURIComponent(q)}`)
+        .then(res => res.json())
+        .then(data => {
+            caja.innerHTML = '';
+            if(data.success && data.data.length > 0) {
+                data.data.forEach(p => {
+                    // Extraemos el código en texto plano
+                    const codigoB = p.codigo_barras ? p.codigo_barras : 'S/C';
+                    
+                    caja.innerHTML += `
+                        <div style="padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="agregarPiezaAReparacion(${p.id})">
+                            <div>
+                                <strong style="font-size: 13px; color: #1d1d1f; display: block;">
+                                    ${p.tipo_repuesto} ${p.marca} ${p.modelo} 
+                                    <span style="color:#007aff; font-family:monospace; font-size:12px; margin-left:5px; background: rgba(0,122,255,0.08); padding: 2px 6px; border-radius: 6px;">[${codigoB}]</span>
+                                </strong>
+                                <span style="font-size: 11px; color: #86868b;">Stock disponible: ${p.cantidad}</span>
+                            </div>
+                            <button class="glass-btn primary" style="height: 30px; padding: 0 10px; font-size: 12px; min-width: auto; width: auto;"><i class="fas fa-plus"></i></button>
+                        </div>`;
+                });
+                caja.style.display = 'block';
+            } else {
+                caja.innerHTML = '<div style="padding: 10px; text-align: center; color: #86868b; font-size: 12px;">No hay piezas en stock o no existe.</div>';
+                caja.style.display = 'block';
+            }
+        });
+    }, 300);
+}
+
+function agregarPiezaAReparacion(id_mercancia) {
+    Swal.fire({ title: 'Agregando pieza...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
+    
+    let fd = new FormData();
+    fd.append('action', 'agregar_pieza');
+    fd.append('id_reparacion', REPARACION_ID);
+    fd.append('id_mercancia', id_mercancia);
+
+    fetch('api/gestion_piezas.php', { method: 'POST', body: fd })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) {
+            document.getElementById('buscador_piezas').value = '';
+            document.getElementById('resultados_piezas').style.display = 'none';
+            Swal.close();
+            cargarPiezasUsadas();
+        } else {
+            Swal.fire('Error', data.message, 'error');
+        }
+    });
+}
+
+window.cargarPiezasUsadas = function() {
+    fetch(`api/gestion_piezas.php?action=listar_piezas&id_reparacion=${REPARACION_ID}`)
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) {
+            const tbody = document.getElementById('tabla_piezas_usadas');
+            tbody.innerHTML = '';
+            
+            data.piezas.forEach(pz => {
+                let celdaCosto = '';
+                // Si es admin, mostramos el dinero
+                if (typeof ES_ADMIN !== 'undefined' && ES_ADMIN) {
+                    celdaCosto = `<td style="padding: 10px 8px; text-align: right; color: #ff3b30; font-weight: 600;">-$${parseFloat(pz.costo_unitario).toFixed(2)}</td>`;
+                }
+                
+                // Dibujamos la fila con el botón de eliminar
+                tbody.innerHTML += `
+                    <tr style="border-bottom: 1px solid rgba(0,0,0,0.03);">
+                        <td style="padding: 10px 8px; font-size: 13px; font-weight: 500;">${pz.nombre_pieza}</td>
+                        ${celdaCosto}
+                        <td style="padding: 10px 8px; text-align: right;">
+                            <button type="button" onclick="eliminarPiezaReparacion(${pz.id})" style="background:rgba(255,59,48,0.1); color:#ff3b30; border:none; width:32px; height:32px; border-radius:8px; cursor:pointer; transition: 0.2s;">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </td>
+                    </tr>`;
+            });
+
+            if(data.piezas.length === 0) {
+                // Ajustar columnas dinámicamente si no hay nada
+                const columnas = (typeof ES_ADMIN !== 'undefined' && ES_ADMIN) ? 3 : 2;
+                tbody.innerHTML = `<tr><td colspan="${columnas}" style="padding: 15px; text-align: center; color: #86868b; font-size: 12px;">Sin refacciones extraídas del sistema aún.</td></tr>`;
+            }
+
+            // Cálculos financieros (Solo si es admin y existen las etiquetas)
+            if (typeof ES_ADMIN !== 'undefined' && ES_ADMIN) {
+                const cobroCliente = parseFloat(data.finanzas.monto) || 0;
+                const costoPiezas = parseFloat(data.finanzas.costo_piezas) || 0;
+                const gananciaNeta = cobroCliente - costoPiezas;
+
+                const lblCosto = document.getElementById('lbl_costo_piezas');
+                const lblGanancia = document.getElementById('lbl_ganancia_neta');
+                
+                if(lblCosto) lblCosto.innerText = '$' + costoPiezas.toFixed(2);
+                if(lblGanancia) lblGanancia.innerText = '$' + gananciaNeta.toFixed(2);
+            }
+        }
+    });
+};
+
+// --- NUEVA FUNCIÓN PARA ELIMINAR Y DEVOLVER AL STOCK ---
+window.eliminarPiezaReparacion = function(id_puente) {
+    Swal.fire({
+        title: '¿Remover pieza?',
+        text: "Se devolverá 1 unidad al inventario de mercancía automáticamente.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ff3b30',
+        cancelButtonColor: '#8e8e93',
+        confirmButtonText: '<i class="fas fa-undo"></i> Sí, remover',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({ title: 'Devolviendo stock...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
+            
+            let fd = new FormData();
+            fd.append('action', 'eliminar_pieza');
+            fd.append('id_puente', id_puente);
+
+            fetch('api/gestion_piezas.php', { method: 'POST', body: fd })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    Swal.close();
+                    cargarPiezasUsadas(); // Recargamos la tablita
+                } else {
+                    Swal.fire('Error', data.message, 'error');
+                }
+            });
+        }
+    });
+};
+// Escuchar cambios en el input del monto para recalcular ganancia en vivo
+document.getElementById('monto').addEventListener('input', () => {
+    cargarPiezasUsadas(); 
+});

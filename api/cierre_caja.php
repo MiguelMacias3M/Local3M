@@ -1,6 +1,7 @@
 <?php
 session_start();
 header('Content-Type: application/json; charset=utf-8');
+date_default_timezone_set('America/Mexico_City');
 ini_set('display_errors', 0);
 error_reporting(0);
 
@@ -185,6 +186,65 @@ try {
             $notas, 
             $id
         ]);
+
+        // ====================================================
+        // ALERTA POR CORREO SI HAY DIFERENCIA EN CAJA
+        // ====================================================
+        if (round($diferencia, 2) != 0.00) {
+            $correo_destino = "miguelmacias3m@gmail.com"; 
+            
+            $tipoDif = ($diferencia < 0) ? "FALTANTE" : "SOBRANTE";
+            $colorDif = ($diferencia < 0) ? "#ff3b30" : "#34c759";
+            
+            $asunto = "⚠️ Alerta de $tipoDif en Corte de Caja - 3M TECHNOLOGY";
+            
+            $mensaje_html = "
+            <html>
+            <head><title>Diferencia en Corte</title></head>
+            <body style='font-family: Arial, sans-serif; color: #1d1d1f; background-color: #f5f5f7; padding: 20px;'>
+                <div style='background: white; border-radius: 16px; padding: 20px; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 5px solid {$colorDif};'>
+                    <h2 style='color: {$colorDif}; margin-top: 0;'>Alerta de Arqueo de Caja</h2>
+                    <p style='color: #86868b;'>Se ha registrado un cierre de turno con una diferencia en el efectivo físico.</p>
+                    
+                    <table border='0' cellpadding='12' cellspacing='0' style='width: 100%; text-align: left; font-size: 14px;'>
+                        <tr style='background: rgba(0,0,0,0.02);'>
+                            <th style='width: 40%; border-bottom: 1px solid #eee;'>👤 Usuario:</th>
+                            <td style='border-bottom: 1px solid #eee;'><b>{$usuario}</b></td>
+                        </tr>
+                        <tr>
+                            <th style='border-bottom: 1px solid #eee;'>🖥️ Efectivo Esperado:</th>
+                            <td style='border-bottom: 1px solid #eee;'>$" . number_format($teorico, 2) . "</td>
+                        </tr>
+                        <tr style='background: rgba(0,0,0,0.02);'>
+                            <th style='border-bottom: 1px solid #eee;'>💰 Efectivo Contado:</th>
+                            <td style='border-bottom: 1px solid #eee;'>$" . number_format($real, 2) . "</td>
+                        </tr>
+                        <tr>
+                            <th style='border-bottom: 1px solid #eee;'>⚖️ Diferencia:</th>
+                            <td style='border-bottom: 1px solid #eee; color: {$colorDif}; font-size: 18px;'><b>$" . number_format($diferencia, 2) . " ({$tipoDif})</b></td>
+                        </tr>
+                        <tr style='background: rgba(0,0,0,0.02);'>
+                            <th style='border-bottom: 1px solid #eee;'>📝 Justificación:</th>
+                            <td style='border-bottom: 1px solid #eee; color: #ff9500;'><i>\"{$notas}\"</i></td>
+                        </tr>
+                    </table>
+                    
+                    <p style='font-size: 12px; color: #86868b; text-align: center; margin-top: 20px;'>
+                        Este es un mensaje automático del sistema POS de 3M TECHNOLOGY.<br>
+                        " . date('d/m/Y h:i A') . "
+                    </p>
+                </div>
+            </body>
+            </html>
+            ";
+
+            $headers  = "MIME-Version: 1.0" . "\r\n";
+            $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
+            $headers .= "From: 3M System <sistema@3mtechnologyoficial.com>" . "\r\n";
+
+            @mail($correo_destino, $asunto, $mensaje_html, $headers);
+        }
+        // ====================================================
 
         $conn->commit();
         echo json_encode(['success' => true]);

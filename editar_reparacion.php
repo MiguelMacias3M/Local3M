@@ -359,12 +359,6 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
     const REPARACION_ID = <?= $id ?>;
     const TICKET_URL = "<?= $ticketUrl ?>";
     const CODIGO_BARRAS = "<?= $reparacion['codigo_barras'] ?? '' ?>";
-    const ES_ADMIN = <?= (isset($esAdmin) && $esAdmin) ? 'true' : 'false' ?>; // <-- AGREGA ESTA LÍNEA
-</script>
-<script>
-    const REPARACION_ID = <?= $id ?>;
-    const TICKET_URL = "<?= $ticketUrl ?>";
-    const CODIGO_BARRAS = "<?= $reparacion['codigo_barras'] ?? '' ?>";
 </script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script> 

@@ -221,14 +221,15 @@ try {
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
 
-    // EXPORTAR REPORTE MENSUAL A EXCEL (CSV)
+   // ==========================================
+    // EXPORTAR REPORTE MENSUAL A EXCEL (CSV) CON GANANCIA NETA
     // ==========================================
     if ($action === 'exportar_mes') {
         $mes = (int)($_GET['mes'] ?? date('m'));
         $anio = (int)($_GET['anio'] ?? date('Y'));
 
-        // Consultamos TODO lo de ese mes (Caja y Gastos) Y LO UNIMOS CON PROVEEDORES
-        $sql = "SELECT c.fecha, c.tipo, c.categoria, c.descripcion, c.ingreso, c.egreso, c.origen, c.usuario, p.empresa AS nombre_proveedor 
+        // Consultamos Caja, Gastos y PROVEEDORES
+        $sql = "SELECT c.fecha, c.tipo, c.categoria, c.descripcion, c.ingreso, c.egreso, c.origen, c.usuario, c.ref_id, p.empresa AS nombre_proveedor 
                 FROM caja_movimientos c 
                 LEFT JOIN proveedores p ON c.id_proveedor = p.id
                 WHERE MONTH(c.fecha) = :mes AND YEAR(c.fecha) = :anio 
@@ -240,20 +241,19 @@ try {
         $nombresMeses = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
         $nombreMes = $nombresMeses[$mes];
 
-        // Forzamos la descarga del archivo como CSV para Excel
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename=Reporte_3M_' . $nombreMes . '_' . $anio . '.csv');
         $output = fopen('php://output', 'w');
-        
-        // Esta línea asegura que Excel lea bien los acentos (UTF-8 BOM)
         fputs($output, $bom =(chr(0xEF) . chr(0xBB) . chr(0xBF)));
         
-        // Cabeceras de la tabla (AGREGADA LA COLUMNA 'PROVEEDOR')
-        fputcsv($output, ['Fecha', 'Hora', 'Origen', 'Tipo', 'Categoría', 'Proveedor', 'Descripción', 'Usuario', 'Ingreso', 'Egreso/Salida']);
+        // Cabeceras (Agregamos "Costo Refacciones" y "Ganancia Real")
+        fputcsv($output, ['Fecha', 'Hora', 'Origen', 'Tipo', 'Categoría', 'Proveedor', 'Descripción', 'Usuario', 'Ingreso', 'Costo Refacciones (Mayoreo)', 'Ganancia Real', 'Egreso/Salida']);
 
         $totIngreso = 0;
         $totEgreso = 0;
-        $totRetiros = 0; // Variable para separar los retiros
+        $totRetiros = 0;
+        $totCostoPiezas = 0;
+        $totGananciaNeta = 0;
 
         foreach ($movs as $m) {
             $fechaObj = strtotime($m['fecha']);
@@ -265,47 +265,71 @@ try {
             $tipo = strtoupper($m['tipo'] ?? '');
             $cat = $m['categoria'] ?? '';
             $desc = $m['descripcion'] ?? '';
-            
-            // OBTENEMOS EL PROVEEDOR
             $proveedor = !empty($m['nombre_proveedor']) ? $m['nombre_proveedor'] : 'N/A';
             
-            $totIngreso += $ing;
+            // --- NUEVO: CALCULAR COSTO DE PIEZAS DE LA REPARACIÓN ---
+            $costo_piezas = 0;
+            $ganancia_real = 0;
 
-            // Verificamos si la salida de dinero es un retiro personal/cierre de caja
+            if ($tipo === 'REPARACION' && !empty($m['ref_id']) && $ing > 0) {
+                // Buscamos el costo en la tabla principal de reparaciones
+                $stmtCosto = $conn->prepare("SELECT costo_piezas FROM reparaciones WHERE id = ?");
+                $stmtCosto->execute([$m['ref_id']]);
+                $costoRep = $stmtCosto->fetchColumn();
+                if ($costoRep) {
+                    $costo_piezas = (float)$costoRep;
+                }
+            }
+            
+            // Solo le calculamos ganancia si entró dinero (no aplica en egresos)
+            if ($ing > 0) {
+                $ganancia_real = $ing - $costo_piezas;
+            }
+
+            // --- SUMATORIAS GENERALES ---
+            $totIngreso += $ing;
+            $totCostoPiezas += $costo_piezas;
+
             $esRetiro = ($tipo === 'RETIRO' || $tipo === 'CIERRE') || 
                         (stripos($cat, 'Retiro') !== false) || 
                         (stripos($cat, 'Cierre') !== false) ||
                         (stripos($desc, 'Retiro') !== false);
 
             if ($esRetiro && $egr > 0) {
-                // Si es retiro, lo sumamos aparte
                 $totRetiros += $egr;
             } else {
-                // Si es un gasto de negocio (mercancía, luz, etc.), se suma a Egresos
                 $totEgreso += $egr;
             }
 
-            // Formatear montos con signo de pesos para cada fila
+            // Textos para Excel
             $strIng = $ing > 0 ? '$' . number_format($ing, 2) : '-';
+            $strCostoP = $costo_piezas > 0 ? '$' . number_format($costo_piezas, 2) : '-';
+            $strGanancia = $ing > 0 ? '$' . number_format($ganancia_real, 2) : '-';
             $strEgr = $egr > 0 ? '$' . number_format($egr, 2) : '-';
 
-            // AGREGAMOS $proveedor AL ARRAY (Debe coincidir con el orden de las cabeceras)
+            // Agregamos las 12 columnas exactas a la fila
             fputcsv($output, [
-                $f, $h, $origen, $m['tipo'], $m['categoria'], $proveedor, $m['descripcion'], $m['usuario'], $strIng, $strEgr
+                $f, $h, $origen, $m['tipo'], $m['categoria'], $proveedor, $m['descripcion'], $m['usuario'], $strIng, $strCostoP, $strGanancia, $strEgr
             ]);
         }
+        
+        $totGananciaNeta = $totIngreso - $totCostoPiezas;
+        $utilidadFinal = $totGananciaNeta - $totEgreso;
 
-        // Dejar una fila en blanco antes de los totales
+        // Fila en blanco
         fputcsv($output, []);
         
-        // Imprimir Totales Finales organizados (Se agregó una coma vacía extra '' para emparejar las 10 columnas)
-        fputcsv($output, ['RESUMEN FINANCIERO DEL MES', '', '', '', '', '', '', '', '', '']);
-        fputcsv($output, ['Total de Ingresos Brutos:', '$' . number_format($totIngreso, 2), '', '', '', '', '', '', '', '']);
-        fputcsv($output, ['Gastos Operativos (Reales):', '$' . number_format($totEgreso, 2), '', '', '', '', '', '', '', '']);
-        fputcsv($output, ['Retiros de Ganancia/Caja:', '$' . number_format($totRetiros, 2), '', '', '', '', '', '', '', '']);
-        fputcsv($output, ['UTILIDAD NETA (Ganancia Limpia):', '$' . number_format($totIngreso - $totEgreso, 2), '', '', '', '', '', '', '', '']);
+        // --- NUEVO: RESUMEN FINANCIERO TOTALMENTE DESGLOSADO ---
+        fputcsv($output, ['RESUMEN FINANCIERO DEL MES (NIVEL DIRECTIVO)', '', '', '', '', '', '', '', '', '', '', '']);
+        fputcsv($output, ['Total de Ingresos Brutos (Lo que pagó el cliente):', '$' . number_format($totIngreso, 2), '', '', '', '', '', '', '', '', '', '']);
+        fputcsv($output, ['Costo de Refacciones de Inventario:', '-$' . number_format($totCostoPiezas, 2), '', '', '', '', '', '', '', '', '', '']);
+        fputcsv($output, ['Total Ganancia Neta (Ingresos Brutos - Refacciones):', '$' . number_format($totGananciaNeta, 2), '', '', '', '', '', '', '', '', '', '']);
+        fputcsv($output, ['Gastos Operativos (Agua, Luz, Nómina, Compras):', '-$' . number_format($totEgreso, 2), '', '', '', '', '', '', '', '', '', '']);
+        fputcsv($output, ['Retiros Personales / Cierres de Caja:', '$' . number_format($totRetiros, 2), '', '', '', '', '', '', '', '', '', '']);
+        fputcsv($output, ['UTILIDAD FINAL (Ganancia Neta - Gastos Operativos):', '$' . number_format($utilidadFinal, 2), '', '', '', '', '', '', '', '', '', '']);
 
         fclose($output);
         exit();
-    }
+    }  
+    
 ?>

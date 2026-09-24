@@ -11,68 +11,80 @@ if (!isset($_SESSION['rol']) || strtolower($_SESSION['rol']) !== 'admin') {
 
 <link rel="stylesheet" href="css/gastos.css?v=<?php echo time(); ?>">
 
-<div class="container glass-container" style="max-width: 1200px;">
+<div class="glass-container" style="max-width: 1200px;">
     
-    <div class="page-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
-        <div>
-            <h1 style="margin: 0; font-weight: 800; font-size: 26px;"><i class="fas fa-wallet" style="color:#34c759;"></i> Control de Caja y Gastos</h1>
-            <p style="color: #86868b; margin: 5px 0 0 0; font-size: 14px;">Administración detallada de entradas, salidas y comprobantes.</p>
+    <!-- ENCABEZADO CON BOTONES ALINEADOS A LA DERECHA -->
+    <div class="page-title-wrap">
+        <div class="title-desc">
+            <h1><i class="fas fa-wallet" style="color:#34c759; margin-right:10px;"></i>Control de Gastos</h1>
+            <p>Administración detallada de entradas, salidas y comprobantes.</p>
         </div>
-        <div style="display: flex; gap: 10px;">
+        
+        <div class="header-actions-wrapper">
+            <!-- Exportador de Balance -->
             <div class="export-group-glass">
                 <div class="export-input-wrapper" title="Seleccionar Mes">
                     <i class="far fa-calendar-alt"></i>
                     <input type="month" id="mesExportar" class="glass-month-input" value="<?php echo date('Y-m'); ?>">
                 </div>
                 <button class="glass-btn success export-btn" onclick="exportarMesExcel()">
-                    <i class="fas fa-file-excel"></i> Descargar Balance
+                    <i class="fas fa-file-excel"></i> Balance
                 </button>
             </div>
             
-            <button class="glass-btn primary" onclick="abrirModalNuevo()">
-                <i class="fas fa-plus-circle"></i> Nuevo Registro
+            <!-- Botón Nuevo Registro con Efecto Neón -->
+            <button class="btn-neon-snake" onclick="abrirModalNuevo()">
+                <span><i class="fas fa-plus-circle"></i> Nuevo Registro</span>
             </button>
         </div>
     </div>
 
-    <div class="row-3-col" style="margin-bottom: 25px;">
-        <div class="glass-card text-center" style="padding: 20px;">
-            <h4 style="margin: 0; color: #86868b; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">Ingresos (Fecha)</h4>
-            <h2 id="resumen-ingresos" style="margin: 10px 0 0 0; font-size: 28px; color: #34c759; font-weight: 800;">$0.00</h2>
+    <!-- TARJETAS DE RESUMEN (KPIs) -->
+    <div class="kpi-grid">
+        <div class="glass-card kpi-mini-card">
+            <div class="kpi-icon-wrap" style="background: rgba(52, 199, 89, 0.15); color: #34c759;"><i class="fas fa-arrow-down"></i></div>
+            <div class="kpi-info-wrap">
+                <span class="kpi-title">Ingresos (Fecha)</span>
+                <span class="kpi-number" id="resumen-ingresos" style="color: #1d1d1f;">$0.00</span>
+            </div>
         </div>
-        <div class="glass-card text-center" style="padding: 20px;">
-            <h4 style="margin: 0; color: #86868b; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">Gastos / Salidas</h4>
-            <h2 id="resumen-gastos" style="margin: 10px 0 0 0; font-size: 28px; color: #ff3b30; font-weight: 800;">$0.00</h2>
+        <div class="glass-card kpi-mini-card">
+            <div class="kpi-icon-wrap" style="background: rgba(255, 59, 48, 0.15); color: #ff3b30;"><i class="fas fa-arrow-up"></i></div>
+            <div class="kpi-info-wrap">
+                <span class="kpi-title">Gastos / Salidas</span>
+                <span class="kpi-number" id="resumen-gastos" style="color: #1d1d1f;">$0.00</span>
+            </div>
         </div>
-        <div class="glass-card text-center" style="padding: 20px;">
-            <h4 style="margin: 0; color: #86868b; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">Balance Neto</h4>
-            <h2 id="resumen-balance" style="margin: 10px 0 0 0; font-size: 28px; color: #007aff; font-weight: 800;">$0.00</h2>
+        <div class="glass-card kpi-mini-card">
+            <div class="kpi-icon-wrap" style="background: rgba(0, 122, 255, 0.15); color: #007aff;"><i class="fas fa-balance-scale"></i></div>
+            <div class="kpi-info-wrap">
+                <span class="kpi-title">Balance Neto</span>
+                <span class="kpi-number" id="resumen-balance" style="color: #1d1d1f;">$0.00</span>
+            </div>
         </div>
     </div>
 
+    <!-- TABLA DE MOVIMIENTOS Y FILTROS AUTOMÁTICOS -->
     <div class="glass-card" style="padding: 0; overflow: hidden; margin-bottom: 25px; display: flex; flex-direction: column;">
         
-        <div style="padding: 20px 25px; border-bottom: 1px solid rgba(0,0,0,0.06); background: rgba(250, 250, 252, 0.5); display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 200px;">
-                <label style="font-size: 13px; font-weight: 600; color: #86868b; margin-bottom: 5px; display: block;">Filtrar por Fecha</label>
-                <input type="date" id="filtroFecha" class="glass-input" value="<?php echo date('Y-m-d'); ?>" style="margin:0; background: white;">
+        <div class="table-header-glass" style="display: flex; gap: 15px; flex-wrap: wrap; background: rgba(250, 250, 252, 0.5);">
+            <!-- FILTROS INTELIGENTES -->
+            <div class="date-filter-glass" style="flex: 1; min-width: 200px;">
+                <i class="far fa-calendar-alt"></i>
+                <input type="date" id="filtroFecha" class="glass-date-input" style="width: 100%;" onchange="cargarMovimientos()">
             </div>
-            <div style="flex: 1; min-width: 200px;">
-                <label style="font-size: 13px; font-weight: 600; color: #86868b; margin-bottom: 5px; display: block;">Tipo de Movimiento</label>
-                <select id="filtroTipo" class="glass-input" style="margin:0; background: white;">
+            
+            <div class="date-filter-glass" style="flex: 1; min-width: 200px;">
+                <i class="fas fa-filter"></i>
+                <select id="filtroTipo" class="glass-date-input" style="width: 100%;" onchange="cargarMovimientos()">
                     <option value="">Todos (Ingresos y Gastos)</option>
                     <option value="INGRESO">Solo Ingresos</option>
                     <option value="GASTO">Solo Gastos</option>
                 </select>
             </div>
-            <div style="flex: 0 0 auto;">
-                <button class="glass-btn info" style="margin:0; height: 48px;" onclick="cargarMovimientos()">
-                    <i class="fas fa-search"></i> Buscar
-                </button>
-            </div>
         </div>
 
-        <div class="glass-table-wrapper" style="border: none; border-radius: 0; box-shadow: none; background: transparent; padding: 0;">
+        <div class="glass-table-wrapper" style="border: none; border-radius: 0; box-shadow: none;">
            <table class="glass-table" id="tablaGastos">
                 <thead>
                     <tr>
@@ -87,71 +99,68 @@ if (!isset($_SESSION['rol']) || strtolower($_SESSION['rol']) !== 'admin') {
                     </tr>
                 </thead>
                 <tbody id="lista-movimientos">
-                    </tbody>
+                    <!-- Se llena con JS -->
+                </tbody>
             </table>
         </div>
-        
     </div>
-    </div>
+</div>
 
-<div id="modalNuevo" class="glass-modal-overlay" style="display:none;">
-    <div class="glass-modal-content" style="max-width: 600px; padding: 30px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 15px; margin-bottom: 20px;">
-            <h2 id="modalTitle" style="margin: 0; font-size: 20px; font-weight: 800; color: #1d1d1f;"><i class="fas fa-exchange-alt" style="color:#007aff;"></i> Registrar Movimiento</h2>
-            <button class="btn-icon" style="background: rgba(255,59,48,0.1); color: #ff3b30;" onclick="cerrarModal()"><i class="fas fa-times"></i></button>
+<!-- MODAL NUEVO REGISTRO -->
+<div id="modalNuevo" class="glass-modal-overlay">
+    <div class="glass-modal-content" style="max-width: 600px;">
+        <div class="modal-header-wrap">
+            <h2 id="modalTitle"><i class="fas fa-exchange-alt" style="color:#007aff; margin-right:10px;"></i> Registrar</h2>
+            <button class="close-modal-btn" onclick="cerrarModal()"><i class="fas fa-times"></i></button>
         </div>
         
         <form id="formGasto" enctype="multipart/form-data">
             <input type="hidden" name="id" id="inputId">
             <input type="hidden" name="action" value="guardar">
             
-            <div class="row-2-col" style="margin-bottom: 15px;">
-                <div>
-                    <label style="font-size: 13px; font-weight: 600; color: #86868b; display: block; margin-bottom: 5px;">Tipo de Movimiento</label>
-                    <select name="tipo" id="inputTipo" class="glass-input" onchange="actualizarCategorias()" style="margin:0;">
+            <div class="row-2-col">
+                <div class="form-group">
+                    <label class="glass-label">Tipo de Movimiento</label>
+                    <select name="tipo" id="inputTipo" class="glass-input" onchange="actualizarCategorias()">
                         <option value="GASTO">Gasto (Salida de dinero)</option>
                         <option value="INGRESO">Ingreso (Entrada de dinero)</option>
                     </select>
                 </div>
-                <div>
-                    <label style="font-size: 13px; font-weight: 600; color: #86868b; display: block; margin-bottom: 5px;">Categoría</label>
-                    <select name="categoria" id="inputCategoria" class="glass-input" style="margin:0;" onchange="verificarMostrarProveedor()"></select>
+                <div class="form-group">
+                    <label class="glass-label">Categoría</label>
+                    <select name="categoria" id="inputCategoria" class="glass-input" onchange="verificarMostrarProveedor()"></select>
                 </div>
             </div>
-            <div id="cajaProveedor" style="display: none; margin-bottom: 15px;">
-                <label style="font-size: 13px; font-weight: 600; color: #86868b; display: block; margin-bottom: 5px;">
-                    <i class="fas fa-truck-loading" style="color:#007aff;"></i> Proveedor Asociado (Opcional)
-                </label>
-                <select name="id_proveedor" id="inputProveedor" class="glass-input" style="margin:0;" onchange="verificarNuevoProveedor(this)">
-                    </select>
+
+            <div id="cajaProveedor" class="form-group" style="display: none;">
+                <label class="glass-label"><i class="fas fa-truck-loading" style="color:#007aff;"></i> Proveedor Asociado</label>
+                <select name="id_proveedor" id="inputProveedor" class="glass-input" onchange="verificarNuevoProveedor(this)"></select>
             </div>
 
-            <div class="row-2-col" style="margin-bottom: 15px;">
-                <!-- FECHA Y HORA OCUPANDO TODO EL ANCHO PARA EVITAR EL DESBORDE EN MÓVILES -->
-            <div style="margin-bottom: 15px;">
-                <label style="font-size: 13px; font-weight: 600; color: #86868b; display: block; margin-bottom: 5px;">Fecha y Hora <span class="text-danger">*</span></label>
-                <input type="datetime-local" class="glass-input" name="fecha_movimiento" id="inputFechaMovimiento" required style="margin:0;">
+            <div class="row-2-col">
+                <div class="form-group">
+                    <label class="glass-label">Fecha y Hora <span class="req-star">*</span></label>
+                    <input type="datetime-local" class="glass-input" name="fecha_movimiento" id="inputFechaMovimiento" required>
+                </div>
+                <div class="form-group">
+                    <label class="glass-label">Usuario Responsable <span class="req-star">*</span></label>
+                    <input type="text" name="usuario" id="inputUsuario" class="glass-input" required>
+                </div>
             </div>
 
-            <div style="margin-bottom: 15px;">
-                <label style="font-size: 13px; font-weight: 600; color: #86868b; display: block; margin-bottom: 5px;">Usuario Responsable <span class="text-danger">*</span></label>
-                <input type="text" name="usuario" id="inputUsuario" class="glass-input" required style="margin:0;">
-            </div>
-            </div>
-
-            <div style="margin-bottom: 15px;">
-                <label style="font-size: 13px; font-weight: 600; color: #86868b; display: block; margin-bottom: 5px;">Descripción detallada</label>
-                <textarea name="descripcion" id="inputDescripcion" class="glass-input" rows="2" placeholder="Ej: Pago de recibo de luz, Compra de material..." required style="margin:0;"></textarea>
+            <div class="form-group">
+                <label class="glass-label">Descripción detallada</label>
+                <textarea name="descripcion" id="inputDescripcion" class="glass-input" rows="2" placeholder="Ej: Pago de recibo de luz, Compra de material..." required></textarea>
             </div>
             
-            <div class="row-2-col" style="margin-bottom: 15px;">
-                <div>
-                    <label style="font-size: 13px; font-weight: 600; color: #86868b; display: block; margin-bottom: 5px;">Monto ($)</label>
-                    <input type="number" name="monto" id="inputMonto" class="glass-input" step="0.01" min="0.1" required style="margin:0; font-size: 18px; font-weight: bold; color: #1d1d1f;">
+            <div class="row-2-col">
+                <div class="form-group">
+                    <label class="glass-label">Monto ($)</label>
+                    <input type="number" name="monto" id="inputMonto" class="glass-input" step="0.01" min="0.1" required style="font-size: 18px; font-weight: 800; color: #1d1d1f;">
                 </div>
-                <div>
-                    <label style="font-size: 13px; font-weight: 600; color: #86868b; display: block; margin-bottom: 5px;">Foto / Comprobante</label>
-                    <input type="file" name="foto" id="inputFoto" class="glass-input" accept="image/*" style="margin:0; padding: 10px;">
+                <div class="form-group">
+                    <label class="glass-label">Foto / Comprobante</label>
+                    <input type="file" name="foto" id="inputFoto" class="glass-input" accept="image/*" style="padding: 10px;">
                 </div>
             </div>
 
@@ -160,9 +169,9 @@ if (!isset($_SESSION['rol']) || strtolower($_SESSION['rol']) !== 'admin') {
                 <img id="imgPreview" src="" style="max-height: 150px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
             </div>
 
-            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px;">
-                <button type="button" class="glass-btn secondary" onclick="cerrarModal()">Cancelar</button>
-                <button type="submit" id="btnGuardar" class="glass-btn primary"><i class="fas fa-save"></i> Guardar Registro</button>
+            <div class="modal-action-footer">
+                <button type="button" class="action-trigger-btn cancel-trigger" onclick="cerrarModal()">Cancelar</button>
+                <button type="submit" id="btnGuardar" class="action-trigger-btn commit-trigger"><i class="fas fa-save"></i> Guardar Registro</button>
             </div>
         </form>
     </div>

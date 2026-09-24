@@ -1,14 +1,12 @@
 /* =========================================
- * LÓGICA DE CONTROL DE CAJA Y GASTOS (COMPLETO)
- * Versión Final: Liquid Glass + Proveedores
+ * LÓGICA DE CONTROL DE CAJA Y GASTOS
+ * Versión Final: Liquid Glass Auto-refresh
  * ========================================= */
 
-// 1. Inicialización
 document.addEventListener('DOMContentLoaded', () => {
     inicializarFecha();
     actualizarCategorias(); 
     
-    // Escuchar la imagen
     const inputFoto = document.getElementById('inputFoto');
     if(inputFoto) {
         inputFoto.addEventListener('change', function(e) {
@@ -26,7 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// 2. Utilidades Generales
 window.formatoDinero = function(amount) { 
     return parseFloat(amount).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'); 
 };
@@ -36,29 +33,41 @@ window.cerrarModal = function() {
     if (modal) modal.style.display = 'none'; 
 };
 
-// 3. Control de Modales (Abrir, Editar)
 window.abrirModalNuevo = function() {
     const form = document.getElementById('formGasto');
     if(form) form.reset();
     document.getElementById('inputId').value = '';
-    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-exchange-alt" style="color:#007aff;"></i> Registrar Movimiento';
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-exchange-alt" style="color:#007aff; margin-right:10px;"></i> Registrar Movimiento';
     document.getElementById('previewContainer').style.display = 'none';
     
-    // Forzar tipo a GASTO
     document.getElementById('inputTipo').value = 'GASTO';
     actualizarCategorias();
     
-    // Seleccionar 'Alimentos' por defecto para que la caja del proveedor NO estorbe
     const selectCat = document.getElementById('inputCategoria');
     if(selectCat) selectCat.value = 'Alimentos';
     verificarMostrarProveedor();
     
+    // ==========================================
+    // MAGIA DE FECHA: Toma la fecha del filtro y le suma la hora actual
+    // ==========================================
     const inputFecha = document.getElementById('inputFechaMovimiento');
+    const filtroFechaVal = document.getElementById('filtroFecha').value;
+    
     if (inputFecha) {
         const now = new Date();
-        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        inputFecha.value = now.toISOString().slice(0, 16);
+        const horas = String(now.getHours()).padStart(2, '0');
+        const minutos = String(now.getMinutes()).padStart(2, '0');
+
+        if (filtroFechaVal) {
+            // Usa la fecha que estás viendo en la tabla + la hora de este momento
+            inputFecha.value = `${filtroFechaVal}T${horas}:${minutos}`;
+        } else {
+            // Respaldo por si el filtro está vacío
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            inputFecha.value = now.toISOString().slice(0, 16);
+        }
     }
+    // ==========================================
 
     const inputUsuario = document.getElementById('inputUsuario');
     if(inputUsuario) { inputUsuario.value = (typeof USUARIO_SESION !== 'undefined') ? USUARIO_SESION : ''; }
@@ -67,7 +76,7 @@ window.abrirModalNuevo = function() {
 };
 
 window.abrirModalEdicion = function(movimiento) {
-    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit" style="color:#007aff;"></i> Editar Movimiento';
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit" style="color:#007aff; margin-right:10px;"></i> Editar Movimiento';
     document.getElementById('inputId').value = movimiento.id;
     
     const inputTipo = document.getElementById('inputTipo');
@@ -82,8 +91,6 @@ window.abrirModalEdicion = function(movimiento) {
     setTimeout(() => { 
         document.getElementById('inputCategoria').value = movimiento.categoria; 
         verificarMostrarProveedor();
-        
-        // Si tiene proveedor asignado, lo seleccionamos
         if (movimiento.id_proveedor) {
             const provSelect = document.getElementById('inputProveedor');
             if(provSelect) provSelect.value = movimiento.id_proveedor;
@@ -110,7 +117,6 @@ window.abrirModalEdicion = function(movimiento) {
     document.getElementById('modalNuevo').style.display = 'flex';
 };
 
-// 4. Lógica de Categorías y Proveedores
 const catsGastos = ['Alimentos', 'Transporte', 'Servicios', 'Proveedores', 'Nómina', 'Mantenimiento', 'Retiro', 'Otros'];
 const catsIngresos = ['Ingreso Extra', 'Inversión', 'Devolución Proveedor', 'Otros'];
 
@@ -177,15 +183,11 @@ window.cargarListaProveedores = async function() {
         if (valorActual && valorActual !== 'NUEVO') {
             select.value = valorActual;
         }
-    } catch (e) {
-        console.error("Error al cargar proveedores", e);
-    }
+    } catch (e) { console.error("Error al cargar proveedores", e); }
 };
 
 window.verificarNuevoProveedor = function(selectElement) {
-    if (selectElement.value === 'NUEVO') {
-        nuevoProveedorRapido();
-    }
+    if (selectElement.value === 'NUEVO') { nuevoProveedorRapido(); }
 };
 
 window.nuevoProveedorRapido = function() {
@@ -203,16 +205,10 @@ window.nuevoProveedorRapido = function() {
                 <input id="swal-prov-tel" type="tel" class="glass-input" style="width: 100%; box-sizing: border-box;" placeholder="10 dígitos" maxlength="10" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);">
             </div>
         `,
-        customClass: {
-            popup: 'glass-swal-popup',
-            confirmButton: 'glass-btn success',
-            cancelButton: 'glass-btn secondary',
-            actions: 'swal-glass-actions'
-        },
-        buttonsStyling: false, 
-        focusConfirm: false,
+        customClass: { popup: 'glass-swal-popup', actions: 'swal-glass-actions' },
         showCancelButton: true,
-        confirmButtonText: '<i class="fas fa-save"></i> Guardar',
+        confirmButtonText: 'Guardar',
+        confirmButtonColor: '#34c759',
         cancelButtonText: 'Cancelar',
         preConfirm: () => {
             const empresa = document.getElementById('swal-prov-empresa').value;
@@ -244,7 +240,6 @@ window.nuevoProveedorRapido = function() {
                     document.getElementById('inputProveedor').value = ''; 
                 }
             } catch (err) {
-                Swal.fire('Error', 'Fallo de conexión', 'error');
                 document.getElementById('inputProveedor').value = ''; 
             }
         } else {
@@ -253,7 +248,6 @@ window.nuevoProveedorRapido = function() {
     });
 };
 
-// 5. Envío del Formulario de Movimiento
 const formGasto = document.getElementById('formGasto');
 if(formGasto) {
     formGasto.addEventListener('submit', async (e) => {
@@ -264,45 +258,35 @@ if(formGasto) {
 
         try {
             const res = await fetch('api/gastos.php', { method: 'POST', body: formData });
-            const text = await res.text();
-            
-            let data;
-            try {
-                data = JSON.parse(text);
-            } catch(e) {
-                console.error("Respuesta cruda de PHP:", text);
-                throw new Error("El servidor devolvió un error interno.");
-            }
+            const data = await res.json();
 
             if(data.success) { 
                 Swal.fire({toast:true, position:'top-end', icon:'success', title:'Guardado', showConfirmButton:false, timer:1500});
                 cerrarModal(); 
                 cargarMovimientos(); 
-            } else {
-                Swal.fire('Error', data.error || 'No se pudo guardar', 'error');
-            }
-        } catch (err) {
-            console.error("Error al guardar:", err);
-            Swal.fire('Error', 'Revisa la consola para más detalles', 'error');
-        }
+            } else { Swal.fire('Error', data.error || 'No se pudo guardar', 'error'); }
+        } catch (err) { Swal.fire('Error', 'Fallo de conexión', 'error'); }
     });
 }
 
-// 6. Carga de Datos y Edición
 function inicializarFecha() {
     const filtroFecha = document.getElementById('filtroFecha');
     if (!filtroFecha) return;
+    
+    // Obtener la fecha en tiempo de México para evitar que cargue el día anterior
     const fechaMexico = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit' });
     filtroFecha.value = fechaMexico;
+    
     cargarMovimientos();
 }
 
 window.cargarMovimientos = function() {
+    // Al ser llamada, obtiene los valores actuales de los inputs
     const fecha = document.getElementById('filtroFecha').value;
     const tipo = document.getElementById('filtroTipo').value;
     const tbody = document.getElementById('lista-movimientos');
     
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding:40px;"><i class="fas fa-spinner fa-spin fa-2x"></i><br><br>Cargando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:40px; color:#86868b;">Cargando movimientos...</td></tr>';
 
     fetch(`api/gastos.php?action=listar&fecha=${fecha}&tipo=${tipo}&_t=${Date.now()}`)
         .then(res => res.json())
@@ -332,22 +316,24 @@ window.cargarMovimientos = function() {
                     let colorMonto = esEntrada ? '#34c759' : '#ff3b30'; 
                     let bgMonto = esEntrada ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 59, 48, 0.1)';
                     
-                    if (esNeutro) {
-                        signo = '•'; colorMonto = '#86868b'; bgMonto = 'rgba(134, 134, 139, 0.1)';
-                    }
+                    if (esNeutro) { signo = '•'; colorMonto = '#86868b'; bgMonto = 'rgba(134, 134, 139, 0.1)'; }
 
                     let origenBadge = m.origen === 'CAJA' 
                         ? '<span style="font-size:11px; background:rgba(0,122,255,0.1); padding:3px 6px; border-radius:4px; color:#007aff; font-weight:600;"><i class="fas fa-store"></i> MOSTRADOR</span>' 
                         : '<span style="font-size:11px; background:rgba(255,149,0,0.1); padding:3px 6px; border-radius:4px; color:#ff9500; font-weight:600;"><i class="fas fa-laptop-code"></i> ADMIN</span>';
 
-                    let claseBadge = 'status-pending'; 
+                    let colorTag = '#86868b';
+                    let bgTag = 'rgba(0,0,0,0.05)';
                     let textoTipo = m.tipo;
                     
-                    if (esEntrada) claseBadge = 'status-ready';
-                    if (tipoUpper === 'VENTA') claseBadge = 'status-delivered'; 
-                    if (tipoUpper === 'REPARACION') { claseBadge = 'status-in-progress'; } 
-                    else if (tipoUpper === 'CIERRE') { claseBadge = 'status-pending'; textoTipo = 'Cierre Caja'; }
-                    else if (tipoUpper === 'RETIRO') { claseBadge = 'status-pending'; }
+                    if (esEntrada) { colorTag = '#34c759'; bgTag = 'rgba(52,199,89,0.15)'; }
+                    if (tipoUpper === 'VENTA') { colorTag = '#007aff'; bgTag = 'rgba(0,122,255,0.15)'; }
+                    if (tipoUpper === 'REPARACION') { colorTag = '#af52de'; bgTag = 'rgba(175,82,222,0.15)'; }
+                    else if (tipoUpper === 'CIERRE') { colorTag = '#1d1d1f'; bgTag = 'rgba(0,0,0,0.1)'; textoTipo = 'Cierre Caja'; }
+                    else if (tipoUpper === 'RETIRO') { colorTag = '#ff9500'; bgTag = 'rgba(255,149,0,0.15)'; }
+                    else if (tipoUpper === 'GASTO') { colorTag = '#ff3b30'; bgTag = 'rgba(255,59,48,0.15)'; }
+
+                    let badgeHtml = `<span style="background:${bgTag}; color:${colorTag}; font-weight:700; font-size:11px; padding:4px 8px; border-radius:6px; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:4px; display:inline-block;">${textoTipo}</span>`;
 
                     let fechaLimpia = '--/--/----';
                     let horaLimpia = '--:--';
@@ -369,7 +355,7 @@ window.cargarMovimientos = function() {
                     tr.innerHTML = `
                         <td data-label="ID"><span style="font-family: monospace; font-size: 13px; color: #86868b;">${m.id_transaccion || m.id}</span></td>
                         <td data-label="Tipo/Origen">
-                            <div style="margin-bottom: 4px;"><span class="status ${claseBadge}">${textoTipo}</span></div>
+                            <div>${badgeHtml}</div>
                             <div>${origenBadge}</div>
                         </td>
                         <td data-label="Descripción" style="font-weight: 500; color: #1d1d1f;">${m.descripcion}</td>
@@ -395,7 +381,7 @@ window.cargarMovimientos = function() {
                     tbody.appendChild(tr);
                 });
             } else {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding: 40px; color: #86868b;">No hay movimientos registrados.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 40px; color: #86868b;">No hay movimientos registrados en esta fecha.</td></tr>';
             }
 
             let balanceFinal = totalIngresos - totalGastos;
@@ -409,25 +395,20 @@ window.cargarMovimientos = function() {
 
         })
         .catch(err => {
-            console.error(err);
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger p-4">Error al cargar datos.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px; color: #ff3b30;">Error al cargar datos.</td></tr>';
         });
 };
 
-// ==========================================
-// MODO EDICIÓN CON LLAVE MAESTRA (SIN AVISOS EN CONSOLA)
-// ==========================================
 window.editarMovimiento = function(id) {
     Swal.fire({
         title: 'Modo Edición',
-        // Metemos el input dentro de un form fantasma para que Chrome sea feliz
         html: `
             <p style="font-size: 14px; color: #86868b; margin-bottom: 15px;">Ingresa la Llave Maestra:</p>
             <form onsubmit="event.preventDefault();">
                 <input type="password" id="swal-llave-editar" class="glass-input" style="width: 80%; text-align: center; letter-spacing: 5px; font-size: 20px;" placeholder="••••••" autocomplete="new-password">
             </form>
         `,
-        customClass: { popup: 'glass-swal-popup' }, // Le damos el estilo cristal que ya creamos
+        customClass: { popup: 'glass-swal-popup' },
         showCancelButton: true,
         confirmButtonText: 'Acceder',
         confirmButtonColor: '#007aff',
@@ -450,19 +431,14 @@ window.editarMovimiento = function(id) {
                 .then(data => {
                     if (data.success) abrirModalEdicion(data.data);
                     else Swal.fire('Acceso Denegado', data.error || 'Llave incorrecta', 'error');
-                })
-                .catch(() => Swal.fire('Error', 'Fallo de conexión', 'error'));
+                });
         }
     });
 };
 
-// ==========================================
-// ELIMINAR REGISTRO CON LLAVE MAESTRA
-// ==========================================
 window.eliminarMovimiento = function(id) {
     Swal.fire({
         title: 'Eliminar Registro',
-        // Formulario fantasma para evitar el warning de DOM Password
         html: `
             <p style="font-size: 14px; color: #86868b; margin-bottom: 15px;">Ingresa la Llave Maestra:</p>
             <form onsubmit="event.preventDefault();">
@@ -493,10 +469,8 @@ window.eliminarMovimiento = function(id) {
                     if(data.success) { 
                         Swal.fire({toast:true, position:'top-end', icon:'success', title:'Eliminado', showConfirmButton:false, timer:1500});
                         cargarMovimientos(); 
-                    }
-                    else Swal.fire('Error', data.error, 'error');
-                })
-                .catch(err => Swal.fire('Error', 'Fallo de conexión', 'error'));
+                    } else { Swal.fire('Error', data.error, 'error'); }
+                });
         }
     });
 };

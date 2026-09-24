@@ -42,11 +42,9 @@ function calcularSaldo() {
 // ==============================================================
 async function cargarVitrina(query = '') {
     try {
-        // 1. Llamada a la API con tu acción original "listar"
         const res = await fetch(`/local3M/api/vitrina.php?action=listar&q=${encodeURIComponent(query)}`);
         const json = await res.json();
         
-        // 2. Usando tu ID correcto "tablaVitrinaBody"
         const tbody = document.getElementById('tablaVitrinaBody');
         tbody.innerHTML = '';
         
@@ -59,7 +57,6 @@ async function cargarVitrina(query = '') {
             const tr = document.createElement('tr');
             let badgeEstado = '', clienteHtml = '<span style="color:#c7c7cc;">--</span>', botonesHtml = '';
             
-            // Construir Nombre Completo
             const nombreEquipo = `${e.marca || ''} ${e.modelo || ''} ${e.color || ''}`.trim();
 
             // --- ESTADO: DISPONIBLE ---
@@ -94,6 +91,12 @@ async function cargarVitrina(query = '') {
                     <button class="btn-icon print" onclick="event.stopPropagation(); abrirModalAbono(${e.id}, '${nombreEquipo}', '${e.imei_serie}', ${e.saldo_restante}, '${e.cliente_nombre}')" title="Abonar / Liquidar">
                         <i class="fas fa-hand-holding-usd"></i>
                     </button>
+                    
+                    <!-- NUEVO BOTÓN PARA IMPRIMIR TICKET DE APARTADO -->
+                    <button class="btn-icon" style="background: rgba(0, 122, 255, 0.1); color: #007aff;" onclick="event.stopPropagation(); imprimirTicketApartado(${e.id})" title="Imprimir Ticket de Apartado">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                    </button>
+                    
                     <button class="btn-icon delete" onclick="event.stopPropagation(); cancelarApartado(${e.id}, '${nombreEquipo}', ${e.anticipo})" title="Cancelar Apartado y Devolver Dinero">
                         <i class="fas fa-ban"></i>
                     </button>`;
@@ -112,7 +115,6 @@ async function cargarVitrina(query = '') {
                     </button>`;
             }
 
-            // 3. Dibujar la fila completa adaptada a tu diseño original (Ocultando costo)
             tr.innerHTML = `
                 <td>
                     <span style="font-size:12px; color:#86868b; display:block;">${e.tipo || ''}</span>
@@ -130,8 +132,6 @@ async function cargarVitrina(query = '') {
         });
     } catch (e) { 
         console.error("Error cargando vitrina:", e); 
-        const tbody = document.getElementById('tablaVitrinaBody');
-        if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#ff3b30;">Error de conexión al cargar la vitrina.</td></tr>';
     }
 }
 
@@ -139,7 +139,7 @@ function cerrarModal(id) { document.getElementById(id).style.display = 'none'; }
 
 // FUNCIONES DE MODALES Y ACCIONES
 function abrirModalNuevo() {
-    document.getElementById('btnEliminarEquipo').style.display = 'none'; // OCULTAMOS EL BOTÓN ROJO
+    document.getElementById('btnEliminarEquipo').style.display = 'none';
     document.getElementById('formNuevoEquipo').reset();
     document.getElementById('equipo_id').value = '';
     document.getElementById('tituloModalNuevo').textContent = 'Registrar Equipo';
@@ -180,14 +180,12 @@ async function guardarEquipo() {
     } catch (e) { Swal.fire('Error', 'Problema de conexión', 'error'); }
 }
 
-// --- CENTRALIZAMOS TODAS LAS VENTAS, ABONOS Y APARTADOS AL CARRITO ---
 function procesarAccionVitrina(accion) {
     if (accion === 'Vender') {
         const id = document.getElementById('vender_id_equipo').value;
         const cliente = document.getElementById('vender_cliente').value.trim();
         const telefono = document.getElementById('vender_telefono').value.trim();
         const nombreEquipo = document.getElementById('vender_nombre_equipo').textContent;
-        // Limpiamos el texto "Total: $1500.00" para quedarnos solo con el número
         const precio = parseFloat(document.getElementById('vender_precio_equipo').textContent.replace(/[^0-9.]/g, ''));
 
         if (!cliente) return Swal.fire('Atención', 'El nombre del cliente es obligatorio', 'warning');
@@ -198,7 +196,7 @@ function procesarAccionVitrina(accion) {
                 nombre: nombreEquipo,
                 precio: precio,
                 cantidad: 1,
-                tipo: 'equipo', // Tu carrito ya soporta este tipo para venta directa
+                tipo: 'equipo',
                 cliente_nombre: cliente,
                 telefono: telefono
             });
@@ -223,9 +221,8 @@ function procesarAccionVitrina(accion) {
                 nombre: 'Enganche: ' + nombreEquipo,
                 precio: anticipo,
                 cantidad: 1,
-                tipo: 'abono_apartado', // Usamos este para que tome el ícono morado de tu carrito
+                tipo: 'abono_apartado', 
                 cliente_nombre: cliente,
-                // Le pasamos estas variables ocultas para que el backend sepa que es un apartado NUEVO
                 es_nuevo_apartado: true,
                 telefono: telefono,
                 saldo_restante: saldo
@@ -235,34 +232,11 @@ function procesarAccionVitrina(accion) {
     }
 }
 
-// Actualizamos el Abono para que también solo envíe datos, sin tocar la BD antes de tiempo
-function procesarAbono() {
-    const id = document.getElementById('abonar_id_equipo').value;
-    const abono = parseFloat(document.getElementById('abonar_monto').value) || 0;
-    const nombreEquipo = document.getElementById('abonar_nombre_equipo').textContent;
-    const nombreCliente = document.getElementById('formAbonar').getAttribute('data-cliente') || 'Cliente';
-
-    if (abono <= 0) return Swal.fire('Atención', 'Ingresa un monto válido a abonar', 'warning');
-
-    if (typeof agregarAlCarritoGlobal === 'function') {
-        agregarAlCarritoGlobal({
-            id: id,
-            nombre: 'Abono: ' + nombreEquipo,
-            precio: abono,
-            cantidad: 1,
-            tipo: 'abono_apartado',
-            cliente_nombre: nombreCliente,
-            es_nuevo_apartado: false // Backend sabrá que es un abono a deuda existente
-        });
-        cerrarModal('modalAbonar');
-    }
-}
 function abrirModalAbono(id, nombre, imei, saldo_actual, cliente) {
     document.getElementById('formAbonar').reset();
     document.getElementById('abonar_id_equipo').value = id;
     document.getElementById('abonar_saldo_actual_oculto').value = saldo_actual;
     
-    // Guardamos el cliente temporalmente en un atributo del form para usarlo al cobrar
     document.getElementById('formAbonar').setAttribute('data-cliente', cliente);
 
     document.getElementById('abonar_nombre_equipo').textContent = nombre;
@@ -279,9 +253,7 @@ function calcularNuevoSaldo() {
     const abono = parseFloat(document.getElementById('abonar_monto').value) || 0;
     let nuevoSaldo = saldoActual - abono;
     
-    // Si el cliente da más dinero del que debe, el saldo no puede ser negativo
     if (nuevoSaldo < 0) nuevoSaldo = 0; 
-    
     document.getElementById('abonar_nuevo_saldo').value = nuevoSaldo.toFixed(2);
 }
 
@@ -305,8 +277,6 @@ async function procesarAbono() {
         const json = await res.json();
         
         if (json.success) {
-            
-            // --- CONEXIÓN PERFECTA CON TU CARRITO GLOBAL ---
             if (typeof agregarAlCarritoGlobal === 'function') {
                 const itemAbono = {
                     id: id,
@@ -316,10 +286,7 @@ async function procesarAbono() {
                     tipo: 'abono_apartado',
                     cliente_nombre: nombreCliente
                 };
-                
                 agregarAlCarritoGlobal(itemAbono);
-            } else {
-                console.warn("No se detectó la función agregarAlCarritoGlobal.");
             }
 
             const nuevoSaldo = document.getElementById('abonar_nuevo_saldo').value;
@@ -336,27 +303,22 @@ async function procesarAbono() {
     } catch (e) {
         Swal.fire('Error', 'Problema de conexión con el servidor', 'error');
     }
-    
 }
 
-// --- FUNCIÓN PARA EDITAR CON CONTRASEÑA MAESTRA ---
 async function editarEquipo(id) {
     const { value: password } = await Swal.fire({
         title: 'Seguridad',
         text: 'Ingresa la contraseña maestra para modificar este equipo',
         input: 'password',
         inputPlaceholder: 'Contraseña maestra...',
-        inputAttributes: {
-            autocapitalize: 'off',
-            autocorrect: 'off'
-        },
+        inputAttributes: { autocapitalize: 'off', autocorrect: 'off' },
         showCancelButton: true,
         confirmButtonColor: '#ff9500',
         cancelButtonText: 'Cancelar',
         confirmButtonText: 'Autorizar'
     });
 
-    if (!password) return; // Si canceló o cerró el cuadro
+    if (!password) return; 
 
     let formData = new FormData();
     formData.append('action', 'obtener_editar');
@@ -369,8 +331,6 @@ async function editarEquipo(id) {
         
         if (json.success) {
             const e = json.data;
-            
-            // Llenar el formulario con los datos protegidos
             document.getElementById('equipo_id').value = e.id;
             document.getElementById('equipo_tipo').value = e.tipo;
             document.getElementById('equipo_imei').value = e.imei_serie;
@@ -380,9 +340,8 @@ async function editarEquipo(id) {
             document.getElementById('equipo_costo').value = parseFloat(e.costo).toFixed(2);
             document.getElementById('equipo_precio').value = parseFloat(e.precio_venta).toFixed(2);
             
-            // Cambiar título y mostrar modal
             document.getElementById('tituloModalNuevo').textContent = 'Editar Equipo';
-            document.getElementById('btnEliminarEquipo').style.display = 'inline-flex'; // MOSTRAMOS EL BOTÓN ROJO
+            document.getElementById('btnEliminarEquipo').style.display = 'inline-flex'; 
             document.getElementById('modalNuevoEquipo').style.display = 'flex';
         } else {
             Swal.fire('Acceso Denegado', json.error, 'error');
@@ -394,8 +353,7 @@ async function editarEquipo(id) {
 
 function eliminarEquipo() {
     const id = document.getElementById('equipo_id').value;
-    
-    if (!id) return; // Por si acaso
+    if (!id) return; 
 
     Swal.fire({
         title: '¿Estás completamente seguro?',
@@ -430,7 +388,6 @@ function eliminarEquipo() {
     });
 }
 
-// --- FUNCIÓN PARA CANCELAR UN APARTADO Y REEMBOLSAR ---
 function cancelarApartado(id, nombreEquipo, anticipo) {
     Swal.fire({
         title: '¿Cancelar apartado?',
@@ -464,11 +421,12 @@ function cancelarApartado(id, nombreEquipo, anticipo) {
     });
 }
 
-// --- FUNCIÓN PARA IMPRIMIR ETIQUETA TÉRMICA (CONECTADA A TU ARCHIVO) ---
 function imprimirEtiqueta(codigo, nombre, detalles) {
-    // Codificamos los textos para que viajen seguros por la URL (espacios, signos de $, etc.)
     const url = `/local3M/imprimir_etiqueta.php?codigo=${encodeURIComponent(codigo)}&nombre=${encodeURIComponent(nombre)}&detalles=${encodeURIComponent(detalles)}`;
-    
-    // Abrimos tu ventana de impresión
     window.open(url, 'Etiqueta', 'width=400,height=500');
+}
+
+// --- NUEVA FUNCIÓN PARA IMPRIMIR TICKET DE APARTADO ---
+function imprimirTicketApartado(id) {
+    window.open(`/local3M/imprimir_ticket_apartado.php?id=${id}`, 'TicketApartado', 'width=400,height=600');
 }

@@ -9,7 +9,6 @@ require 'lib/fpdf185/fpdf.php';
 
 $id_equipo = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
-// Obtener los datos del equipo desde la vitrina
 $stmt = $conn->prepare("SELECT * FROM vitrina WHERE id = ?");
 $stmt->execute([$id_equipo]);
 $equipo = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -18,16 +17,30 @@ if (!$equipo) {
     die("Error: Equipo no encontrado.");
 }
 
-// Matemáticas del apartado
+// Matemáticas
 $precio_total = (float)$equipo['precio_venta'];
 $saldo_restante = (float)$equipo['saldo_restante'];
-// Lo que ha abonado hasta ahora es el Precio Total menos lo que aún debe
 $total_abonado = $precio_total - $saldo_restante;
 
 // Nombre ensamblado del equipo
 $nombre_equipo = trim($equipo['marca'] . ' ' . $equipo['modelo'] . ' ' . $equipo['color']);
 
-// Configuración para Impresora Térmica de 58mm
+// ============================================================
+// LÓGICA INTELIGENTE: ¿Es un apartado o una compra liquidada?
+// ============================================================
+$es_liquidado = ($saldo_restante <= 0);
+
+$titulo_ticket = $es_liquidado ? 'TICKET DE COMPRA' : 'TICKET DE APARTADO';
+$titulo_articulo = $es_liquidado ? 'ARTÍCULO COMPRADO:' : 'ARTÍCULO APARTADO:';
+
+if ($es_liquidado) {
+    $terminos = "Nota: Conserve este comprobante para cualquier duda o aclaracion.\n\nEl equipo ha sido liquidado en su totalidad. Aplican terminos y condiciones de garantia segun el articulo adquirido.";
+} else {
+    $terminos = "Nota: Este es un comprobante de apartado. Se requiere conservar este ticket para futuras aclaraciones o pagos.\n\nTiene un plazo maximo de 30 dias para liquidar el equipo. Pasado este tiempo, el equipo podria ser puesto a la venta nuevamente.";
+}
+// ============================================================
+
+
 $pdf = new FPDF('P', 'mm', array(58, 200)); 
 $pdf->AddPage();
 $pdf->SetMargins(3, 2, 3);
@@ -38,7 +51,7 @@ $pdf->SetFont('Arial', 'B', 12);
 $pdf->Cell(0, 5, utf8_decode('3M TECHNOLOGY'), 0, 1, 'C');
 
 $pdf->SetFont('Arial', 'B', 9);
-$pdf->Cell(0, 4, utf8_decode('TICKET DE APARTADO'), 0, 1, 'C');
+$pdf->Cell(0, 4, utf8_decode($titulo_ticket), 0, 1, 'C'); // Título dinámico
 
 $pdf->Ln(2);
 $pdf->SetFont('Arial', '', 8);
@@ -46,7 +59,7 @@ $pdf->Cell(0, 4, utf8_decode('Fecha: ' . date('d/m/Y h:i A')), 0, 1, 'C');
 $pdf->Cell(0, 4, utf8_decode('Atendió: ' . $_SESSION['nombre']), 0, 1, 'C');
 
 $pdf->Ln(2);
-$pdf->Cell(0, 0, '', 'T', 1, 'C'); // Línea separadora
+$pdf->Cell(0, 0, '', 'T', 1, 'C'); 
 $pdf->Ln(2);
 
 // --- DATOS DEL CLIENTE ---
@@ -62,7 +75,7 @@ $pdf->Ln(2);
 
 // --- DATOS DEL EQUIPO ---
 $pdf->SetFont('Arial', 'B', 8);
-$pdf->Cell(0, 4, utf8_decode('ARTÍCULO APARTADO:'), 0, 1, 'L');
+$pdf->Cell(0, 4, utf8_decode($titulo_articulo), 0, 1, 'L'); // Título dinámico
 $pdf->SetFont('Arial', '', 8);
 $pdf->MultiCell(0, 4, utf8_decode($nombre_equipo), 0, 'L');
 $pdf->Cell(0, 4, utf8_decode('IMEI/Serie: ' . $equipo['imei_serie']), 0, 1, 'L');
@@ -90,15 +103,13 @@ $pdf->Ln(2);
 $pdf->Cell(0, 0, '', 'T', 1, 'C');
 $pdf->Ln(3);
 
-// --- TÉRMINOS Y CONDICIONES ---
+// --- TÉRMINOS Y CONDICIONES DINÁMICOS ---
 $pdf->SetFont('Arial', 'I', 7);
-$terminos = "Nota: Este es un comprobante de apartado. Se requiere conservar este ticket para futuras aclaraciones o pagos.\n\nTiene un plazo maximo de 30 dias para liquidar el equipo. Pasado este tiempo, el equipo podria ser puesto a la venta nuevamente.";
 $pdf->MultiCell(0, 3, utf8_decode($terminos), 0, 'C');
 
 $pdf->Ln(5);
 $pdf->SetFont('Arial', 'B', 8);
 $pdf->Cell(0, 4, utf8_decode('¡Gracias por tu preferencia!'), 0, 1, 'C');
 
-// Imprimir PDF
-$pdf->Output('I', 'Ticket_Apartado_' . $equipo['imei_serie'] . '.pdf');
+$pdf->Output('I', 'Ticket_' . $equipo['imei_serie'] . '.pdf');
 ?>

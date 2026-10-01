@@ -91,12 +91,9 @@ async function cargarVitrina(query = '') {
                     <button class="btn-icon print" onclick="event.stopPropagation(); abrirModalAbono(${e.id}, '${nombreEquipo}', '${e.imei_serie}', ${e.saldo_restante}, '${e.cliente_nombre}')" title="Abonar / Liquidar">
                         <i class="fas fa-hand-holding-usd"></i>
                     </button>
-                    
-                    <!-- NUEVO BOTÓN PARA IMPRIMIR TICKET DE APARTADO -->
                     <button class="btn-icon" style="background: rgba(0, 122, 255, 0.1); color: #007aff;" onclick="event.stopPropagation(); imprimirTicketApartado(${e.id})" title="Imprimir Ticket de Apartado">
                         <i class="fas fa-file-invoice-dollar"></i>
                     </button>
-                    
                     <button class="btn-icon delete" onclick="event.stopPropagation(); cancelarApartado(${e.id}, '${nombreEquipo}', ${e.anticipo})" title="Cancelar Apartado y Devolver Dinero">
                         <i class="fas fa-ban"></i>
                     </button>`;
@@ -110,6 +107,9 @@ async function cargarVitrina(query = '') {
                         <span class="cliente-fecha">${e.fecha_operacion || ''}</span>
                     </div>`;
                 botonesHtml = `
+                    <button class="btn-icon" style="background: rgba(0, 122, 255, 0.1); color: #007aff;" onclick="event.stopPropagation(); imprimirTicketApartado(${e.id})" title="Imprimir Ticket de Compra">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                    </button>
                     <button class="btn-icon outline-btn" onclick="event.stopPropagation(); Swal.fire('Garantía Válida', 'Equipo vendido a ${e.cliente_nombre || 'Mostrador'}', 'success')" title="Ver Garantía">
                         <i class="fas fa-shield-alt"></i>
                     </button>`;
@@ -137,7 +137,6 @@ async function cargarVitrina(query = '') {
 
 function cerrarModal(id) { document.getElementById(id).style.display = 'none'; }
 
-// FUNCIONES DE MODALES Y ACCIONES
 function abrirModalNuevo() {
     document.getElementById('btnEliminarEquipo').style.display = 'none';
     document.getElementById('formNuevoEquipo').reset();
@@ -426,7 +425,6 @@ function imprimirEtiqueta(codigo, nombre, detalles) {
     window.open(url, 'Etiqueta', 'width=400,height=500');
 }
 
-// --- NUEVA FUNCIÓN PARA IMPRIMIR TICKET DE APARTADO ---
 function imprimirTicketApartado(id) {
     window.open(`/local3M/imprimir_ticket_apartado.php?id=${id}`, 'TicketApartado', 'width=400,height=600');
 }

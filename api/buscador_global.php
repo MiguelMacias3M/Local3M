@@ -16,29 +16,46 @@ if (empty($codigo)) {
 }
 
 try {
-    // 1. ¿ES UNA REPARACIÓN? (Busca por ID de nota numérico o por el código alfanumérico REP...)
-    $stmt = $conn->prepare("SELECT id FROM reparaciones WHERE id = ? OR codigo_barras = ? LIMIT 1");
-    $stmt->execute([$codigo, $codigo]);
-    if ($r = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        echo json_encode([
-            'success' => true, 
-            'tipo' => 'reparacion', 
-            'url' => 'editar_reparacion.php?id=' . $r['id']
-        ]);
+    $id_rep = null;
+
+    // 1. ¿ES UNA REPARACIÓN? 
+    if (is_numeric($codigo)) {
+        try {
+            $stmt = $conn->prepare("SELECT id FROM reparaciones WHERE id = ? LIMIT 1");
+            $stmt->execute([$codigo]);
+            if ($r = $stmt->fetch(PDO::FETCH_ASSOC)) $id_rep = $r['id'];
+        } catch(Exception $e) {}
+    }
+    
+    if (!$id_rep) {
+        $columnas = ['codigo_barras', 'codigo', 'folio', 'id_transaccion'];
+        foreach ($columnas as $col) {
+            try {
+                $stmt = $conn->prepare("SELECT id FROM reparaciones WHERE $col = ? LIMIT 1");
+                $stmt->execute([$codigo]);
+                if ($r = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $id_rep = $r['id']; break; 
+                }
+            } catch (Exception $e) {}
+        }
+    }
+
+    if ($id_rep) {
+        echo json_encode(['success' => true, 'tipo' => 'reparacion', 'url' => 'editar_reparacion.php?id=' . $id_rep]);
         exit();
     }
 
-    // 2. ¿ES UN PRODUCTO? (Busca en tabla mercancia)
+    // 2. ¿ES MERCANCÍA / REFACCIÓN? (Lo manda al inventario)
     try {
-        $stmtProd = $conn->prepare("SELECT codigo_barras FROM mercancia WHERE codigo_barras = ? LIMIT 1");
-        $stmtProd->execute([$codigo]);
-        if ($prod = $stmtProd->fetch(PDO::FETCH_ASSOC)) {
-            echo json_encode(['success' => true, 'tipo' => 'producto', 'url' => 'venta.php?search=' . urlencode($prod['codigo_barras'])]);
+        $stmtMerc = $conn->prepare("SELECT codigo_barras FROM mercancia WHERE codigo_barras = ? LIMIT 1");
+        $stmtMerc->execute([$codigo]);
+        if ($merc = $stmtMerc->fetch(PDO::FETCH_ASSOC)) {
+            echo json_encode(['success' => true, 'tipo' => 'mercancia', 'url' => 'mercancia.php?search=' . urlencode($merc['codigo_barras'])]);
             exit();
         }
     } catch(Exception $e) {}
     
-    // 2.1 Respaldo por si el inventario está en la tabla productos
+    // 3. ¿ES UN PRODUCTO DE VENTA? (Lo manda al carrito)
     try {
         $stmtProd2 = $conn->prepare("SELECT codigo_barras FROM productos WHERE codigo_barras = ? LIMIT 1");
         $stmtProd2->execute([$codigo]);
@@ -48,7 +65,7 @@ try {
         }
     } catch(Exception $e) {}
 
-    // 3. ¿ES UN EQUIPO DE VITRINA?
+    // 4. ¿ES UN EQUIPO DE VITRINA?
     $stmtVit = $conn->prepare("SELECT imei_serie FROM vitrina WHERE imei_serie = ? LIMIT 1");
     $stmtVit->execute([$codigo]);
     if ($vit = $stmtVit->fetch(PDO::FETCH_ASSOC)) {
@@ -56,10 +73,9 @@ try {
         exit();
     }
 
-    // Si no encuentra nada en absoluto
     echo json_encode(['success' => false, 'error' => 'No encontrado']);
 
 } catch (Exception $e) {
-    echo json_encode(['success' => false, 'error' => 'Error interno de BD']);
+    echo json_encode(['success' => false, 'error' => 'Error BD']);
 }
 ?>

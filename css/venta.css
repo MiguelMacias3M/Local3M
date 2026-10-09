@@ -1,172 +1,92 @@
-/* Layout Principal */
-.venta-container {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 20px;
-    height: calc(100vh - 180px); /* Ajustar según altura de header */
-    min-height: 600px;
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+
+body {
+    background-color: #f5f5f7;
+    font-family: 'Poppins', sans-serif;
+    color: #1d1d1f;
+    -webkit-font-smoothing: antialiased;
 }
 
-/* Área de Productos */
-.products-area {
-    display: flex;
-    flex-direction: column;
-    padding: 20px;
-    background: #fff;
-    overflow: hidden; /* Para que el scroll sea interno */
-}
+.glass-container { padding: 30px 20px; margin: 0 auto; animation: slideDownSmooth 0.5s ease; }
 
-/* Barra de búsqueda y escáner */
-.search-bar-container {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 20px;
-}
+.page-title-wrap { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
+.title-desc h1 { font-size: 28px; font-weight: 800; margin: 0; color: #1d1d1f; letter-spacing: -0.5px; }
+.title-desc p { color: #86868b; margin: 5px 0 0 0; font-size: 14px; }
 
-.scan-input-wrap, .search-input-wrap {
-    position: relative;
-    flex: 1;
-}
-
-.scan-input-wrap i, .search-input-wrap i {
-    position: absolute;
-    left: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #0056b3;
-}
-
-.scan-input, .search-input {
-    width: 100%;
-    padding: 12px 15px 12px 40px;
-    border: 2px solid #dee2e6;
-    border-radius: 8px;
-    font-size: 1rem;
+/* Contenedores Base */
+.glass-card {
+    background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.8); border-radius: 20px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.03);
     box-sizing: border-box;
-    transition: all 0.3s;
 }
 
-.scan-input:focus, .search-input:focus {
-    border-color: #0056b3;
-    outline: none;
-    box-shadow: 0 0 0 4px rgba(0, 86, 179, 0.1);
+/* Inputs de Búsqueda */
+.glass-input {
+    width: 100%; height: 50px; padding: 10px 16px; background: rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(0,0,0,0.05); border-radius: 14px; font-size: 15px; color: #1d1d1f;
+    font-family: 'Poppins', sans-serif; outline: none; box-sizing: border-box; transition: 0.3s;
 }
+.glass-input:focus { background: #ffffff; border-color: #007aff; box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.15); }
 
-/* Grid de Productos */
+/* ========================================================
+   GRID DE PRODUCTOS 
+   ======================================================== */
 .products-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 15px;
-    overflow-y: auto;
-    padding-right: 5px;
-    flex: 1;
+    /* Las tarjetas se ajustan solas al ancho de la pantalla */
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+    /* Margen inferior gigante para que el Carrito Flotante no tape la última fila */
+    padding-bottom: 120px; 
 }
 
-/* Tarjeta de Producto */
-.product-card {
-    border: 1px solid #e0e0e0;
-    border-radius: 10px;
-    padding: 15px;
-    background: #fff;
-    transition: transform 0.2s, box-shadow 0.2s;
-    cursor: pointer;
+/* Tarjeta Cristal de Producto */
+.glass-product-card {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    border-radius: 20px;
+    padding: 20px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-}
-
-.product-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    border-color: #0056b3;
-}
-
-.prod-name { font-weight: 700; color: #333; margin-bottom: 5px; font-size: 0.95rem; }
-.prod-code { font-size: 0.8rem; color: #666; margin-bottom: 10px; font-family: monospace; }
-.prod-price { font-size: 1.2rem; color: #0056b3; font-weight: 800; }
-.prod-stock { font-size: 0.8rem; color: #28a745; margin-top: 5px; }
-.prod-stock.low { color: #dc3545; }
-
-/* Área del Carrito */
-.cart-area {
-    display: flex;
-    flex-direction: column;
-    padding: 0;
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.04);
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    cursor: pointer;
+    position: relative;
     overflow: hidden;
 }
 
-.cart-header {
-    background: #0056b3;
-    color: white;
-    padding: 15px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.cart-header h2 { margin: 0; font-size: 1.1rem; }
-
-.btn-clear {
-    background: transparent; border: none; color: #fff; cursor: pointer; font-size: 1.1rem;
-    opacity: 0.8; transition: opacity 0.2s;
-}
-.btn-clear:hover { opacity: 1; }
-
-.cart-items-container {
-    flex: 1;
-    overflow-y: auto;
-    padding: 10px;
+/* Efecto al pasar el Mouse (PC) */
+.glass-product-card:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 15px 35px rgba(0, 122, 255, 0.15);
+    border-color: rgba(0, 122, 255, 0.3);
 }
 
-.cart-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-.cart-table th { text-align: left; color: #666; padding-bottom: 10px; font-size: 0.8rem; }
-.cart-table td { padding: 8px 0; border-bottom: 1px solid #eee; vertical-align: middle; }
-.cart-table td:last-child { text-align: right; }
-
-.btn-remove {
-    background: #ffebeb; color: #dc3545; border: none; width: 24px; height: 24px;
-    border-radius: 50%; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
-    transition: background 0.2s;
-}
-.btn-remove:hover { background: #dc3545; color: white; }
-
-/* Footer del Carrito */
-.cart-footer {
-    padding: 20px;
-    background: #fff;
-    border-top: 2px solid #e0e0e0;
+/* Efecto al tocar la tarjeta (Móvil / Táctil) */
+.glass-product-card:active {
+    transform: scale(0.95);
+    box-shadow: 0 4px 10px rgba(0, 122, 255, 0.1);
 }
 
-.cart-total {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 1.3rem;
-    font-weight: 800;
-    color: #333;
-    margin-bottom: 15px;
-}
+.prod-info { margin-bottom: 20px; pointer-events: none; /* Evita que el clic seleccione texto */ }
+.prod-code { font-size: 11px; font-weight: 700; color: #86868b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
+.prod-name { font-size: 15px; font-weight: 700; color: #1d1d1f; line-height: 1.3; }
 
-.btn-checkout {
-    width: 100%;
-    padding: 15px;
-    background-color: #28a745;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 1.1rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: background 0.3s;
-    box-shadow: 0 4px 6px rgba(40, 167, 69, 0.2);
-}
-.btn-checkout:hover { background-color: #218838; }
-.btn-checkout:disabled { background-color: #ccc; cursor: not-allowed; box-shadow: none; }
+.prod-footer { display: flex; justify-content: space-between; align-items: flex-end; pointer-events: none; }
+.prod-price { font-size: 22px; font-weight: 800; color: #007aff; }
+.prod-stock { font-size: 12px; font-weight: 800; padding: 5px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px; }
 
-/* Responsive */
-@media (max-width: 900px) {
-    .venta-container { grid-template-columns: 1fr; height: auto; }
-    .cart-area { margin-top: 20px; height: 500px; }
+@keyframes slideDownSmooth { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Responsivo Móvil */
+@media (max-width: 600px) {
+    .glass-container { padding: 20px 15px; }
+    .products-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; padding-bottom: 140px; }
+    .glass-product-card { padding: 15px; border-radius: 16px; }
+    .prod-name { font-size: 14px; }
+    .prod-price { font-size: 18px; }
+    .prod-stock { padding: 4px 8px; font-size: 11px; }
 }

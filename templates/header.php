@@ -42,6 +42,26 @@ $esAdmin = (isset($_SESSION['rol']) && strtolower($_SESSION['rol']) === 'admin')
     <link rel="stylesheet" href="/local3M/css/header.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        /* ESTILOS PARA EL BOTÓN DEL ESCÁNER EN LA BARRA SUPERIOR */
+        .nav-actions { display: flex; align-items: center; gap: 15px; }
+        .btn-global-scanner {
+            background: rgba(0, 122, 255, 0.15); color: #007aff; border: none; border-radius: 10px;
+            padding: 8px 14px; font-size: 14px; font-weight: 700; cursor: pointer; 
+            display: flex; align-items: center; gap: 6px; transition: all 0.2s ease;
+            font-family: 'Poppins', sans-serif;
+        }
+        .btn-global-scanner:hover { background: #007aff; color: #fff; transform: scale(1.05); }
+        
+        /* Ajuste estricto para celulares */
+        @media (max-width: 600px) {
+            .nav-actions { gap: 8px; }
+            .btn-global-scanner span { display: none; } /* Oculta texto, deja solo ícono */
+            .btn-global-scanner { padding: 8px 12px; font-size: 18px; }
+            .user-greeting { display: none !important; } /* Oculta el nombre para dar espacio */
+        }
+    </style>
 </head>
 <body>
 
@@ -57,8 +77,13 @@ $esAdmin = (isset($_SESSION['rol']) && strtolower($_SESSION['rol']) === 'admin')
             </div>
         </div>
         
-        <div class="navbar-user">
-            <span><i class="far fa-user"></i> <?php echo htmlspecialchars($_SESSION['nombre']); ?></span>
+        <div class="navbar-user nav-actions">
+            <!-- NUEVO BOTÓN DE ESCÁNER MÓVIL/GLOBAL -->
+            <button class="btn-global-scanner" onclick="document.dispatchEvent(new KeyboardEvent('keydown', {'key': 'F2'}))" title="Abrir Escáner">
+                <i class="fas fa-barcode"></i> <span>Escáner</span>
+            </button>
+
+            <span class="user-greeting"><i class="far fa-user"></i> <?php echo htmlspecialchars($_SESSION['nombre']); ?></span>
             <a href="/local3M/logout.php" class="logout-button">Cerrar Sesión</a>
         </div>
     </nav>

@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // -----------------------------------------------------
-        // LÓGICA DE LA CÁMARA (VERSIÓN ALTA RESOLUCIÓN / iPHONE)
+        // LÓGICA DE LA CÁMARA (FILTRO DE CÓDIGOS PARA iPHONE)
         // -----------------------------------------------------
         btnScannerCamera.addEventListener('click', () => {
             const readerContainer = document.getElementById('reader-container');
@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 readerContainer.style.display = 'block';
                 inputSpotlight.placeholder = "Apuntando a etiqueta...";
                 
-                // Le decimos explícitamente que lea CODE_128 (tus etiquetas) y EAN_13/UPC (productos)
+                // Optimizamos el procesador del iPhone para que SOLO busque tus etiquetas y productos
                 html5QrCode = new Html5Qrcode("reader", { 
                     formatsToSupport: [ 
                         Html5QrcodeSupportedFormats.CODE_128, 
@@ -105,14 +105,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 html5QrCode.start(
-                    { 
-                        facingMode: "environment",
-                        // ¡LA MAGIA!: Forzamos a la cámara a usar calidad Full HD para ver las líneas finas
-                        width: { ideal: 1920 },
-                        height: { ideal: 1080 }
-                    },
+                    { facingMode: "environment" }, // <-- CORRECCIÓN: La librería solo acepta esta instrucción aquí
                     {
-                        fps: 15, // Bajamos a 15 fps para dar tiempo al autoenfoque del iPhone
+                        fps: 15, 
                         qrbox: function(viewfinderWidth, viewfinderHeight) {
                             return { width: viewfinderWidth * 0.9, height: 120 };
                         }
@@ -124,12 +119,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         procesarBusquedaGlobal(); 
                     },
                     (errorMessage) => {
-                        // Ignorar errores mientras busca
+                        // Ignorar errores visuales mientras busca
                     }
                 ).catch((err) => {
                     console.log(err);
                     detenerCamara();
-                    Swal.fire({toast: true, position: 'top-end', icon: 'error', title: 'Permiso de cámara denegado', showConfirmButton: false, timer: 3000});
+                    Swal.fire({toast: true, position: 'top-end', icon: 'error', title: 'Error al iniciar la cámara', showConfirmButton: false, timer: 3000});
                 });
             }
         });

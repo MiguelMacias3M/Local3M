@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'Enter') { e.preventDefault(); procesarBusquedaGlobal(); } 
         });
 
-        // -----------------------------------------------------
+// -----------------------------------------------------
         // LÓGICA DE LA CÁMARA MEJORADA PARA ETIQUETAS TÉRMICAS
         // -----------------------------------------------------
         btnScannerCamera.addEventListener('click', () => {
@@ -125,6 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         });
+    }
 
     // -----------------------------------------------------
     // FUNCIONES BASE DEL SPOTLIGHT

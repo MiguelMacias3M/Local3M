@@ -75,7 +75,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'Escape' && modalSpotlight.style.display === 'flex') { cerrarSpotlight(); }
         });
 
-        // Modificamos el clic fuera para no cerrar si estamos escaneando
         modalSpotlight.addEventListener('click', (e) => { 
             if (e.target === modalSpotlight) cerrarSpotlight(); 
         });
@@ -84,8 +83,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'Enter') { e.preventDefault(); procesarBusquedaGlobal(); } 
         });
 
-// -----------------------------------------------------
-        // LÓGICA DE LA CÁMARA MEJORADA PARA ETIQUETAS TÉRMICAS
+        // -----------------------------------------------------
+        // LÓGICA DE LA CÁMARA (VERSIÓN ALTA RESOLUCIÓN / iPHONE)
         // -----------------------------------------------------
         btnScannerCamera.addEventListener('click', () => {
             const readerContainer = document.getElementById('reader-container');
@@ -96,18 +95,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 readerContainer.style.display = 'block';
                 inputSpotlight.placeholder = "Apuntando a etiqueta...";
                 
-                html5QrCode = new Html5Qrcode("reader");
+                // Le decimos explícitamente que lea CODE_128 (tus etiquetas) y EAN_13/UPC (productos)
+                html5QrCode = new Html5Qrcode("reader", { 
+                    formatsToSupport: [ 
+                        Html5QrcodeSupportedFormats.CODE_128, 
+                        Html5QrcodeSupportedFormats.EAN_13, 
+                        Html5QrcodeSupportedFormats.UPC_A 
+                    ] 
+                });
+
                 html5QrCode.start(
-                    { facingMode: "environment" }, // Usa la cámara trasera principal
+                    { 
+                        facingMode: "environment",
+                        // ¡LA MAGIA!: Forzamos a la cámara a usar calidad Full HD para ver las líneas finas
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    },
                     {
-                        fps: 30, // Máxima velocidad de escaneo
+                        fps: 15, // Bajamos a 15 fps para dar tiempo al autoenfoque del iPhone
                         qrbox: function(viewfinderWidth, viewfinderHeight) {
-                            // Cuadro dinámico: 90% del ancho de la pantalla y solo 120px de alto. 
-                            // Perfecto para códigos largos de impresoras 58mm
                             return { width: viewfinderWidth * 0.9, height: 120 };
-                        },
-                        experimentalFeatures: {
-                            useBarCodeDetectorIfSupported: true // Usa el motor nativo del celular (lo hace rapidísimo)
                         }
                     },
                     (decodedText, decodedResult) => {
@@ -117,9 +124,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         procesarBusquedaGlobal(); 
                     },
                     (errorMessage) => {
-                        // Se ignora silenciosamente mientras busca
+                        // Ignorar errores mientras busca
                     }
                 ).catch((err) => {
+                    console.log(err);
                     detenerCamara();
                     Swal.fire({toast: true, position: 'top-end', icon: 'error', title: 'Permiso de cámara denegado', showConfirmButton: false, timer: 3000});
                 });

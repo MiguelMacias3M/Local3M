@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // -----------------------------------------------------
-        // LÓGICA DE LA CÁMARA
+        // LÓGICA DE LA CÁMARA MEJORADA PARA ETIQUETAS TÉRMICAS
         // -----------------------------------------------------
         btnScannerCamera.addEventListener('click', () => {
             const readerContainer = document.getElementById('reader-container');
@@ -94,36 +94,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 detenerCamara();
             } else {
                 readerContainer.style.display = 'block';
-                inputSpotlight.placeholder = "Apuntando a código de barras...";
+                inputSpotlight.placeholder = "Apuntando a etiqueta...";
                 
                 html5QrCode = new Html5Qrcode("reader");
-                // Configuramos para usar la cámara trasera del celular
                 html5QrCode.start(
-                    { facingMode: "environment" },
+                    { facingMode: "environment" }, // Usa la cámara trasera principal
                     {
-                        fps: 10,
-                        qrbox: { width: 250, height: 150 },
-                        aspectRatio: 1.0
+                        fps: 30, // Máxima velocidad de escaneo
+                        qrbox: function(viewfinderWidth, viewfinderHeight) {
+                            // Cuadro dinámico: 90% del ancho de la pantalla y solo 120px de alto. 
+                            // Perfecto para códigos largos de impresoras 58mm
+                            return { width: viewfinderWidth * 0.9, height: 120 };
+                        },
+                        experimentalFeatures: {
+                            useBarCodeDetectorIfSupported: true // Usa el motor nativo del celular (lo hace rapidísimo)
+                        }
                     },
                     (decodedText, decodedResult) => {
-                        // ¡Código encontrado por la cámara!
                         detenerCamara();
                         inputSpotlight.value = decodedText;
-                        // Hacemos que vibre el celular para confirmar lectura
                         if (navigator.vibrate) navigator.vibrate(200); 
-                        procesarBusquedaGlobal(); // Busca y teletransporta
+                        procesarBusquedaGlobal(); 
                     },
                     (errorMessage) => {
-                        // Errores de lectura continua (se ignoran silenciosamente)
+                        // Se ignora silenciosamente mientras busca
                     }
                 ).catch((err) => {
-                    console.log(err);
                     detenerCamara();
-                    Swal.fire({toast: true, position: 'top-end', icon: 'error', title: 'Permiso de cámara denegado o no disponible', showConfirmButton: false, timer: 3000});
+                    Swal.fire({toast: true, position: 'top-end', icon: 'error', title: 'Permiso de cámara denegado', showConfirmButton: false, timer: 3000});
                 });
             }
         });
-    }
 
     // -----------------------------------------------------
     // FUNCIONES BASE DEL SPOTLIGHT

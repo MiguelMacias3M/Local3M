@@ -1,24 +1,53 @@
 /* =========================================
  * LÓGICA PARA EDITAR REPARACIÓN (JS PURO)
- * Versión Final: Ubicación (Mapa Caja) + Fotos + Pagos + Checklist + Nuevos Estados
+ * Versión Final: Bitácora Única + Fotos Comprimidas Sin Duplicados + Lightbox + Pagos + Checklist
  * ========================================= */
 
-// --- DIBUJO DE CÓDIGO DE BARRAS INICIAL ---
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof CODIGO_BARRAS !== 'undefined' && document.getElementById("barcode-svg")) {
-        try {
-            JsBarcode("#barcode-svg", CODIGO_BARRAS, {
-                format: "CODE128",
-                lineColor: "#000",
-                width: 2,
-                height: 50,
-                displayValue: false
-            });
-        } catch(e) {
-            console.error("Error al dibujar barcode inicial:", e);
+let archivosBitacora = [];
+
+// --- COMPRESOR DE IMÁGENES EN CLIENTE (MÁX 1280px, JPG 80%) ---
+function comprimirImagen(file, maxWidth = 1280, quality = 0.8) {
+    return new Promise((resolve) => {
+        const nombreLimpio = (file.name ? file.name.replace(/\.[^/.]+$/, "") : "foto_" + Date.now()) + ".jpg";
+        
+        if (!file.type || !file.type.startsWith('image/')) {
+            resolve({ blob: file, name: file.name || nombreLimpio, previewUrl: URL.createObjectURL(file) });
+            return;
         }
-    }
-});
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                let width = img.width;
+                let height = img.height;
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        resolve({
+                            blob: blob,
+                            name: nombreLimpio,
+                            previewUrl: URL.createObjectURL(blob)
+                        });
+                    } else {
+                        resolve({ blob: file, name: file.name || nombreLimpio, previewUrl: URL.createObjectURL(file) });
+                    }
+                }, 'image/jpeg', quality);
+            };
+            img.onerror = () => resolve({ blob: file, name: file.name || nombreLimpio, previewUrl: URL.createObjectURL(file) });
+        };
+        reader.onerror = () => resolve({ blob: file, name: file.name || nombreLimpio, previewUrl: URL.createObjectURL(file) });
+    });
+}
 
 // --- FUNCIONES MAPA CAJA ---
 function abrirMapaCaja() {
@@ -115,24 +144,171 @@ function seleccionarLugar(coordenada) {
     });
 }
 
-// --- FUNCIONES ORIGINALES (FOTO, DEUDA, ABONO, GUARDAR) ---
-function previsualizarFoto() {
-    const input = document.getElementById('evidencia_input');
-    const preview = document.getElementById('img-preview');
-    const container = document.getElementById('preview-container');
-
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            preview.src = e.target.result;
-            container.style.display = 'block';
+// --- PREVISUALIZAR Y COMPRIMIR FOTOS DE BITÁCORA ---
+async function previsualizarBitacora(inputEl) {
+    const container = document.getElementById('bitacora-preview-box');
+    if (inputEl && inputEl.files && inputEl.files.length > 0) {
+        for (let file of Array.from(inputEl.files)) {
+            const itemComprimido = await comprimirImagen(file);
+            archivosBitacora.push(itemComprimido);
         }
-        reader.readAsDataURL(input.files[0]);
-    } else {
-        container.style.display = 'none';
+        inputEl.value = '';
+        renderizarPreviewsBitacora(container);
     }
 }
 
+function renderizarPreviewsBitacora(container) {
+    if (!container) return;
+    container.innerHTML = '';
+    if (archivosBitacora.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+    container.style.display = 'grid';
+    archivosBitacora.forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.className = 'preview-thumb-item';
+        div.innerHTML = `
+            <img src="${item.previewUrl}">
+            <button type="button" onclick="quitarFotoPreview(${idx})"><i class="fas fa-times"></i></button>
+        `;
+        container.appendChild(div);
+    });
+}
+
+window.quitarFotoPreview = function(idx) {
+    archivosBitacora.splice(idx, 1);
+    renderizarPreviewsBitacora(document.getElementById('bitacora-preview-box'));
+};
+
+// --- GUARDAR BITÁCORA RÁPIDA (SIN DUPLICADOS) ---
+window.guardarBitacoraRapida = function() {
+    const notaEl = document.getElementById('nota_bitacora');
+    const nota = notaEl ? notaEl.value.trim() : '';
+
+    if (nota === '' && archivosBitacora.length === 0) {
+        Swal.fire('Atención', 'Escribe una nota técnica o adjunta una foto para la bitácora.', 'warning');
+        return;
+    }
+
+    let fd = new FormData();
+    fd.append('action', 'agregar_bitacora');
+    fd.append('id', REPARACION_ID);
+    fd.append('nota_bitacora', nota);
+
+    // Enviamos únicamente 'evidencias[]' para que se guarde 1 sola vez por foto
+    archivosBitacora.forEach((item) => {
+        fd.append('evidencias[]', item.blob, item.name);
+    });
+
+    Swal.fire({
+        title: 'Registrando en bitácora...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    fetch('api/editar_reparacion.php', {
+        method: 'POST',
+        body: fd
+    })
+    .then(async res => {
+        const texto = await res.text();
+        try {
+            return JSON.parse(texto);
+        } catch (e) {
+            throw new Error(texto || 'Respuesta inválida del servidor');
+        }
+    })
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                toast: true, position: 'top-end', icon: 'success',
+                title: 'Registrado en bitácora', showConfirmButton: false, timer: 1000
+            }).then(() => location.reload());
+        } else {
+            Swal.fire('Error', data.message || 'No se pudo guardar la bitácora', 'error');
+        }
+    })
+    .catch(err => {
+        console.error("Error en bitácora:", err);
+        Swal.fire('Error', 'No se pudo conectar con la API: ' + err.message.substring(0, 100), 'error');
+    });
+};
+
+// --- VISOR LIGHTBOX LIQUID GLASS ---
+let zoomActivo = false;
+window.abrirLightbox = function(url, comentario, fecha, usuario, idHistorial) {
+    const modal = document.getElementById('modalLightbox');
+    const img = document.getElementById('lb-img');
+    const lblCom = document.getElementById('lb-comentario');
+    const lblMeta = document.getElementById('lb-meta');
+    const btnDown = document.getElementById('lb-download');
+    const btnDel = document.getElementById('lb-delete-btn');
+
+    zoomActivo = false;
+    img.classList.remove('zoomed');
+    document.getElementById('lb-zoom-icon').className = 'fas fa-search-plus';
+
+    img.src = url;
+    lblCom.textContent = comentario || 'Evidencia Fotográfica';
+    lblMeta.innerHTML = `<i class="far fa-calendar-alt"></i> ${fecha} &nbsp;|&nbsp; <i class="far fa-user"></i> ${usuario}`;
+    btnDown.href = url;
+
+    if (btnDel) {
+        btnDel.onclick = () => eliminarEvidencia(idHistorial);
+    }
+
+    modal.style.display = 'flex';
+};
+
+window.cerrarLightbox = function(e) {
+    if (e && e.target.id !== 'modalLightbox') return;
+    document.getElementById('modalLightbox').style.display = 'none';
+    document.getElementById('lb-img').src = '';
+};
+
+window.alternarZoomLightbox = function() {
+    const img = document.getElementById('lb-img');
+    const icon = document.getElementById('lb-zoom-icon');
+    zoomActivo = !zoomActivo;
+    if (zoomActivo) {
+        img.classList.add('zoomed');
+        icon.className = 'fas fa-search-minus';
+    } else {
+        img.classList.remove('zoomed');
+        icon.className = 'fas fa-search-plus';
+    }
+};
+
+window.eliminarEvidencia = function(idHistorial) {
+    Swal.fire({
+        title: '¿Eliminar esta fotografía?',
+        text: 'Se borrará el archivo del servidor de forma permanente.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ff3b30',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    }).then((res) => {
+        if (res.isConfirmed) {
+            let fd = new FormData();
+            fd.append('action', 'eliminar_evidencia');
+            fd.append('id_historial', idHistorial);
+
+            fetch('api/editar_reparacion.php', { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    Swal.fire('Error', data.message || 'No se pudo eliminar', 'error');
+                }
+            });
+        }
+    });
+};
+
+// --- FUNCIONES FINANCIERAS Y GUARDADO PRINCIPAL ---
 function calcularDeuda() {
     let monto = parseFloat(document.getElementById('monto').value) || 0;
     let adelanto = parseFloat(document.getElementById('adelanto').value) || 0;
@@ -197,7 +373,6 @@ function guardarCambios() {
     const estadoSeleccionado = document.getElementById('selectEstado').value;
     const ubicacionActual = document.getElementById('ubicacion').value.trim();
 
-    // 🔒 CANDADO DE SEGURIDAD: Si está Terminado, requiere ubicación física
     if (estadoSeleccionado === 'Terminado' && ubicacionActual === '') {
         Swal.fire({
             title: '¡Falta la Ubicación!',
@@ -206,9 +381,9 @@ function guardarCambios() {
             confirmButtonText: '<i class="fas fa-map-marker-alt"></i> Asignar Lugar',
             confirmButtonColor: '#007aff'
         }).then(() => {
-            abrirMapaCaja(); // Despliega el mapa automáticamente
+            abrirMapaCaja();
         });
-        return; // Detiene el guardado hasta que cumpla la regla
+        return;
     }
 
     let formData = new FormData();
@@ -227,13 +402,9 @@ function guardarCambios() {
     formData.append('fecha_estimada', document.getElementById('fecha_estimada').value);     
     formData.append('ubicacion', document.getElementById('ubicacion').value); 
 
-    const fileInput = document.getElementById('evidencia_input');
-    if(fileInput.files.length > 0) {
-        formData.append('evidencia', fileInput.files[0]);
-    }
-
     Swal.fire({
         title: 'Guardando...',
+        allowOutsideClick: false,
         didOpen: () => { Swal.showLoading() }
     });
 
@@ -241,7 +412,14 @@ function guardarCambios() {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    .then(async response => {
+        const texto = await response.text();
+        try {
+            return JSON.parse(texto);
+        } catch (e) {
+            throw new Error(texto || 'Respuesta inválida del servidor');
+        }
+    })
     .then(data => {
         if (data.success) {
             Swal.fire('Guardado', 'Cambios registrados correctamente', 'success')
@@ -251,7 +429,8 @@ function guardarCambios() {
         }
     })
     .catch(error => {
-        Swal.fire('Error', 'Fallo de conexión', 'error');
+        console.error("Error al guardar:", error);
+        Swal.fire('Error', 'Detalle: ' + error.message.substring(0, 120), 'error');
     });
 }
 
@@ -326,8 +505,6 @@ window.abrirChecklist = function() {
     const modalChecklist = document.getElementById('modalChecklist');
     if(modalChecklist) {
         modalChecklist.style.display = 'flex';
-    } else {
-        console.error("No se encontró el HTML del modal modalChecklist");
     }
 };
 
@@ -382,10 +559,7 @@ window.finalizarChecklist = function() {
 // FUNCIÓN PARA IMPRIMIR ETIQUETA DIRECTA
 // ==========================================
 window.imprimirEtiquetaReparacion = function() {
-    // Tomamos el código existente o usamos el ID como respaldo
     const codigo = CODIGO_BARRAS || REPARACION_ID; 
-    
-    // Leemos los datos actuales de los inputs por si los acabas de modificar
     const cliente = document.getElementById('nombre_cliente').value || 'Sin nombre';
     const marca = document.getElementById('marca_celular').value || '';
     const modelo = document.getElementById('modelo').value || '';
@@ -397,13 +571,11 @@ window.imprimirEtiquetaReparacion = function() {
         return;
     }
 
-    // Armamos la URL exacta como la usa control.js
-    const url = `/local3M/imprimir_etiqueta.php?codigo=${encodeURIComponent(codigo)}` +
+    const url = `imprimir_etiqueta.php?codigo=${encodeURIComponent(codigo)}` +
                 `&nombre=${encodeURIComponent(equipo)}` +
                 `&cliente=${encodeURIComponent(cliente)}` +
                 `&detalles=${encodeURIComponent(falla)}`;
                 
-    // Abrimos la ventanita de impresión
     window.open(url, '_blank', 'width=450,height=550,scrollbars=no,resizable=no');
 };
 
@@ -417,12 +589,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const dropdownOptions = document.getElementById('glassDropdownOptions');
     const dropdownText = document.getElementById('glassDropdownText');
     
-    // 1. Clonar las opciones del viejo select al nuevo diseño de cristal
     Array.from(nativeSelect.options).forEach(option => {
         const div = document.createElement('div');
         div.className = 'glass-option';
         
-        // Si es el estado actual guardado, lo pintamos activo
         if (option.selected) {
             div.classList.add('selected');
             dropdownText.innerHTML = option.text;
@@ -430,27 +600,18 @@ document.addEventListener('DOMContentLoaded', () => {
         
         div.innerHTML = option.text;
         
-        // 2. ¿Qué pasa al hacer clic en una opción de cristal?
         div.onclick = function() {
-            // A) Actualizar colores visuales
             document.querySelectorAll('.glass-option').forEach(el => el.classList.remove('selected'));
             this.classList.add('selected');
             dropdownText.innerHTML = this.innerHTML;
-            
-            // B) Sincronizar secretamente con el Select Oculto para que Guardar() siga funcionando
             nativeSelect.value = option.value;
-            
-            // C) Disparar el evento para que salte el Checklist si se elige "Terminado"
             nativeSelect.dispatchEvent(new Event('change'));
-            
-            // D) Cerrar el menú
             document.getElementById('glassDropdown').classList.remove('active');
         };
         
         dropdownOptions.appendChild(div);
     });
 
-    // 3. Cerrar el menú si hacemos clic afuera en la pantalla
     document.addEventListener('click', function(e) {
         const customDropdown = document.getElementById('glassDropdown');
         if (customDropdown && !customDropdown.contains(e.target)) {
@@ -459,7 +620,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// Función para el botón del Dropdown
 window.toggleGlassDropdown = function() {
     document.getElementById('glassDropdown').classList.toggle('active');
 };
@@ -487,7 +647,6 @@ function buscarPiezaReparacion() {
             caja.innerHTML = '';
             if(data.success && data.data.length > 0) {
                 data.data.forEach(p => {
-                    // Extraemos el código en texto plano
                     const codigoB = p.codigo_barras ? p.codigo_barras : 'S/C';
                     
                     caja.innerHTML += `
@@ -543,12 +702,10 @@ window.cargarPiezasUsadas = function() {
             
             data.piezas.forEach(pz => {
                 let celdaCosto = '';
-                // Si es admin, mostramos el dinero
                 if (typeof ES_ADMIN !== 'undefined' && ES_ADMIN) {
                     celdaCosto = `<td style="padding: 10px 8px; text-align: right; color: #ff3b30; font-weight: 600;">-$${parseFloat(pz.costo_unitario).toFixed(2)}</td>`;
                 }
                 
-                // Dibujamos la fila con el botón de eliminar
                 tbody.innerHTML += `
                     <tr style="border-bottom: 1px solid rgba(0,0,0,0.03);">
                         <td style="padding: 10px 8px; font-size: 13px; font-weight: 500;">${pz.nombre_pieza}</td>
@@ -562,12 +719,10 @@ window.cargarPiezasUsadas = function() {
             });
 
             if(data.piezas.length === 0) {
-                // Ajustar columnas dinámicamente si no hay nada
                 const columnas = (typeof ES_ADMIN !== 'undefined' && ES_ADMIN) ? 3 : 2;
                 tbody.innerHTML = `<tr><td colspan="${columnas}" style="padding: 15px; text-align: center; color: #86868b; font-size: 12px;">Sin refacciones extraídas del sistema aún.</td></tr>`;
             }
 
-            // Cálculos financieros (Solo si es admin y existen las etiquetas)
             if (typeof ES_ADMIN !== 'undefined' && ES_ADMIN) {
                 const cobroCliente = parseFloat(data.finanzas.monto) || 0;
                 const costoPiezas = parseFloat(data.finanzas.costo_piezas) || 0;
@@ -583,7 +738,6 @@ window.cargarPiezasUsadas = function() {
     });
 };
 
-// --- NUEVA FUNCIÓN PARA ELIMINAR Y DEVOLVER AL STOCK ---
 window.eliminarPiezaReparacion = function(id_puente) {
     Swal.fire({
         title: '¿Remover pieza?',
@@ -607,7 +761,7 @@ window.eliminarPiezaReparacion = function(id_puente) {
             .then(data => {
                 if(data.success) {
                     Swal.close();
-                    cargarPiezasUsadas(); // Recargamos la tablita
+                    cargarPiezasUsadas();
                 } else {
                     Swal.fire('Error', data.message, 'error');
                 }
@@ -615,7 +769,7 @@ window.eliminarPiezaReparacion = function(id_puente) {
         }
     });
 };
-// Escuchar cambios en el input del monto para recalcular ganancia en vivo
+
 document.getElementById('monto').addEventListener('input', () => {
     cargarPiezasUsadas(); 
 });

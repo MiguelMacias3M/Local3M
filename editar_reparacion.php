@@ -40,9 +40,25 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
         <h1 style="margin: 0; font-weight: 800; font-size: 26px;">
             <i class="fas fa-tools" style="color:#ff2d55;"></i> Editar Reparación #<?= $id ?>
         </h1>
-        <span style="background: rgba(0,122,255,0.1); color: #007aff; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 13px;">
-            <i class="fas fa-camera"></i> <?= count($fotos_evidencia) ?> Evidencia(s)
-        </span>
+        
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <!-- ETIQUETA DE CONTRASEÑA DIRECTA -->
+            <?php if (!empty($reparacion['tipo_pass']) && $reparacion['tipo_pass'] !== 'Ninguno'): ?>
+                <?php if ($reparacion['tipo_pass'] === 'Patron'): ?>
+                    <span style="background: rgba(88, 86, 214, 0.1); color: #5856d6; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 13px; border: 1px solid rgba(88, 86, 214, 0.3);">
+                        <i class="fas fa-project-diagram"></i> Patrón: <?= htmlspecialchars($reparacion['codigo_pass']) ?>
+                    </span>
+                <?php else: ?>
+                    <span style="background: rgba(255, 149, 0, 0.1); color: #ff9500; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 13px; border: 1px solid rgba(255, 149, 0, 0.3);">
+                        <i class="fas fa-lock"></i> <?= htmlspecialchars($reparacion['tipo_pass']) ?>: <?= htmlspecialchars($reparacion['codigo_pass']) ?>
+                    </span>
+                <?php endif; ?>
+            <?php endif; ?>
+
+            <span style="background: rgba(0,122,255,0.1); color: #007aff; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 13px;">
+                <i class="fas fa-camera"></i> <?= count($fotos_evidencia) ?> Evidencia(s)
+            </span>
+        </div>
     </div>
 
     <div class="edit-grid">
@@ -96,6 +112,50 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
                             <input type="number" class="glass-input" id="deuda" value="<?= (int)$reparacion['deuda'] ?>" readonly style="color: #ff3b30; font-weight:bold;">
                         </div>
                     </div>
+
+                    <!-- Pega esto JUSTO DEBAJO del <div class="glass-card"> de "Equipo" y ARRIBA del "Balance Financiero" -->
+                
+                <div class="glass-card">
+                    <h3><i class="fas fa-lock" style="color:#5856d6;"></i> Seguridad del Equipo</h3>
+                    <div class="row-2-col" style="align-items: start;">
+                        <div class="form-group">
+                            <label>Método de Desbloqueo</label>
+                            <select class="glass-input" id="tipo_pass" onchange="cambiarTipoPass()" style="font-weight: 700; color: #5856d6;">
+                                <option value="Ninguno">Ninguno / Sin Contraseña</option>
+                                <option value="PIN">PIN Numérico</option>
+                                <option value="Texto">Contraseña (Texto/Alfanumérica)</option>
+                                <option value="Patron">Patrón de Dibujo</option>
+                            </select>
+                        </div>
+                        
+                        <div id="caja_pass_texto" class="form-group" style="display:none;">
+                            <label id="lbl_pass_texto">Código / Contraseña</label>
+                            <input type="text" class="glass-input" id="codigo_pass_txt" placeholder="Ingresa la contraseña..." autocomplete="off">
+                        </div>
+                    </div>
+
+                    <div id="caja_pass_patron" style="display:none; text-align: center;">
+                        <label style="color: #86868b; font-weight: 600; font-size: 13px;">Dibuja el patrón deslizando el dedo o ratón</label>
+                        <div class="patron-grid" id="patronGrid">
+                            <div class="patron-dot" data-val="1"></div>
+                            <div class="patron-dot" data-val="2"></div>
+                            <div class="patron-dot" data-val="3"></div>
+                            <div class="patron-dot" data-val="4"></div>
+                            <div class="patron-dot" data-val="5"></div>
+                            <div class="patron-dot" data-val="6"></div>
+                            <div class="patron-dot" data-val="7"></div>
+                            <div class="patron-dot" data-val="8"></div>
+                            <div class="patron-dot" data-val="9"></div>
+                        </div>
+                        <button type="button" class="glass-btn secondary" style="height: 35px; padding: 0 15px; font-size: 12px; margin-top: 5px;" onclick="limpiarPatron()">
+                            <i class="fas fa-eraser"></i> Borrar Dibujo
+                        </button>
+                        <input type="hidden" id="codigo_pass_patron">
+                    </div>
+                </div>
+
+                <!-- Continúa con el módulo de "Balance Financiero" normal... -->
+
                     <div class="abono-box">
                         <div style="flex:1;">
                             <label style="color:#007aff;">Registrar Abono</label>

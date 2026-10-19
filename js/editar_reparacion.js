@@ -401,7 +401,13 @@ function guardarCambios() {
     formData.append('estado', document.getElementById('selectEstado').value);
     formData.append('fecha_estimada', document.getElementById('fecha_estimada').value);     
     formData.append('ubicacion', document.getElementById('ubicacion').value); 
-
+// --- NUEVO: GUARDAR SEGURIDAD ---
+    formData.append('tipo_pass', document.getElementById('tipo_pass').value);
+    if (document.getElementById('tipo_pass').value === 'Patron') {
+        formData.append('codigo_pass', document.getElementById('codigo_pass_patron').value);
+    } else {
+        formData.append('codigo_pass', document.getElementById('codigo_pass_txt').value);
+    }
     Swal.fire({
         title: 'Guardando...',
         allowOutsideClick: false,
@@ -773,3 +779,122 @@ window.eliminarPiezaReparacion = function(id_puente) {
 document.getElementById('monto').addEventListener('input', () => {
     cargarPiezasUsadas(); 
 });
+
+// ==========================================
+// MOTOR DE SEGURIDAD (PIN, TEXTO, PATRÓN)
+// ==========================================
+
+let isDrawingPattern = false;
+let currentPattern = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Inicializar el motor visual del Patrón
+    initPatternLock();
+
+    // 2. Cargar los datos guardados en la BD
+    const selectTipo = document.getElementById('tipo_pass');
+    if (selectTipo && typeof TIPO_PASS_DB !== 'undefined') {
+        selectTipo.value = TIPO_PASS_DB;
+        cambiarTipoPass();
+
+        if (TIPO_PASS_DB === 'PIN' || TIPO_PASS_DB === 'Texto') {
+            document.getElementById('codigo_pass_txt').value = CODIGO_PASS_DB;
+        } else if (TIPO_PASS_DB === 'Patron' && CODIGO_PASS_DB) {
+            document.getElementById('codigo_pass_patron').value = CODIGO_PASS_DB;
+            const parts = CODIGO_PASS_DB.split('-');
+            parts.forEach((val, index) => {
+                currentPattern.push(val);
+                const dot = document.querySelector(`.patron-dot[data-val="${val}"]`);
+                if (dot) {
+                    dot.classList.add('active');
+                    dot.innerText = index + 1; // Pone el número de orden
+                }
+            });
+        }
+    }
+});
+
+window.cambiarTipoPass = function() {
+    const tipo = document.getElementById('tipo_pass').value;
+    const cajaTxt = document.getElementById('caja_pass_texto');
+    const cajaPatron = document.getElementById('caja_pass_patron');
+    const lblTxt = document.getElementById('lbl_pass_texto');
+    const inputTxt = document.getElementById('codigo_pass_txt');
+
+    cajaTxt.style.display = 'none';
+    cajaPatron.style.display = 'none';
+
+    if (tipo === 'PIN') {
+        cajaTxt.style.display = 'block';
+        lblTxt.innerText = 'PIN Numérico';
+        inputTxt.placeholder = 'Ej: 1234';
+        inputTxt.type = 'number';
+    } else if (tipo === 'Texto') {
+        cajaTxt.style.display = 'block';
+        lblTxt.innerText = 'Contraseña Alfanumérica';
+        inputTxt.placeholder = 'Ej: Juan123';
+        inputTxt.type = 'text';
+    } else if (tipo === 'Patron') {
+        cajaPatron.style.display = 'block';
+    }
+};
+
+window.limpiarPatron = function() {
+    currentPattern = [];
+    document.getElementById('codigo_pass_patron').value = '';
+    document.querySelectorAll('.patron-dot').forEach(dot => {
+        dot.classList.remove('active');
+        dot.innerText = '';
+    });
+};
+
+function initPatternLock() {
+    const dots = document.querySelectorAll('.patron-dot');
+    const grid = document.getElementById('patronGrid');
+    if (!grid) return;
+
+    const addDot = (dot) => {
+        const val = dot.getAttribute('data-val');
+        if (!currentPattern.includes(val)) {
+            currentPattern.push(val);
+            dot.classList.add('active');
+            dot.innerText = currentPattern.length; 
+            document.getElementById('codigo_pass_patron').value = currentPattern.join('-');
+        }
+    };
+
+    // Eventos para Computadora (Mouse)
+    dots.forEach(dot => {
+        dot.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            if(currentPattern.length > 0) limpiarPatron();
+            isDrawingPattern = true;
+            addDot(dot);
+        });
+        dot.addEventListener('mouseenter', (e) => {
+            if(isDrawingPattern) addDot(dot);
+        });
+    });
+
+    document.addEventListener('mouseup', () => { isDrawingPattern = false; });
+
+    // Eventos para Celular (Pantalla Táctil)
+    grid.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // Evita que se mueva la pantalla al dibujar
+        if(currentPattern.length > 0) limpiarPatron();
+        isDrawingPattern = true;
+        const touch = e.touches[0];
+        const dot = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (dot && dot.classList.contains('patron-dot')) addDot(dot);
+    }, {passive: false});
+
+    grid.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        if (!isDrawingPattern) return;
+        const touch = e.touches[0];
+        const dot = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (dot && dot.classList.contains('patron-dot')) addDot(dot);
+    }, {passive: false});
+
+    document.addEventListener('touchend', () => { isDrawingPattern = false; });
+}

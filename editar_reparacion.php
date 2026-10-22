@@ -44,10 +44,11 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <!-- ETIQUETA DE CONTRASEÑA DIRECTA -->
             <?php if (!empty($reparacion['tipo_pass']) && $reparacion['tipo_pass'] !== 'Ninguno'): ?>
-                <?php if ($reparacion['tipo_pass'] === 'Patron'): ?>
-                    <span style="background: rgba(88, 86, 214, 0.1); color: #5856d6; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 13px; border: 1px solid rgba(88, 86, 214, 0.3);">
-                        <i class="fas fa-project-diagram"></i> Patrón: <?= htmlspecialchars($reparacion['codigo_pass']) ?>
-                    </span>
+               <?php if ($reparacion['tipo_pass'] === 'Patron'): ?>
+                    <!-- BOTÓN INTERACTIVO PARA VER LA ANIMACIÓN -->
+                    <button type="button" onclick="mostrarAnimacionPatron('<?= htmlspecialchars($reparacion['codigo_pass']) ?>')" style="background: rgba(88, 86, 214, 0.1); color: #5856d6; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 13px; border: 1px solid rgba(88, 86, 214, 0.3); cursor: pointer; transition: 0.2s;">
+                        <i class="fas fa-play-circle"></i> Ver Patrón Animado
+                    </button>
                 <?php else: ?>
                     <span style="background: rgba(255, 149, 0, 0.1); color: #ff9500; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 13px; border: 1px solid rgba(255, 149, 0, 0.3);">
                         <i class="fas fa-lock"></i> <?= htmlspecialchars($reparacion['tipo_pass']) ?>: <?= htmlspecialchars($reparacion['codigo_pass']) ?>
@@ -471,6 +472,33 @@ $ticketUrl = "generar_ticket_id.php?id_transaccion=" . urlencode($reparacion['id
         <div style="display:flex; gap:10px;">
             <button type="button" class="glass-btn secondary" style="flex:1; justify-content:center;" onclick="cancelarChecklist()">Cancelar</button>
             <button type="button" class="glass-btn success" style="flex:1; justify-content:center;" onclick="confirmarChecklist()"><i class="fas fa-check"></i> Todo en orden</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: REPRODUCTOR DE PATRÓN ANIMADO LIQUID GLASS -->
+<div id="modalAnimacionPatron" class="glass-modal-overlay" style="display:none; z-index: 99999;" onclick="cerrarAnimacionPatron(event)">
+    <div class="glass-modal-content" style="max-width: 400px; padding: 30px; text-align: center; position: relative;" onclick="event.stopPropagation()">
+        <h3 style="margin-top:0; color:#1d1d1f; font-weight:800;">
+            <i class="fas fa-project-diagram" style="color:#5856d6;"></i> Patrón de Desbloqueo
+        </h3>
+        <p style="color:#86868b; font-size:13px; margin-bottom: 25px;">Secuencia original: <b id="secuenciaText" style="color:#5856d6;"></b></p>
+        
+        <div style="position: relative; width: 280px; height: 280px; margin: 0 auto; background: rgba(0,0,0,0.02); border-radius: 24px; border: 1px solid rgba(0,0,0,0.05); padding: 25px; box-sizing: border-box;">
+            <!-- Lienzo SVG donde se dibujarán las líneas animadas -->
+            <svg id="svgLineasPatron" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;"></svg>
+            
+            <!-- Los 9 puntos -->
+            <div class="patron-grid" style="margin: 0; padding: 0; border: none; background: transparent; position: relative; z-index: 2; height: 100%; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 15px; width: 100%;">
+                <?php for($i=1; $i<=9; $i++): ?>
+                    <div class="patron-dot anim-dot" id="anim-dot-<?= $i ?>" data-val="<?= $i ?>" style="width: 100%; height: 100%; aspect-ratio: 1/1; margin: auto;"></div>
+                <?php endfor; ?>
+            </div>
+        </div>
+
+        <div style="margin-top: 30px; display: flex; gap: 10px; justify-content: center;">
+            <button type="button" class="glass-btn info" style="flex:1;" onclick="reiniciarAnimacionPatron()"><i class="fas fa-redo"></i> Repetir</button>
+            <button type="button" class="glass-btn secondary" style="flex:1;" onclick="cerrarAnimacionPatron()"><i class="fas fa-times"></i> Cerrar</button>
         </div>
     </div>
 </div>

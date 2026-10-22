@@ -898,3 +898,101 @@ function initPatternLock() {
 
     document.addEventListener('touchend', () => { isDrawingPattern = false; });
 }
+
+// ==========================================
+// REPRODUCTOR ANIMADO DEL PATRÓN DE DESBLOQUEO
+// ==========================================
+let animacionPatronTimeout = [];
+let patronActualAnimacion = [];
+
+window.mostrarAnimacionPatron = function(patronStr) {
+    if (!patronStr) return;
+    patronActualAnimacion = patronStr.split('-');
+    document.getElementById('secuenciaText').innerText = patronStr;
+    document.getElementById('modalAnimacionPatron').style.display = 'flex';
+    
+    // Pequeño retraso para permitir que el modal se renderice y el SVG calcule sus medidas
+    setTimeout(() => {
+        reiniciarAnimacionPatron();
+    }, 150);
+};
+
+window.cerrarAnimacionPatron = function(e) {
+    if (e && e.target.id !== 'modalAnimacionPatron') return;
+    document.getElementById('modalAnimacionPatron').style.display = 'none';
+    detenerAnimacionPatron();
+};
+
+window.detenerAnimacionPatron = function() {
+    animacionPatronTimeout.forEach(clearTimeout);
+    animacionPatronTimeout = [];
+};
+
+window.reiniciarAnimacionPatron = function() {
+    detenerAnimacionPatron();
+    
+    // Limpiar todos los puntos
+    for(let i=1; i<=9; i++) {
+        let dot = document.getElementById('anim-dot-'+i);
+        if(dot) {
+            dot.classList.remove('active');
+            dot.innerText = '';
+        }
+    }
+    // Limpiar las líneas dibujadas
+    document.getElementById('svgLineasPatron').innerHTML = '';
+
+    // Intervalo de la animación (400 milisegundos entre cada punto)
+    let delay = 400; 
+    let previousDotInfo = null;
+
+    patronActualAnimacion.forEach((val, index) => {
+        let to = setTimeout(() => {
+            let dot = document.getElementById('anim-dot-'+val);
+            
+            // Si hay un punto anterior, dibujamos la línea hacia el punto actual
+            if (previousDotInfo) {
+                dibujarLineaSVG(previousDotInfo, val);
+            }
+            
+            // Iluminar el punto actual y ponerle su número de orden
+            dot.classList.add('active');
+            dot.innerText = index + 1;
+
+            previousDotInfo = val;
+
+        }, delay * index); // Multiplicamos por index para que se ejecuten en cascada
+        
+        animacionPatronTimeout.push(to);
+    });
+};
+
+// Dibuja una línea perfecta calculando el centro geométrico de cada punto
+function dibujarLineaSVG(fromVal, toVal) {
+    let svg = document.getElementById('svgLineasPatron');
+    let dotFrom = document.getElementById('anim-dot-'+fromVal);
+    let dotTo = document.getElementById('anim-dot-'+toVal);
+    
+    if (!dotFrom || !dotTo || !svg) return;
+
+    let svgRect = svg.getBoundingClientRect();
+    let fromRect = dotFrom.getBoundingClientRect();
+    let toRect = dotTo.getBoundingClientRect();
+
+    // Calcular el centro de cada círculo relativo al lienzo SVG
+    let x1 = (fromRect.left - svgRect.left) + (fromRect.width / 2);
+    let y1 = (fromRect.top - svgRect.top) + (fromRect.height / 2);
+    let x2 = (toRect.left - svgRect.left) + (toRect.width / 2);
+    let y2 = (toRect.top - svgRect.top) + (toRect.height / 2);
+
+    let line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', x1);
+    line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2);
+    line.setAttribute('y2', y2);
+    line.setAttribute('stroke', '#5856d6'); // Color morado
+    line.setAttribute('stroke-width', '5');
+    line.setAttribute('stroke-linecap', 'round');
+    
+    svg.appendChild(line);
+}

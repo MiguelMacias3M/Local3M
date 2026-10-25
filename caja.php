@@ -125,6 +125,7 @@
                         <option value="Proveedores">Proveedores</option>
                         <option value="Retiro">Retiro de Efectivo</option>
                     </select>
+                    
                 </div>
             </div>
 

@@ -84,6 +84,13 @@ try {
     }
     
     if ($action === 'registrar_movimiento') {
+        // 🔒 CANDADO DE CAJA: VERIFICAR QUE EL TURNO ESTÉ ABIERTO
+        $estadoCaja = obtenerEstadoCaja($conn);
+        if ($estadoCaja['estado'] !== 'ABIERTA') {
+            echo json_encode(['success' => false, 'error' => '🛑 CAJA CERRADA. Ve a la vista general y abre turno para registrar un movimiento manual.']);
+            exit();
+        }
+
         $tipoBase = $_POST['tipo']; 
         $desc = trim($_POST['descripcion']);
         $monto = (float)$_POST['monto'];
@@ -108,6 +115,7 @@ try {
         echo json_encode(['success' => true]);
         exit();
     }
+    
 
     if ($action === 'usuarios') {
         $stmt = $conn->query("SELECT DISTINCT usuario FROM caja_movimientos ORDER BY usuario");

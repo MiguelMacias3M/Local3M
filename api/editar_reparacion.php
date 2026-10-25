@@ -146,6 +146,7 @@ try {
         responderJSON(['success' => true, 'ticketUrl' => 'generar_ticket_id.php?id_transaccion=' . urlencode($reparacion['id_transaccion'])]);
     }
 
+// --- ACCIÓN: GUARDAR CAMBIOS ---
     if ($action === 'guardar') {
         $urls_fotos = procesarSubidaEvidencias();
         $primera_foto = $urls_fotos[0] ?? null;
@@ -156,17 +157,18 @@ try {
         $monto = (float)($data['monto'] ?? $reparacion['monto']);
         $adelanto = (float)($data['adelanto'] ?? $reparacion['adelanto']);
         
-        $nuevo_pago = $adelanto - (float)$reparacion['adelanto'];
+        $adelanto_previo = (float)$reparacion['adelanto'];
+        $nuevo_pago = $adelanto - $adelanto_previo;
+        
         if ($nuevo_pago > 0) {
             $stmt_caja->execute([
                 $reparacion['id_transaccion'], $reparacion['id'], "Abono Extra: " . ($data['tipo_reparacion'] ?? '') . " " . ($data['modelo'] ?? ''),
                 $nuevo_pago, $nuevo_pago, $_SESSION['nombre'], ($data['nombre_cliente'] ?? '')
             ]);
         }
+        $deuda = max(0, $monto - $adelanto);
         
         $sql_fecha_ent = ($estado_nuevo === 'Entregado' && $reparacion['estado'] !== 'Entregado') ? ", fecha_entrega = NOW()" : "";
-
-        // AQUÍ INYECTAMOS LA SEGURIDAD DEL EQUIPO
         $tipo_pass = $data['tipo_pass'] ?? $reparacion['tipo_pass'] ?? 'Ninguno';
         $codigo_pass = $data['codigo_pass'] ?? $reparacion['codigo_pass'] ?? '';
 
@@ -184,52 +186,95 @@ try {
             ':tr' => $data['tipo_reparacion'] ?? $reparacion['tipo_reparacion'],
             ':ma' => $data['marca_celular'] ?? $reparacion['marca_celular'],
             ':mo' => $data['modelo'] ?? $reparacion['modelo'],
-            ':m'  => $monto, ':a'  => $adelanto, ':d'  => max(0, $monto - $adelanto),
+            ':m'  => $monto, ':a'  => $adelanto, ':d'  => $deuda,
             ':i'  => $data['info_extra'] ?? $reparacion['info_extra'], 
             ':e'  => $estado_nuevo, ':u'  => $ubicacion_nueva, ':fe' => $fecha_estimada_nueva,
             ':tp' => $tipo_pass, ':cp' => $codigo_pass, ':id' => $id
         ]);
 
-// Historial Inteligente
+// ==========================================
+        // HISTORIAL INTELIGENTE (DETECCIÓN DE CAMBIOS)
+        // ==========================================
         $comentarios = [];
         
-        if ($reparacion['estado'] !== $estado_nuevo) {
-            $comentarios[] = "Estado: " . $reparacion['estado'] . " -> " . $estado_nuevo;
+        // --- Corrección: Convertir a texto y limpiar espacios (trim) para evitar falsos positivos ---
+        $nom_db = trim((string)($reparacion['nombre_cliente'] ?? ''));
+        $nom_post = trim((string)($data['nombre_cliente'] ?? ''));
+        if ($nom_db !== $nom_post) {
+            $comentarios[] = "Cliente actualizado a: " . $nom_post;
         }
-        if ($estado_nuevo !== 'Entregado' && ($reparacion['ubicacion'] ?? '') !== $ubicacion_nueva) {
-            $comentarios[] = "Ubicación: " . ($reparacion['ubicacion'] ?? 'N/A') . " -> " . $ubicacion_nueva;
+
+        $tel_db = trim((string)($reparacion['telefono'] ?? ''));
+        $tel_post = trim((string)($data['telefono'] ?? ''));
+        if ($tel_db !== $tel_post) {
+            $comentarios[] = "Teléfono actualizado a: " . $tel_post;
+        }
+
+        $marca_db = trim((string)($reparacion['marca_celular'] ?? ''));
+        $marca_post = trim((string)($data['marca_celular'] ?? ''));
+        $mod_db = trim((string)($reparacion['modelo'] ?? ''));
+        $mod_post = trim((string)($data['modelo'] ?? ''));
+        
+        if ($marca_db !== $marca_post || $mod_db !== $mod_post) {
+            $comentarios[] = "Equipo modificado a: " . $marca_post . " " . $mod_post;
+        }
+
+        $falla_db = trim((string)($reparacion['tipo_reparacion'] ?? ''));
+        $falla_post = trim((string)($data['tipo_reparacion'] ?? ''));
+        if ($falla_db !== $falla_post) {
+            $comentarios[] = "Falla/Servicio modificado a: " . $falla_post;
+        }
+        // ---------------------------------------------------
+
+        if ($reparacion['estado'] !== $estado_nuevo) {
+            $comentarios[] = "Estado: " . $reparacion['estado'] . " ➔ " . $estado_nuevo;
+        }
+        
+        $ubi_db = trim((string)($reparacion['ubicacion'] ?? ''));
+        $ubi_post = trim((string)$ubicacion_nueva);
+        if ($estado_nuevo !== 'Entregado' && $ubi_db !== $ubi_post) {
+            $comentarios[] = "Ubicación: " . ($ubi_db ?: 'N/A') . " ➔ " . ($ubi_post ?: 'N/A');
+        }
+        
+        if ((float)$reparacion['monto'] !== $monto) {
+            $comentarios[] = "Costo modificado a: $" . number_format($monto, 2);
         }
         
         $fe_ant = $reparacion['fecha_estimada'] ? date('Y-m-d H:i', strtotime($reparacion['fecha_estimada'])) : '';
         $fe_nue = $fecha_estimada_nueva ? date('Y-m-d H:i', strtotime($fecha_estimada_nueva)) : '';
         if ($fe_ant !== $fe_nue) {
-            $comentarios[] = "Fecha entrega reprogramada";
+            $comentarios[] = "Fecha de entrega reprogramada";
         }
 
-        // --- NUEVO: DETECTAR CAMBIO DE CONTRASEÑA ---
-        $tipo_pass_ant = $reparacion['tipo_pass'] ?? 'Ninguno';
-        $codigo_pass_ant = $reparacion['codigo_pass'] ?? '';
-        if ($tipo_pass_ant !== $tipo_pass || $codigo_pass_ant !== $codigo_pass) {
-            if ($tipo_pass === 'Ninguno') {
-                $comentarios[] = "🔓 Se eliminó la contraseña del equipo";
-            } else if ($tipo_pass === 'Patron') {
-                $comentarios[] = "🔐 Patrón registrado: " . $codigo_pass;
+        $tipo_pass_ant = trim((string)($reparacion['tipo_pass'] ?? 'Ninguno'));
+        $codigo_pass_ant = trim((string)($reparacion['codigo_pass'] ?? ''));
+        $tipo_pass_post = trim((string)$tipo_pass);
+        $codigo_pass_post = trim((string)$codigo_pass);
+
+        if ($tipo_pass_ant !== $tipo_pass_post || $codigo_pass_ant !== $codigo_pass_post) {
+            if ($tipo_pass_post === 'Ninguno') {
+                $comentarios[] = "Se eliminó la contraseña";
+            } else if ($tipo_pass_post === 'Patron') {
+                $comentarios[] = "Patrón de seguridad actualizado";
             } else {
-                $comentarios[] = "🔑 $tipo_pass registrado: " . $codigo_pass;
+                $comentarios[] = "$tipo_pass_post de seguridad actualizado";
             }
         }
-        // ---------------------------------------------
 
         if ($nuevo_pago > 0) $comentarios[] = "Abono de $" . number_format($nuevo_pago, 2);
         
-        $texto_historial = empty($comentarios) ? "Actualización de datos" : implode(". ", $comentarios);
-        registrarHistorial($conn, $id, $estado_nuevo, $texto_historial, $_SESSION['nombre'], $primera_foto);
+        // SOLO ESCRIBIR EN EL HISTORIAL SI HUBO UN CAMBIO REAL O SE SUBIÓ UNA FOTO
+        if (!empty($comentarios) || $primera_foto) {
+            $texto_historial = empty($comentarios) ? "Evidencia adjuntada" : implode(" | ", $comentarios);
+            registrarHistorial($conn, $id, $estado_nuevo, $texto_historial, $_SESSION['nombre'], $primera_foto);
+        }
 
         if (count($urls_fotos) > 1) {
             for ($i = 1; $i < count($urls_fotos); $i++) {
                 registrarHistorial($conn, $id, $estado_nuevo, "Evidencia adjuntada (" . ($i + 1) . ")", $_SESSION['nombre'], $urls_fotos[$i]);
             }
         }
+ 
         $conn->commit();
         responderJSON(['success' => true]);
     }

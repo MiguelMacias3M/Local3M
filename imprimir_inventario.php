@@ -3,19 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <title>Hoja de Conteo de Inventario - 3M TECHNOLOGY</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Librerías nativas para generación real de tablas PDF sin cortes -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     
     <style>
         body { 
             font-family: Arial, sans-serif; 
-            background: #f4f6f9; /* Fondo grisecito para la pantalla */
+            background: #f4f6f9;
             color: black; 
             margin: 0;
             padding: 20px; 
             font-size: 12px;
         }
         
-        /* Contenedor principal que simula una hoja de papel en la pantalla */
         #documento-pdf {
             background: white;
             padding: 30px;
@@ -50,12 +51,11 @@
             text-transform: uppercase;
         }
         .text-center { text-align: center; }
-        .col-blanco { width: 120px; } 
+        .col-blanco { width: 110px; } 
         
         .fila-desordenada { background-color: #fafafa; }
         .texto-sin-asignar { color: #888; font-style: italic; }
 
-        /* Estilos de los botones superiores */
         .controles-superior {
             text-align: center;
             margin-bottom: 20px;
@@ -76,12 +76,13 @@
         .btn-imprimir { background-color: #007bff; }
         .btn-pdf { background-color: #dc3545; }
 
-        /* Ocultar elementos cuando se imprime físicamente o se hace el PDF */
         @media print {
             body { background: white; padding: 0; }
             #documento-pdf { box-shadow: none; padding: 0; max-width: 100%; }
             .no-print { display: none !important; }
             .fila-desordenada { background-color: transparent; }
+            tr { page-break-inside: avoid; }
+            thead { display: table-header-group; }
         }
     </style>
 </head>
@@ -98,7 +99,7 @@
             <p class="subtitle">Hoja de Conteo Físico de Inventario | Fecha de revisión: <strong><span id="fechaActual"></span></strong></p>
         </div>
 
-        <table>
+        <table id="tablaInventario">
             <thead>
                 <tr>
                     <th>Ubicación</th>
@@ -116,11 +117,14 @@
     </div>
 
     <script>
-        document.getElementById('fechaActual').textContent = new Date().toLocaleDateString('es-MX');
+        const fechaTexto = new Date().toLocaleDateString('es-MX');
+        document.getElementById('fechaActual').textContent = fechaTexto;
+        
+        // Guardamos los datos ordenados globalmente para usarlos al generar el PDF
+        let datosInventarioGlobal = [];
 
         async function cargarInventario() {
             try {
-                // Aquí va la señal secreta &todo=1
                 const res = await fetch('/local3M/api/productos.php?action=listar&todo=1');
                 const json = await res.json();
                 const tbody = document.getElementById('tablaReporte');
@@ -128,7 +132,7 @@
 
                 if (json.success && json.data.length > 0) {
                     
-                    const productosOrdenados = json.data.sort((a, b) => {
+                    datosInventarioGlobal = json.data.sort((a, b) => {
                         let ubiA = String(a.id_ubicacion || a.ubicacion || '').trim().toLowerCase();
                         let ubiB = String(b.id_ubicacion || b.ubicacion || '').trim().toLowerCase();
                         
@@ -139,7 +143,7 @@
                         if (!aVacio && bVacio) return -1;
 
                         if (!aVacio && !bVacio && ubiA !== ubiB) {
-                            return ubiA.localeCompare(ubiB);
+                            return ubiA.localeCompare(ubiB, undefined, { numeric: true, sensitivity: 'base' });
                         }
 
                         let nomA = String(a.nombre_producto || '').toLowerCase();
@@ -147,7 +151,7 @@
                         return nomA.localeCompare(nomB);
                     });
 
-                    productosOrdenados.forEach(p => {
+                    datosInventarioGlobal.forEach(p => {
                         let rawUbi = p.id_ubicacion || p.ubicacion || '';
                         let textoUbi = String(rawUbi).trim();
                         let esVacio = (textoUbi === '' || textoUbi === 'null' || textoUbi === 'undefined');
@@ -178,26 +182,112 @@
         }
 
         // ==========================================
-        // FUNCIÓN PARA GENERAR EL PDF
+        // GENERACIÓN NATIVA DE PDF CON AUTOTABLE
         // ==========================================
         function descargarPDF() {
-            // Seleccionamos el div que queremos convertir (ignorando los botones)
-            const elemento = document.getElementById('documento-pdf');
-            
-            // Le damos formato a la fecha para el nombre del archivo (Ej: Inventario_3M_10-04-2026)
-            let fechaHoy = new Date().toLocaleDateString('es-MX').replace(/\//g, '-');
-            
-            // Configuramos la calidad y el tamaño de la hoja (A4)
-            const opciones = {
-                margin:       10,
-                filename:     `Inventario_3M_${fechaHoy}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2 }, // El scale 2 mejora la resolución de las letras
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
+            if (datosInventarioGlobal.length === 0) {
+                alert("Espera a que cargue el inventario antes de descargar.");
+                return;
+            }
 
-            // Ejecutamos la librería
-            html2pdf().set(opciones).from(elemento).save();
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            // Encabezado del documento en la primera página
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(18);
+            doc.text("3M TECHNOLOGY", 105, 16, { align: "center" });
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+            doc.setTextColor(80);
+            doc.text(`Hoja de Conteo Físico de Inventario | Fecha de revisión: ${fechaTexto}`, 105, 22, { align: "center" });
+
+            // Línea divisoria
+            doc.setDrawColor(0);
+            doc.setLineWidth(0.5);
+            doc.line(10, 25, 200, 25);
+
+            // Preparamos las filas limpias directamente desde el arreglo ordenado
+            const filas = datosInventarioGlobal.map(p => {
+                let rawUbi = p.id_ubicacion || p.ubicacion || '';
+                let textoUbi = String(rawUbi).trim();
+                let esVacio = (textoUbi === '' || textoUbi === 'null' || textoUbi === 'undefined');
+
+                return [
+                    esVacio ? 'Sin asignar' : textoUbi,
+                    p.nombre_producto || '',
+                    p.codigo_barras || '--',
+                    String(p.cantidad_piezas ?? 0),
+                    '', // Conteo físico
+                    ''  // Notas / Diferencias
+                ];
+            });
+
+            // Dibujamos la tabla con saltos de página automáticos y encabezados repetidos
+            doc.autoTable({
+                startY: 29,
+                margin: { top: 12, right: 10, bottom: 15, left: 10 },
+                head: [['UBICACIÓN', 'PRODUCTO', 'CÓDIGO / MODELO', 'STOCK SIST.', 'CONTEO FÍSICO', 'NOTAS / DIFERENCIAS']],
+                body: filas,
+                theme: 'grid',
+                rowPageBreak: 'avoid', // Nunca corta una fila entre dos hojas
+                headStyles: {
+                    fillColor: [240, 240, 240],
+                    textColor: [0, 0, 0],
+                    fontStyle: 'bold',
+                    fontSize: 8,
+                    lineColor: [0, 0, 0],
+                    lineWidth: 0.2,
+                    halign: 'left'
+                },
+                bodyStyles: {
+                    textColor: [0, 0, 0],
+                    fontSize: 8.5,
+                    lineColor: [0, 0, 0],
+                    lineWidth: 0.2,
+                    cellPadding: 2.2,
+                    valign: 'middle'
+                },
+                columnStyles: {
+                    0: { cellWidth: 20, fontStyle: 'bold' }, // Ubicación
+                    1: { cellWidth: 64 },                     // Producto (se ajusta en múltiples líneas sin cortarse)
+                    2: { cellWidth: 32 },                     // Código
+                    3: { cellWidth: 20, halign: 'center', fontStyle: 'bold' }, // Stock
+                    4: { cellWidth: 24 },                     // Conteo físico
+                    5: { cellWidth: 30 }                      // Notas
+                },
+                didParseCell: function(data) {
+                    // Estilo gris cursiva si no tiene ubicación asignada
+                    if (data.section === 'body' && data.column.index === 0 && data.cell.raw === 'Sin asignar') {
+                        data.cell.styles.textColor = [130, 130, 130];
+                        data.cell.styles.fontStyle = 'italic';
+                    }
+                    // Centrar título de Stock Sistema y Conteo Físico
+                    if (data.section === 'head' && (data.column.index === 3 || data.column.index === 4)) {
+                        data.cell.styles.halign = 'center';
+                    }
+                },
+                didDrawPage: function(data) {
+                    // Pie de página con número de hoja en todas las páginas
+                    const totalPaginas = doc.internal.getNumberOfPages();
+                    doc.setFontSize(8);
+                    doc.setTextColor(100);
+                    doc.text(
+                        `Página ${data.pageNumber} de ${totalPaginas}`,
+                        200,
+                        290,
+                        { align: 'right' }
+                    );
+                }
+            });
+
+            let fechaArchivo = fechaTexto.replace(/\//g, '-');
+            doc.save(`Inventario_3M_${fechaArchivo}.pdf`);
         }
 
         cargarInventario();
